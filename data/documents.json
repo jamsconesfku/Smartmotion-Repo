@@ -57,5 +57,16 @@
     "links": [],
     "notes": "",
     "updated": "2026-11-07"
+  },
+  {
+    "id": "DOC-06",
+    "title": "Sky Barrage game brief",
+    "format": "PDF",
+    "area": "Games",
+    "status": "in_repo",
+    "path": "docs/source/Sky_Barrage_Brief.pdf",
+    "links": [],
+    "notes": "Built as the Sky Barrage game in the Games section. Notes in docs/games/sky-barrage.md.",
+    "updated": "2026-11-07"
   }
 ]

@@ -8,5 +8,10 @@
     "date": "2026-11-07",
     "summary": "Dashboard redesigned to be easier to follow: this week's jobs up front, plain-English reasons for each job, must-have checklists, and jargon explained on tap.",
     "ids": []
+  },
+  {
+    "date": "2026-11-07",
+    "summary": "Added Sky Barrage, a SmartMotion arcade game with 20 levels, in a new Games section of the dashboard.",
+    "ids": []
   }
 ]

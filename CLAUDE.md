@@ -10,6 +10,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - `docs/source/` — original PDFs/files, unchanged
 - `data/` — `tasks`, `contacts`, `licences`, `documents`, `decisions`, `milestones`, `changelog`, `glossary` (.json)
 - `dashboard/index.html` — single file, no build step, fetches `../data/*.json`
+- `dashboard/games/` — games that open full-screen over the dashboard (see `docs/games/`)
 - `scripts/build-artifact.sh` — builds the private claude.ai copy of the dashboard into `build/artifact/`
 
 ## Data conventions
@@ -34,6 +35,11 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - **Republish the dashboard after any change to `data/` or `dashboard/`:** run `scripts/build-artifact.sh`, then publish `build/artifact/index.html` with the Artifact tool, `url` = https://claude.ai/artifact/2UtrL6HCXVmKdrYJavCaME, and `files` mapping each `data/<name>.json` to `build/artifact/data/<name>.json` (plus `assets/logo.png` and `assets/logo-dark.png` when the logo changes). (`build/` is gitignored.) The repo is private, so GitHub Pages isn't available.
 - Validate JSON before committing: `for f in data/*.json; do python3 -m json.tool "$f" >/dev/null || echo "BAD $f"; done`
 - Preview locally: `python3 -m http.server` in the repo root, open `http://localhost:8000/dashboard/`.
+
+## Games
+- Each game is one JS file in `dashboard/games/` that exposes `window.<Name>.open({onClose})`, `close()` and `stats()`, injects its own scoped CSS, and draws with canvas/SVG (no libraries).
+- Register it in the dashboard: an entry in `VIEWS` with `g:"Games"`, a tile in `renderGames()`, and a `<script src="games/<file>.js">` tag. The build script inlines `games/*.js` into the private page automatically.
+- Save progress in `localStorage` under an `sm2:` key, wrapped in try/catch.
 
 ## Rules
 - The dashboard's name is always **SmartMotion Dashboard** (page title, gallery name, and how to refer to it).
