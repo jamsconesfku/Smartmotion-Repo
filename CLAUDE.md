@@ -8,7 +8,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - `docs/brief.md` — the original kickoff brief (historical; don't edit status here)
 - `docs/{business,compliance,operations,product,3d-printing,marketing}/` — topic docs
 - `docs/source/` — original PDFs/files, unchanged
-- `data/` — `tasks`, `contacts`, `licences`, `documents`, `decisions`, `milestones`, `changelog` (.json)
+- `data/` — `tasks`, `contacts`, `licences`, `documents`, `decisions`, `milestones`, `changelog`, `glossary` (.json)
 - `dashboard/index.html` — single file, no build step, fetches `../data/*.json`
 - `scripts/build-artifact.sh` — builds the private claude.ai copy of the dashboard into `build/artifact/`
 
@@ -17,6 +17,9 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Task `status`: `todo` | `in_progress` | `waiting` | `done` | `parked`.
 - Task `area`: Admin, Finance, Legal, Insurance, Safety, Software, Engineering, Operations, Sales, Website, Marketing, Events, Launch, 3D Printing, Product Sales.
 - Task IDs: `D-` done before repo, `W1-`..`W4-` November weeks, `P-` before first rider, `F-` parked/future. New tasks: next free number in the right prefix.
+- Every open task has a `why`: one or two plain-English sentences on why it matters, written for someone hands-on but not business- or tech-minded. Add one to every new task.
+- `data/glossary.json` holds plain explanations of jargon (`term`, `meaning`). The dashboard underlines those terms wherever they appear; add new jargon there.
+- Gates (`type: "gate"`) also have a plain `why`.
 - `depends_on` lists task IDs; `links` may hold URLs, repo paths (`docs/...`) or IDs (`DEC-..`, task IDs).
 - Decisions: `DEC-nn` open questions, `DEC-Pn` agreed working principles. Set `status: "decided"` and fill `decision` when Sam decides.
 - Milestones: `type: "date"` (countdowns) and `type: "gate"`. A gate shows as met when **all** its `tasks` are `done` (computed by the dashboard).
@@ -33,6 +36,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Preview locally: `python3 -m http.server` in the repo root, open `http://localhost:8000/dashboard/`.
 
 ## Rules
+- Dashboard wording is plain English for a practical, non-technical reader: say what to do and why, avoid business and tech jargon (or add it to the glossary), keep it professional.
 - Keep everything factual; mark assumptions clearly (e.g. P- task due dates are assumed 28 Feb 2027).
 - **Never mark a compliance item (ADIPS, insurance, licences, legal) done without Sam's explicit confirmation.**
 - Nothing paid runs until ADIPS DOC + insurance. Never charge on consumer-licensed software. Advertise by experience type, not game/aircraft brand names.

@@ -1,0 +1,70 @@
+[
+  {
+    "term": "ADIPS",
+    "meaning": "Amusement Device Inspection Procedures Scheme. The UK scheme for checking that rides used by the public are safe. Our rig counts as a ride."
+  },
+  {
+    "term": "DOC",
+    "meaning": "Declaration of Operational Compliance. The certificate an ADIPS inspector gives once the rig passes. No paying riders without it."
+  },
+  {
+    "term": "HSG175",
+    "meaning": "The Health and Safety Executive's guidance on fairground and amusement rides. ADIPS follows it."
+  },
+  {
+    "term": "Public liability",
+    "meaning": "Insurance that pays out if a member of the public is hurt or their property is damaged because of us."
+  },
+  {
+    "term": "PAT",
+    "meaning": "Portable Appliance Testing. A safety test for plug-in electrical kit, recorded with a sticker on each item."
+  },
+  {
+    "term": "VAT",
+    "meaning": "Value Added Tax. Depending on how SmartMotion is set up, public prices may need to include 20% VAT."
+  },
+  {
+    "term": "GDPR",
+    "meaning": "UK data protection law. It covers how we collect, store and use customers' personal details."
+  },
+  {
+    "term": "RIDDOR",
+    "meaning": "The law on reporting certain workplace accidents and injuries to the Health and Safety Executive."
+  },
+  {
+    "term": "AED",
+    "meaning": "Automated External Defibrillator. The portable machine used if someone's heart stops."
+  },
+  {
+    "term": "6-DOF",
+    "meaning": "Six degrees of freedom. The rig can move in all six directions: tilt forward and back, tilt side to side, turn, and slide forward, sideways and up and down."
+  },
+  {
+    "term": "Commercial licence",
+    "meaning": "Permission from a software company to use their game for paid rides. Normal shop-bought copies don't allow it."
+  },
+  {
+    "term": "FlyPT Mover",
+    "meaning": "The program that reads what's happening in the game and tells the rig how to move."
+  },
+  {
+    "term": "UK IPO",
+    "meaning": "The UK Intellectual Property Office. It's where you check and register trademarks such as a business name."
+  },
+  {
+    "term": "Ltd",
+    "meaning": "A limited company. A separate legal business, so the owners' personal money is protected if things go wrong."
+  },
+  {
+    "term": "Carnet",
+    "meaning": "An international customs document that lets equipment travel abroad temporarily without paying import tax."
+  },
+  {
+    "term": "Break-even",
+    "meaning": "The point where money coming in covers all the costs. About £3,900 a month for SmartMotion."
+  },
+  {
+    "term": "Utilisation",
+    "meaning": "How much of the available ride time is actually booked, shown as a percentage."
+  }
+]

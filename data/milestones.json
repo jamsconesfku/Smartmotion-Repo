@@ -2,7 +2,7 @@
   {
     "id": "M-01",
     "type": "date",
-    "title": "Gift voucher sales go live",
+    "title": "Gift vouchers go on sale",
     "date": "2026-11-30",
     "status": "todo",
     "tasks": [
@@ -14,7 +14,7 @@
   {
     "id": "M-02",
     "type": "date",
-    "title": "First paying riders (public opening)",
+    "title": "First paying riders",
     "date": "2027-03-01",
     "status": "todo",
     "tasks": [
@@ -27,68 +27,74 @@
     "id": "G-01",
     "type": "gate",
     "milestone": "M-01",
-    "title": "Insurance held",
+    "title": "Insurance in place",
     "status": "todo",
     "tasks": [
       "W2-01"
     ],
-    "updated": "2026-11-07"
+    "updated": "2026-11-07",
+    "why": "Public liability cover that names paying riders on the rig. No cover, no sales."
   },
   {
     "id": "G-02",
     "type": "gate",
     "milestone": "M-01",
-    "title": "Inspection booked",
+    "title": "Safety inspector booked",
     "status": "todo",
     "tasks": [
       "W2-02"
     ],
-    "updated": "2026-11-07"
+    "updated": "2026-11-07",
+    "why": "A confirmed date with an ADIPS ride safety inspector."
   },
   {
     "id": "G-03",
     "type": "gate",
     "milestone": "M-01",
-    "title": "Licences signed",
+    "title": "Software licences signed",
     "status": "todo",
     "tasks": [
       "W3-01"
     ],
-    "updated": "2026-11-07"
+    "updated": "2026-11-07",
+    "why": "Commercial permission for at least one flight game and one driving game."
   },
   {
     "id": "G-04",
     "type": "gate",
     "milestone": "M-01",
-    "title": "Booking system tested",
+    "title": "Bookings and payments working",
     "status": "todo",
     "tasks": [
       "W3-02",
       "W3-03",
       "W3-04"
     ],
-    "updated": "2026-11-07"
+    "updated": "2026-11-07",
+    "why": "Customers can choose, pay and get a voucher code. Proven with a real test purchase."
   },
   {
     "id": "G-05",
     "type": "gate",
     "milestone": "M-01",
-    "title": "Terms and conditions in place",
+    "title": "Terms and conditions ready",
     "status": "todo",
     "tasks": [
       "W4-01"
     ],
-    "updated": "2026-11-07"
+    "updated": "2026-11-07",
+    "why": "The small print for vouchers and bookings, checked by a solicitor."
   },
   {
     "id": "G-06",
     "type": "gate",
     "milestone": "M-02",
-    "title": "ADIPS DOC issued",
+    "title": "Ride safety certificate issued",
     "status": "todo",
     "tasks": [
       "P-01"
     ],
-    "updated": "2026-11-07"
+    "updated": "2026-11-07",
+    "why": "The ADIPS inspector's sign-off (the DOC) that the rig is safe for the public."
   }
 ]

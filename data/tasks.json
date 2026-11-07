@@ -2,6 +2,7 @@
   {
     "id": "D-01",
     "title": "Business plan written (31 Oct 2026)",
+    "why": "",
     "area": "Admin",
     "phase": "Done",
     "status": "done",
@@ -18,6 +19,7 @@
   {
     "id": "D-02",
     "title": "Research: which games can legally be used commercially",
+    "why": "",
     "area": "Software",
     "phase": "Done",
     "status": "done",
@@ -34,6 +36,7 @@
   {
     "id": "D-03",
     "title": "Research: ADIPS process and registered inspection bodies",
+    "why": "",
     "area": "Safety",
     "phase": "Done",
     "status": "done",
@@ -50,6 +53,7 @@
   {
     "id": "D-04",
     "title": "Research: specialist insurance brokers",
+    "why": "",
     "area": "Insurance",
     "phase": "Done",
     "status": "done",
@@ -66,6 +70,7 @@
   {
     "id": "D-05",
     "title": "Launch checklist written (Docs + PDF)",
+    "why": "",
     "area": "Launch",
     "phase": "Done",
     "status": "done",
@@ -82,6 +87,7 @@
   {
     "id": "D-06",
     "title": "ADIPS inspection request email drafted",
+    "why": "",
     "area": "Safety",
     "phase": "Done",
     "status": "done",
@@ -96,6 +102,7 @@
   {
     "id": "D-07",
     "title": "Insurance quote request email drafted (5-point harness confirmed)",
+    "why": "",
     "area": "Insurance",
     "phase": "Done",
     "status": "done",
@@ -110,6 +117,7 @@
   {
     "id": "D-08",
     "title": "Operations manual draft written (11 sections + 3 appendices; Docs + PDF)",
+    "why": "",
     "area": "Safety",
     "phase": "Done",
     "status": "done",
@@ -126,6 +134,7 @@
   {
     "id": "D-09",
     "title": "Emails pack PDF (both emails + recipients)",
+    "why": "",
     "area": "Admin",
     "phase": "Done",
     "status": "done",
@@ -140,6 +149,7 @@
   {
     "id": "W1-01",
     "title": "Send ADIPS email to Rundle, TÜV SÜD, Westlakes",
+    "why": "Ride safety inspectors get booked up weeks ahead. Asking now means we can get an inspection date in time.",
     "area": "Safety",
     "phase": "Week 1",
     "status": "todo",
@@ -154,6 +164,7 @@
   {
     "id": "W1-02",
     "title": "Send insurance email to Broker2U, Acer, Peacock and Skysmart's broker; ask for quotes by about 14 Nov",
+    "why": "We can't sell vouchers without public liability insurance, and quotes take a week or two to come back.",
     "area": "Insurance",
     "phase": "Week 1",
     "status": "todo",
@@ -168,6 +179,7 @@
   {
     "id": "W1-03",
     "title": "Decide with Andy: SmartMotion as a Skysmart division or a new Ltd",
+    "why": "Decides whose name goes on the insurance, contracts, bank account and invoices. A lot of the other paperwork depends on it.",
     "area": "Admin",
     "phase": "Week 1",
     "status": "todo",
@@ -184,6 +196,7 @@
   {
     "id": "W1-04",
     "title": "Check the \"SmartMotion\" name and trademark (UK IPO)",
+    "why": "Makes sure nobody else already owns the SmartMotion name before we spend money on signs, the website and marketing.",
     "area": "Admin",
     "phase": "Week 1",
     "status": "todo",
@@ -198,6 +211,7 @@
   {
     "id": "W1-05",
     "title": "Accountant: VAT position; separate bank account or cost centre",
+    "why": "Tells us whether our prices have to include VAT, and keeps SmartMotion's money separate from Skysmart's.",
     "area": "Finance",
     "phase": "Week 1",
     "status": "todo",
@@ -214,6 +228,7 @@
   {
     "id": "W1-06",
     "title": "Landlord consent and planning-use check for public visitors",
+    "why": "The landlord and the council need to be happy with members of the public visiting the unit.",
     "area": "Admin",
     "phase": "Week 1",
     "status": "todo",
@@ -228,6 +243,7 @@
   {
     "id": "W1-07",
     "title": "Licence requests: Eagle Dynamics, Assetto Corsa reseller, FlyPT Mover developer; buy X-Plane Pro",
+    "why": "Normal copies of games can't legally be used for paid rides. Each software company has to give commercial permission, and some take time to reply.",
     "area": "Software",
     "phase": "Week 1",
     "status": "todo",
@@ -244,6 +260,7 @@
   {
     "id": "W2-01",
     "title": "Compare insurance quotes; bind public liability cover",
+    "why": "Pick the best quote and buy the cover. This is a must-have before any vouchers are sold.",
     "area": "Insurance",
     "phase": "Week 2",
     "status": "waiting",
@@ -260,6 +277,7 @@
   {
     "id": "W2-02",
     "title": "Choose and book the ADIPS inspection body",
+    "why": "Pick an inspector and get a date in the diary. Event organisers will ask for their certificate.",
     "area": "Safety",
     "phase": "Week 2",
     "status": "waiting",
@@ -276,6 +294,7 @@
   {
     "id": "W2-03",
     "title": "Written risk assessment (base + event template)",
+    "why": "A written list of what could go wrong and how we stop it happening. Inspectors and insurers will ask to see it.",
     "area": "Safety",
     "phase": "Week 2",
     "status": "todo",
@@ -290,6 +309,7 @@
   {
     "id": "W2-04",
     "title": "Complete the operations manual [bracketed] values with rig data",
+    "why": "The operations manual has blanks (like maximum rider weight) that need the rig's real measurements.",
     "area": "Safety",
     "phase": "Week 2",
     "status": "todo",
@@ -308,6 +328,7 @@
   {
     "id": "W2-05",
     "title": "Set rider restrictions (age, height, weight, medical)",
+    "why": "Who can and can't ride: minimum age and height, maximum weight, and health conditions.",
     "area": "Safety",
     "phase": "Week 2",
     "status": "todo",
@@ -324,6 +345,7 @@
   {
     "id": "W2-06",
     "title": "Gentle, Medium and Strong motion profiles per title",
+    "why": "Three comfort levels for each experience, so nervous first-timers and thrill-seekers both enjoy it.",
     "area": "Engineering",
     "phase": "Week 2",
     "status": "todo",
@@ -338,6 +360,7 @@
   {
     "id": "W2-07",
     "title": "PAT testing of all electrical kit",
+    "why": "Every plug-in electrical item gets a safety test and a sticker. Insurers and events expect it.",
     "area": "Safety",
     "phase": "Week 2",
     "status": "todo",
@@ -352,6 +375,7 @@
   {
     "id": "W3-01",
     "title": "Sign at least one flight and one car commercial licence",
+    "why": "We need at least one flight game and one driving game with a signed commercial licence before we sell anything.",
     "area": "Software",
     "phase": "Week 3",
     "status": "todo",
@@ -368,6 +392,7 @@
   {
     "id": "W3-02",
     "title": "Choose booking system (Bookeo / Checkfront)",
+    "why": "The online system where customers choose a time slot and pay.",
     "area": "Sales",
     "phase": "Week 3",
     "status": "todo",
@@ -384,6 +409,7 @@
   {
     "id": "W3-03",
     "title": "Set up vouchers: unique codes, 12-month expiry, redemption tracking",
+    "why": "Gift vouchers need their own codes, an expiry date, and a way to mark them as used.",
     "area": "Sales",
     "phase": "Week 3",
     "status": "todo",
@@ -400,6 +426,7 @@
   {
     "id": "W3-04",
     "title": "Card payments set up and tested (Stripe / Square / SumUp)",
+    "why": "Taking card payments online and in person. Do a real test purchase to prove it works.",
     "area": "Sales",
     "phase": "Week 3",
     "status": "todo",
@@ -416,6 +443,7 @@
   {
     "id": "W3-05",
     "title": "Health and eligibility questions in booking flow",
+    "why": "Customers answer health and eligibility questions when they book, so anyone unsuitable is spotted before they turn up.",
     "area": "Sales",
     "phase": "Week 3",
     "status": "todo",
@@ -433,6 +461,7 @@
   {
     "id": "W4-01",
     "title": "Booking and voucher terms (solicitor check)",
+    "why": "The small print for bookings and vouchers: refunds, cancellations and expiry. A solicitor should check it.",
     "area": "Legal",
     "phase": "Week 4",
     "status": "todo",
@@ -447,6 +476,7 @@
   {
     "id": "W4-02",
     "title": "Rider declaration and parental consent form",
+    "why": "The form every rider signs before riding, plus a version for parents of under-18s.",
     "area": "Legal",
     "phase": "Week 4",
     "status": "todo",
@@ -463,6 +493,7 @@
   {
     "id": "W4-03",
     "title": "UK GDPR privacy notice",
+    "why": "A legal notice telling customers what we do with their personal details.",
     "area": "Legal",
     "phase": "Week 4",
     "status": "todo",
@@ -477,6 +508,7 @@
   {
     "id": "W4-04",
     "title": "Website: Experiences page, prices, booking button, Gift Vouchers page, FAQ",
+    "why": "Customers need a page to see the experiences and prices, and to buy.",
     "area": "Website",
     "phase": "Week 4",
     "status": "todo",
@@ -494,6 +526,7 @@
   {
     "id": "W4-05",
     "title": "Fix the outdated \"coming to market in 2025\" text and the placeholder launch news post",
+    "why": "The website still says \"coming to market in 2025\", which looks out of date to customers.",
     "area": "Website",
     "phase": "Week 4",
     "status": "todo",
@@ -508,6 +541,7 @@
   {
     "id": "W4-06",
     "title": "Google Business Profile for the Dunmow base",
+    "why": "Puts SmartMotion on Google Maps and search, with reviews and opening times.",
     "area": "Marketing",
     "phase": "Week 4",
     "status": "todo",
@@ -522,6 +556,7 @@
   {
     "id": "W4-07",
     "title": "Recheck prices against VR Sim",
+    "why": "Make sure our prices make sense next to the nearest competitor before they're printed on vouchers.",
     "area": "Sales",
     "phase": "Week 4",
     "status": "todo",
@@ -538,6 +573,7 @@
   {
     "id": "W4-08",
     "title": "Go-live gate: insurance certificate held, inspection date confirmed, licences signed, test purchase passed → open voucher sales and start the Christmas campaign",
+    "why": "The final check that everything above is in place. Then switch on voucher sales for Christmas.",
     "area": "Launch",
     "phase": "Week 4",
     "status": "todo",
@@ -559,6 +595,7 @@
   {
     "id": "P-01",
     "title": "ADIPS design review, conformity, initial test; DOC issued",
+    "why": "The official ride safety sign-off. No paying riders until we have it.",
     "area": "Safety",
     "phase": "Before first rider",
     "status": "todo",
@@ -576,6 +613,7 @@
   {
     "id": "P-02",
     "title": "Operator training and written sign-off",
+    "why": "Anyone running the rig is trained, and there's a written record that they're signed off.",
     "area": "Safety",
     "phase": "Before first rider",
     "status": "todo",
@@ -590,6 +628,7 @@
   {
     "id": "P-03",
     "title": "Base fit-out: barrier, waiting area, spectator screen, ventilation",
+    "why": "Getting the unit ready for customers: safety barrier, seating, a screen to watch, and fresh air.",
     "area": "Operations",
     "phase": "Before first rider",
     "status": "todo",
@@ -604,6 +643,7 @@
   {
     "id": "P-04",
     "title": "First-aider, AED plan, hygiene kit, incident log, RIDDOR procedure",
+    "why": "First aid cover, a defibrillator plan, cleaning kit for headsets, and a way to record and report accidents.",
     "area": "Safety",
     "phase": "Before first rider",
     "status": "todo",
@@ -618,6 +658,7 @@
   {
     "id": "P-05",
     "title": "Maintenance log, spares box, spare headset, backup PC image",
+    "why": "Service records, plus spare parts and kit, so one breakdown doesn't cancel a day of bookings.",
     "area": "Operations",
     "phase": "Before first rider",
     "status": "todo",
@@ -632,6 +673,7 @@
   {
     "id": "P-06",
     "title": "Staff and friends trial sessions; tune profiles for motion sickness",
+    "why": "Practice sessions with friendly riders to fine-tune the motion and cut down motion sickness.",
     "area": "Operations",
     "phase": "Before first rider",
     "status": "todo",
@@ -648,6 +690,7 @@
   {
     "id": "P-07",
     "title": "Event pack: insurance, DOC, risk assessment, power spec",
+    "why": "The documents event organisers always ask for, ready to send in one go.",
     "area": "Events",
     "phase": "Before first rider",
     "status": "todo",
@@ -666,6 +709,7 @@
   {
     "id": "P-08",
     "title": "Book 2027 airshows and car shows",
+    "why": "Get 2027 airshows and car shows in the diary.",
     "area": "Events",
     "phase": "Before first rider",
     "status": "todo",
@@ -680,6 +724,7 @@
   {
     "id": "P-09",
     "title": "Corporate target list (150 organisations within 60 miles), brochure, demo slots",
+    "why": "A list of local companies to approach for team days, a brochure, and demo dates.",
     "area": "Sales",
     "phase": "Before first rider",
     "status": "todo",
@@ -694,6 +739,7 @@
   {
     "id": "F-01",
     "title": "Simulator sales line: pricing, kit packages, design certification for buyers",
+    "why": "Selling rigs to customers. On hold until the experiences business is running.",
     "area": "Product Sales",
     "phase": "Parked",
     "status": "parked",
@@ -710,6 +756,7 @@
   {
     "id": "F-02",
     "title": "Custom SmartMotion sim (FlightGear first version)",
+    "why": "Our own flight software, so we don't rely on game companies. On hold.",
     "area": "Engineering",
     "phase": "Parked",
     "status": "parked",
@@ -724,6 +771,7 @@
   {
     "id": "F-03",
     "title": "3D printing workstream (awaiting Sam's documents)",
+    "why": "Waiting for Sam's notes on how 3D printing fits in.",
     "area": "3D Printing",
     "phase": "Parked",
     "status": "parked",
@@ -741,6 +789,7 @@
   {
     "id": "F-04",
     "title": "Second rig (when weekend utilisation stays above 75% for 3 months)",
+    "why": "Only once weekends are consistently busy.",
     "area": "Operations",
     "phase": "Parked",
     "status": "parked",
@@ -755,6 +804,7 @@
   {
     "id": "F-05",
     "title": "Bulldog DCS module or custom aircraft (ask Eagle Dynamics)",
+    "why": "A marketing idea built around Skysmart's real Bulldog aircraft.",
     "area": "Marketing",
     "phase": "Parked",
     "status": "parked",
