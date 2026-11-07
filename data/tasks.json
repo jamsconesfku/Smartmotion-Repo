@@ -770,16 +770,16 @@
   },
   {
     "id": "F-03",
-    "title": "3D printing workstream (awaiting Sam's documents)",
-    "why": "Waiting for Sam's notes on how 3D printing fits in.",
+    "title": "3D printing and design: build up the model library",
+    "why": "Printed parts for the rig (button boxes, mounts, clips) and personal projects, designed and tracked in the Print & Design section.",
     "area": "3D Printing",
     "phase": "Parked",
-    "status": "parked",
+    "status": "in_progress",
     "priority": "low",
     "due": null,
     "owner": "Sam",
     "depends_on": [],
-    "notes": "",
+    "notes": "Print & Design section added 7 Nov 2026 with 3 starter models. Waiting for Sam's own models and design requests.",
     "links": [
       "docs/3d-printing/README.md",
       "DEC-08"

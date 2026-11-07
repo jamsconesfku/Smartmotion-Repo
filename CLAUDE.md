@@ -36,6 +36,15 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Validate JSON before committing: `for f in data/*.json; do python3 -m json.tool "$f" >/dev/null || echo "BAD $f"; done`
 - Preview locally: `python3 -m http.server` in the repo root, open `http://localhost:8000/dashboard/`.
 
+## Printing & Design (3D models)
+- Sam prints on an Anycubic Kobra 3 (250×250×260 mm) and Kobra 3 Max (420×420×500 mm). Deliver STL + STEP for every design. Details: `docs/3d-printing/README.md`.
+- New design: create `designs/<slug>/model.py` (copy the pattern of an existing one: `META`, `PARAMS`, `build(p)` returning `{part: cadquery shape}`), then `python3 scripts/build_design.py <slug>`. The build needs `pip install cadquery trimesh matplotlib` and uses Playwright + `scripts/render_preview.js` for the preview picture.
+- Change to an existing design: edit `model.py`, then `python3 scripts/build_design.py <slug> --changes "what changed"`. This makes the next version and keeps the old ones.
+- Always look at the preview PNG before publishing, and check the build output says every part is watertight and fits a printer.
+- Sam's own uploads: put the files in `designs/<slug>/<version>/`, add a `data/designs.json` entry by hand (`origin: "Sam"`), and make a preview with the render script.
+- Print feedback: update `status` and add to `print_log` in `data/designs.json`. Write lessons in plain English; the section is also for learning.
+- Republishing: the build script copies `designs/**/{preview.png,view.json,*.zip}` into `build/artifact/` and lists them in `build/artifact/files.json`. Pass all of them in `files` when publishing (with `capabilities: {downloads: true}` kept).
+
 ## Games
 - Each game is one JS file in `dashboard/games/` that exposes `window.<Name>.open({onClose})`, `close()` and `stats()`, injects its own scoped CSS, and draws with canvas/SVG (no libraries).
 - Register it in the dashboard: an entry in `VIEWS` with `g:"Games"`, a tile in `renderGames()`, and a `<script src="games/<file>.js">` tag. The build script inlines `games/*.js` into the private page automatically.

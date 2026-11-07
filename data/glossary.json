@@ -66,5 +66,49 @@
   {
     "term": "Utilisation",
     "meaning": "How much of the available ride time is actually booked, shown as a percentage."
+  },
+  {
+    "term": "STL file",
+    "meaning": "The standard 3D printing file. Open it in your slicer (Anycubic Slicer, Cura, PrusaSlicer) to print it. It can't easily be edited."
+  },
+  {
+    "term": "STEP file",
+    "meaning": "An editable CAD file. Open it in Fusion 360, Onshape, FreeCAD or SolidWorks to change the design properly."
+  },
+  {
+    "term": "Slicer",
+    "meaning": "The program that turns a 3D model into layer-by-layer instructions for the printer (Anycubic Slicer Next for the Kobra 3)."
+  },
+  {
+    "term": "Infill",
+    "meaning": "The pattern printed inside a part to save plastic. 15 to 30% is normal; more makes it heavier and stronger."
+  },
+  {
+    "term": "Gyroid",
+    "meaning": "A wavy infill pattern that is equally strong in every direction and prints quickly."
+  },
+  {
+    "term": "PLA",
+    "meaning": "The easiest printing plastic. Stiff and neat, but softens at around 55°C."
+  },
+  {
+    "term": "PETG",
+    "meaning": "A tougher, slightly flexible plastic. Good for clips, brackets and anything that gets knocked."
+  },
+  {
+    "term": "Heat-set insert",
+    "meaning": "A small brass threaded sleeve pressed into a printed hole with a soldering iron, so screws can go in and out many times."
+  },
+  {
+    "term": "Overhang",
+    "meaning": "Part of a print that sticks out over thin air. Up to about 45° prints fine; flatter needs supports."
+  },
+  {
+    "term": "Elephant foot",
+    "meaning": "The first layer squashing outwards slightly, making the bottom edge a little bigger than designed."
+  },
+  {
+    "term": "Clearance",
+    "meaning": "The small gap left between parts that must fit together, so they don't jam."
   }
 ]

@@ -13,5 +13,12 @@
     "date": "2026-11-07",
     "summary": "Added Sky Barrage, a SmartMotion arcade game with 20 levels, in a new Games section of the dashboard.",
     "ids": []
+  },
+  {
+    "date": "2026-11-07",
+    "summary": "Added the Print & Design workspace: a 3D model library with 3D views, downloads (STL + STEP), print settings and lessons. Three starter models for the rig: button box, cable clip and VR headset hook.",
+    "ids": [
+      "F-03"
+    ]
   }
 ]

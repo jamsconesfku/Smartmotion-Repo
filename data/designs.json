@@ -1,0 +1,367 @@
+[
+  {
+    "id": "PD-001",
+    "slug": "sim-button-box",
+    "status": "ready_to_print",
+    "notes": "",
+    "print_log": [],
+    "versions": [
+      {
+        "v": "v1",
+        "date": "2026-11-07",
+        "changes": "First version",
+        "parts": [
+          {
+            "name": "body",
+            "stl": "designs/sim-button-box/v1/sim-button-box-v1-body.stl",
+            "step": "designs/sim-button-box/v1/sim-button-box-v1-body.step",
+            "dims_mm": [
+              170.0,
+              100.0,
+              55.0
+            ],
+            "volume_cm3": 144.7,
+            "solid_g": 183.7,
+            "est_g": 92.0,
+            "triangles": 7160,
+            "watertight": true,
+            "fits": {
+              "kobra3": true,
+              "kobra3max": true
+            }
+          },
+          {
+            "name": "lid",
+            "stl": "designs/sim-button-box/v1/sim-button-box-v1-lid.stl",
+            "step": "designs/sim-button-box/v1/sim-button-box-v1-lid.step",
+            "dims_mm": [
+              170.0,
+              100.0,
+              7.0
+            ],
+            "volume_cm3": 87.5,
+            "solid_g": 111.2,
+            "est_g": 56.0,
+            "triangles": 15764,
+            "watertight": true,
+            "fits": {
+              "kobra3": true,
+              "kobra3max": true
+            }
+          }
+        ],
+        "zip": "designs/sim-button-box/v1/sim-button-box-v1.zip",
+        "preview": "designs/sim-button-box/v1/preview.png",
+        "view": "designs/sim-button-box/v1/view.json",
+        "source": "designs/sim-button-box/v1/model.py"
+      }
+    ],
+    "title": "Sim button box",
+    "category": "Simulator parts",
+    "summary": "Two-part box for 6 push buttons, 2 toggle switches and 2 rotary encoders, with a USB port and slots to bolt it to the rig.",
+    "purpose": "Gives riders and the operator real switches for things like engine start, lights and view reset, instead of a keyboard.",
+    "print": {
+      "material": "PETG (PLA+ is fine indoors)",
+      "printer": "Kobra 3",
+      "layer_height": "0.2 mm",
+      "walls": "4 walls (1.6 mm)",
+      "infill": "20% gyroid",
+      "supports": "None: print the body open side up and the lid top face down",
+      "orientation": "Body: floor on the bed. Lid: flat face on the bed so the panel comes out smooth.",
+      "fill_factor": 0.5
+    },
+    "steps": [
+      "Started from a rounded box and hollowed it with an even 3 mm wall, open at the top.",
+      "Added four corner posts with 4.0 mm holes sized for M3 heat-set inserts, so the lid can come off many times without wearing the plastic.",
+      "Cut a USB port in the back wall and two slots in the floor for M6 bolts to the rig.",
+      "Made the lid with a lip that drops 3 mm inside the walls (0.3 mm gap all round) so it locates itself.",
+      "Cut the panel holes: 12 mm buttons, 6.2 mm toggles, 7.2 mm encoders, then countersunk the M3 lid screw holes.",
+      "Chamfered the bottom edge 0.8 mm so the first layer squish (elephant foot) doesn't stop the lid fitting."
+    ],
+    "learning": [
+      "Design clearances: parts that slide together need about 0.2 to 0.3 mm gap per side on an FDM printer. The lid lip uses 0.3 mm.",
+      "Heat-set inserts beat screwing into plastic. Hole sizes come from the insert maker; 4.0 mm suits common M3 x 5.7 mm inserts.",
+      "Print panels face-down on the bed: the side people see gets the smooth bed finish.",
+      "Make hole sizes a parameter. Switches vary, and changing one number is quicker than redrawing."
+    ],
+    "assumptions": [
+      "Hole sizes assume 12 mm push buttons, MTS-style toggles (6 mm thread) and EC11 encoders (7 mm thread). Measure yours and change the numbers if different.",
+      "Mounting slots assume M6 bolts. The box's position on the rig hasn't been decided."
+    ],
+    "origin": "Designed by Claude",
+    "params": [
+      {
+        "key": "width",
+        "value": 170.0,
+        "unit": "mm",
+        "label": "Box width"
+      },
+      {
+        "key": "depth",
+        "value": 100.0,
+        "unit": "mm",
+        "label": "Box depth"
+      },
+      {
+        "key": "height",
+        "value": 55.0,
+        "unit": "mm",
+        "label": "Body height"
+      },
+      {
+        "key": "wall",
+        "value": 3.0,
+        "unit": "mm",
+        "label": "Wall thickness"
+      },
+      {
+        "key": "corner",
+        "value": 8.0,
+        "unit": "mm",
+        "label": "Corner radius"
+      },
+      {
+        "key": "lid",
+        "value": 4.0,
+        "unit": "mm",
+        "label": "Lid thickness"
+      },
+      {
+        "key": "button_hole",
+        "value": 12.2,
+        "unit": "mm",
+        "label": "Push button hole"
+      },
+      {
+        "key": "toggle_hole",
+        "value": 6.3,
+        "unit": "mm",
+        "label": "Toggle switch hole"
+      },
+      {
+        "key": "encoder_hole",
+        "value": 7.3,
+        "unit": "mm",
+        "label": "Encoder hole"
+      },
+      {
+        "key": "insert_hole",
+        "value": 4.0,
+        "unit": "mm",
+        "label": "Heat-set insert hole (M3)"
+      },
+      {
+        "key": "fit_gap",
+        "value": 0.3,
+        "unit": "mm",
+        "label": "Lid lip clearance"
+      }
+    ],
+    "current": "v1",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "PD-002",
+    "slug": "vr-headset-hook",
+    "status": "ready_to_print",
+    "notes": "",
+    "print_log": [],
+    "versions": [
+      {
+        "v": "v1",
+        "date": "2026-11-07",
+        "changes": "First version",
+        "parts": [
+          {
+            "name": "hook",
+            "stl": "designs/vr-headset-hook/v1/vr-headset-hook-v1-hook.stl",
+            "step": "designs/vr-headset-hook/v1/vr-headset-hook-v1-hook.step",
+            "dims_mm": [
+              75.0,
+              40.0,
+              60.0
+            ],
+            "volume_cm3": 46.6,
+            "solid_g": 59.2,
+            "est_g": 36.0,
+            "triangles": 5226,
+            "watertight": true,
+            "fits": {
+              "kobra3": true,
+              "kobra3max": true
+            }
+          }
+        ],
+        "zip": "designs/vr-headset-hook/v1/vr-headset-hook-v1.zip",
+        "preview": "designs/vr-headset-hook/v1/preview.png",
+        "view": "designs/vr-headset-hook/v1/view.json",
+        "source": "designs/vr-headset-hook/v1/model.py"
+      }
+    ],
+    "title": "VR headset hook",
+    "category": "Simulator parts",
+    "summary": "Bolts to 40 mm aluminium profile with two M8 T-nuts. A wide, rounded saddle holds the headset by its strap without creasing it.",
+    "purpose": "Gives the headset a safe home between sessions, off the floor and away from the moving seat.",
+    "print": {
+      "material": "PETG",
+      "printer": "Kobra 3",
+      "layer_height": "0.2 mm",
+      "walls": "5 walls (2 mm) for strength",
+      "infill": "30% gyroid",
+      "supports": "None",
+      "orientation": "On its side (the 40 mm wide face down), so the arm's layers run the length of the hook and don't snap off.",
+      "fill_factor": 0.6
+    },
+    "steps": [
+      "Drew the side view: a back plate, an arm reaching 75 mm out and a raised lip at the end.",
+      "Added a curved brace under the arm to spread the load into the back plate.",
+      "Pushed the profile out 40 mm wide to match the profile face.",
+      "Rounded every edge the strap touches (3 mm) so it can't dig in, and drilled two 8.5 mm holes 20 mm apart for M8 bolts."
+    ],
+    "learning": [
+      "Fillets on the inside corner of a bracket make it far stronger: sharp inside corners are where cracks start.",
+      "Bolt holes: add about 0.5 mm to the bolt size (8.5 mm for M8) so the bolt slides through.",
+      "For brackets, print so the load runs along the layers, never trying to peel them apart."
+    ],
+    "assumptions": [
+      "Assumes 40 mm aluminium profile and M8 T-nuts. Check what the rig frame uses before printing."
+    ],
+    "origin": "Designed by Claude",
+    "params": [
+      {
+        "key": "width",
+        "value": 40.0,
+        "unit": "mm",
+        "label": "Hook width"
+      },
+      {
+        "key": "reach",
+        "value": 75.0,
+        "unit": "mm",
+        "label": "Arm reach"
+      },
+      {
+        "key": "plate_h",
+        "value": 60.0,
+        "unit": "mm",
+        "label": "Back plate height"
+      },
+      {
+        "key": "thick",
+        "value": 7.0,
+        "unit": "mm",
+        "label": "Arm and plate thickness"
+      },
+      {
+        "key": "lip_h",
+        "value": 22.0,
+        "unit": "mm",
+        "label": "End lip height"
+      },
+      {
+        "key": "bolt",
+        "value": 8.5,
+        "unit": "mm",
+        "label": "Bolt hole"
+      }
+    ],
+    "current": "v1",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "PD-003",
+    "slug": "extrusion-cable-clip",
+    "status": "ready_to_print",
+    "notes": "",
+    "print_log": [],
+    "versions": [
+      {
+        "v": "v1",
+        "date": "2026-11-07",
+        "changes": "First version",
+        "parts": [
+          {
+            "name": "clip",
+            "stl": "designs/extrusion-cable-clip/v1/extrusion-cable-clip-v1-clip.stl",
+            "step": "designs/extrusion-cable-clip/v1/extrusion-cable-clip-v1-clip.step",
+            "dims_mm": [
+              10.0,
+              18.0,
+              22.1
+            ],
+            "volume_cm3": 1.5,
+            "solid_g": 1.9,
+            "est_g": 2.0,
+            "triangles": 4840,
+            "watertight": true,
+            "fits": {
+              "kobra3": true,
+              "kobra3max": true
+            }
+          }
+        ],
+        "zip": "designs/extrusion-cable-clip/v1/extrusion-cable-clip-v1.zip",
+        "preview": "designs/extrusion-cable-clip/v1/preview.png",
+        "view": "designs/extrusion-cable-clip/v1/view.json",
+        "source": "designs/extrusion-cable-clip/v1/model.py"
+      }
+    ],
+    "title": "Extrusion cable clip",
+    "category": "Simulator parts",
+    "summary": "Pushes into the 8 mm slot of 40-series aluminium profile and holds a cable bundle up to 10 mm across. No screws needed.",
+    "purpose": "Keeps actuator, USB and power cables tidy and away from moving parts of the motion rig.",
+    "print": {
+      "material": "PETG (flexes without snapping)",
+      "printer": "Kobra 3",
+      "layer_height": "0.2 mm",
+      "walls": "3 walls",
+      "infill": "100% (it's small)",
+      "supports": "None",
+      "orientation": "On its side (the flat 10 mm face on the bed), so the springy legs bend along the layers, not across them.",
+      "fill_factor": 1.0
+    },
+    "steps": [
+      "Drew the clip as a flat side profile, then pushed it out 10 mm thick.",
+      "Made a split stem 7.6 mm wide (0.3 mm smaller than the slot each side) with a 1.8 mm gap so the legs can squeeze together.",
+      "Added small barbs that spring out behind the slot lip to hold it in.",
+      "Added a C-shaped cradle on top with a 6 mm opening; cables push in and stay put."
+    ],
+    "learning": [
+      "Print orientation decides strength. Layers stick to each other less well than plastic along a layer, so parts that flex should bend along the layers.",
+      "Snap fits work best in PETG or nylon. PLA is stiff and tends to crack.",
+      "Small parts print better at 100% infill; there's no room for infill pattern anyway."
+    ],
+    "assumptions": [
+      "Assumes 40-series profile with an 8 mm slot (common B-type). Measure the slot opening on the rig; if it's 10 mm, change the slot width."
+    ],
+    "origin": "Designed by Claude",
+    "params": [
+      {
+        "key": "slot",
+        "value": 8.0,
+        "unit": "mm",
+        "label": "Profile slot opening"
+      },
+      {
+        "key": "lip",
+        "value": 4.3,
+        "unit": "mm",
+        "label": "Slot lip thickness"
+      },
+      {
+        "key": "cable",
+        "value": 10.0,
+        "unit": "mm",
+        "label": "Cable bundle size"
+      },
+      {
+        "key": "thickness",
+        "value": 10.0,
+        "unit": "mm",
+        "label": "Clip thickness"
+      }
+    ],
+    "current": "v1",
+    "updated": "2026-11-07"
+  }
+]
