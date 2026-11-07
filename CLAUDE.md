@@ -24,6 +24,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Documents `status`: `awaiting_upload` | `draft` | `in_repo`.
 
 ## Workflow
+- **Git:** Sam wants every change committed and pushed straight to `main` (no feature branches or pull requests).
 - **Sam reports progress:** update the record(s) (status, notes, `updated`), add an entry at the end of `data/changelog.json` (`{date, summary, ids}`), commit with a clear message, push.
 - **Sam uploads a document:** put the original in `docs/source/`, summarise it into the right topic doc, add any new tasks/contacts/decisions to `data/`, update `data/documents.json`, log it.
 - Validate JSON before committing: `for f in data/*.json; do python3 -m json.tool "$f" >/dev/null || echo "BAD $f"; done`
