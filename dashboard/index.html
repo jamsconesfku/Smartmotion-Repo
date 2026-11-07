@@ -11,10 +11,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
-/* Layout: one column, phone first. Big date at the top, this week's jobs next, checklists, then everything else behind tabs. */
+/* Layout: phone = one column with a sticky row of section tabs.
+   Laptop = sidebar menu on the left, content on the right; the Overview puts this week's jobs and the must-have checklists side by side. */
 :root{
   --bg:#f1f3f6; --surface:#ffffff; --surface-2:#e9edf2; --ink:#14213d; --muted:#56627a; --line:#d9dfe7;
-  --brand:#14213d; --brand-ink:#ffffff; --brand-muted:#b9c3d6;
+  --brand:#14213d; --brand-ink:#ffffff; --brand-muted:#b9c3d6; --nav-on:#14213d;
   --amber:#f2b632; --amber-ink:#7a4f00; --amber-soft:#fdf1d6;
   --green:#1d7a46; --green-soft:#e1f2e7;
   --blue:#2457c5; --blue-soft:#e4ecfb;
@@ -28,7 +29,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0d1320; --surface:#151d2c; --surface-2:#1d2738; --ink:#e7ecf4; --muted:#9aa6bb; --line:#2a3548;
-    --brand:#1b2740; --brand-ink:#ffffff; --brand-muted:#a7b3c9;
+    --brand:#1b2740; --brand-ink:#ffffff; --brand-muted:#a7b3c9; --nav-on:#2c3d63;
     --amber:#f2b632; --amber-ink:#f5c561; --amber-soft:#3a2c0c;
     --green:#4cc283; --green-soft:#133222; --blue:#7ea2ff; --blue-soft:#1b2a4a;
     --red:#ff7a70; --red-soft:#3d1a18; --grey:#a3adbf; --grey-soft:#222c3d; --hold:#b9a7e0; --hold-soft:#2a2440;
@@ -37,7 +38,7 @@
 }
 :root[data-theme="dark"]{
   --bg:#0d1320; --surface:#151d2c; --surface-2:#1d2738; --ink:#e7ecf4; --muted:#9aa6bb; --line:#2a3548;
-  --brand:#1b2740; --brand-ink:#ffffff; --brand-muted:#a7b3c9;
+  --brand:#1b2740; --brand-ink:#ffffff; --brand-muted:#a7b3c9; --nav-on:#2c3d63;
   --amber:#f2b632; --amber-ink:#f5c561; --amber-soft:#3a2c0c;
   --green:#4cc283; --green-soft:#133222; --blue:#7ea2ff; --blue-soft:#1b2a4a;
   --red:#ff7a70; --red-soft:#3d1a18; --grey:#a3adbf; --grey-soft:#222c3d; --hold:#b9a7e0; --hold-soft:#2a2440;
@@ -49,22 +50,38 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-body)}
 a{color:var(--blue)}
 button{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--amber);outline-offset:2px;border-radius:6px}
-.wrap{max-width:760px;margin:0 auto;padding-block:12px 56px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
 h1,h2,h3{font-family:var(--f-display);letter-spacing:.005em;text-wrap:balance;margin:0}
 .num{font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
 
-/* Top bar */
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-.brand{display:flex;align-items:center;gap:10px}
-.brand .mark{width:34px;height:34px;border-radius:8px;background:var(--brand);display:grid;place-items:center;flex:none}
+/* ---------- App frame (phone first) ---------- */
+.app{display:block}
+.side{display:contents}
+.brandbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(16px, env(safe-area-inset-right, 0px)) 4px max(16px, env(safe-area-inset-left, 0px))}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand .mark{width:36px;height:36px;border-radius:9px;background:var(--brand);display:grid;place-items:center;flex:none}
 .brand b{display:block;font-family:var(--f-display);font-size:20px;line-height:1.1}
 .brand span{display:block;font-size:13px;color:var(--muted)}
-.iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
+.themebtn{flex:none;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.nav{position:sticky;top:env(safe-area-inset-top, 0px);z-index:5;background:var(--bg);display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px))}
+.nav::-webkit-scrollbar{display:none}
+.nav-label{display:none}
+.nav button{flex:none;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:7px 13px;font-size:15px;font-weight:500;cursor:pointer}
+.nav button svg{flex:none;width:17px;height:17px;color:var(--muted)}
+.nav button .n{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.nav button[aria-current="page"]{background:var(--nav-on);border-color:var(--nav-on);color:var(--brand-ink)}
+.nav button[aria-current="page"] svg{color:var(--amber)}
+.nav button[aria-current="page"] .n{color:var(--brand-muted)}
+.main{padding-block:8px 56px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));max-width:760px;margin:0 auto}
 
-/* Hero */
-.hero{background:var(--brand);color:var(--brand-ink);border-radius:16px;padding:20px;margin-bottom:20px}
+.view-h{margin:4px 0 16px}
+.view-h h1{font-size:28px;line-height:1.1}
+.view-h p{margin:4px 0 0;color:var(--muted);font-size:15px;max-width:62ch}
+
+/* ---------- Hero ---------- */
+.hero{background:var(--brand);color:var(--brand-ink);border-radius:16px;padding:20px;margin-bottom:24px}
 .eyebrow{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--amber)}
-.hero h1{font-size:clamp(28px,7vw,38px);line-height:1.08;margin:6px 0 8px}
+.hero h1{font-size:clamp(28px,7vw,40px);line-height:1.08;margin:6px 0 8px}
 .hero h1 .big{color:var(--amber)}
 .hero p{margin:0;color:var(--brand-muted);font-size:15px}
 .hero p b{color:var(--brand-ink);font-weight:600}
@@ -73,17 +90,18 @@ h1,h2,h3{font-family:var(--f-display);letter-spacing:.005em;text-wrap:balance;ma
 .hero .tracklabel{font-size:13px;color:var(--brand-muted)}
 .hero-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
 .hero-stats div{background:rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;min-width:0}
-.hero-stats b{display:block;font-family:var(--f-display);font-size:24px;line-height:1.1}
+.hero-stats b{display:block;font-family:var(--f-display);font-size:26px;line-height:1.1}
 .hero-stats span{display:block;font-size:13px;line-height:1.35;margin-top:4px;color:var(--brand-muted)}
 
-/* Sections */
-.sec{margin-bottom:24px}
-.sec-h{margin-bottom:10px}
-.sec-h h2{font-size:22px;line-height:1.15}
-.sec-h p{margin:2px 0 0;color:var(--muted);font-size:14px}
-.hint{font-size:13px;color:var(--muted);margin:8px 2px 0}
+/* ---------- Overview columns ---------- */
+.ov-grid{display:grid;gap:24px}
+.panel-h{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+.panel-h .label{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.panel-h h2{font-size:22px;line-height:1.15}
+.panel-h p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.hint{font-size:13px;color:var(--muted);margin:10px 2px 0}
 
-/* Job cards */
+/* ---------- Job cards ---------- */
 .jobs{display:grid;gap:8px}
 .job{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .job>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;padding:14px}
@@ -126,8 +144,9 @@ h1,h2,h3{font-family:var(--f-display);letter-spacing:.005em;text-wrap:balance;ma
 .waitbox h4{color:var(--amber-ink)!important}
 .linkbtn{background:none;border:0;padding:0;color:var(--blue);cursor:pointer;text-decoration:underline;text-underline-offset:2px;text-align:left}
 
-/* Checklists */
-.check{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:4px 14px}
+/* ---------- Must-have checklists ---------- */
+.checks{display:grid;gap:12px}
+.check{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:4px 16px}
 .check-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:12px 0 8px}
 .check-head h3{font-size:18px}
 .check-head span{font-size:14px;color:var(--muted);white-space:nowrap}
@@ -136,107 +155,151 @@ h1,h2,h3{font-family:var(--f-display);letter-spacing:.005em;text-wrap:balance;ma
 .ci p{margin:2px 0 6px;color:var(--muted);font-size:14px}
 .ci .refs{display:flex;flex-wrap:wrap;gap:6px}
 .ci .refs button{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:3px 9px;font-size:13px;cursor:pointer}
-.checks{display:grid;gap:12px}
 
-/* Tabs */
-.tabs{position:sticky;top:env(safe-area-inset-top, 0px);z-index:5;background:var(--bg);padding:8px 0;margin-bottom:8px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tabs button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:8px 14px;font-size:15px;font-weight:500;cursor:pointer}
-.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.tabs .n{opacity:.6;margin-left:5px;font-size:13px}
-
-/* Filters */
-.seg{display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface-2);border-radius:10px;padding:3px;gap:3px;margin-bottom:10px}
-.seg button{border:0;background:transparent;border-radius:8px;padding:8px 4px;font-size:14px;font-weight:500;cursor:pointer;color:var(--muted)}
+/* ---------- All jobs filters ---------- */
+.toolbar{display:grid;gap:8px;margin-bottom:6px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface-2);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:0;background:transparent;border-radius:8px;padding:8px 6px;font-size:14px;font-weight:500;cursor:pointer;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.search{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);margin-bottom:8px}
-.more{margin-bottom:14px}
+.search{width:100%;font:inherit;font-size:16px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+.more{margin-bottom:16px}
 .more summary{cursor:pointer;font-size:14px;color:var(--blue);padding:4px 0}
 .more .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
 .more label{font-size:12px;color:var(--muted);display:grid;gap:4px;min-width:0}
 .more select{width:100%;font:inherit;font-size:15px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
-.group{margin-bottom:20px}
+.group{margin-bottom:24px}
 .group-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 2px 8px}
-.group-h h3{font-size:18px}
+.group-h h3{font-size:19px}
 .group-h p{margin:0;color:var(--muted);font-size:13px}
 .group-h .count{font-size:13px;color:var(--muted);white-space:nowrap}
 
-/* Cards for other tabs */
-.intro{background:var(--surface-2);border-radius:10px;padding:12px 14px;font-size:15px;margin-bottom:12px}
-.cards{display:grid;gap:8px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-width:0}
+/* ---------- Cards for the other sections ---------- */
+.intro{background:var(--surface-2);border-radius:10px;padding:12px 14px;font-size:15px;margin-bottom:14px}
+.cards{display:grid;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-width:0;display:flex;flex-direction:column}
 .card .h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .card .h b{font-weight:600;overflow-wrap:anywhere}
 .card .s{font-size:14px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
 .card .s strong{color:var(--ink);font-weight:600}
-.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.btns a{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;background:var(--surface-2);color:var(--ink);text-decoration:none;max-width:100%;overflow-wrap:anywhere}
-.sub{font-family:var(--f-display);font-size:18px;margin:20px 2px 4px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:10px}
+.btns:empty{display:none}
+.btns a{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:14px;background:var(--surface-2);color:var(--ink);text-decoration:none;max-width:100%;overflow-wrap:anywhere}
+.btns a:hover{border-color:var(--muted)}
+.sub{font-family:var(--f-display);font-size:20px;margin:26px 2px 2px}
 .sub:first-child{margin-top:0}
-.subhelp{margin:0 2px 8px;color:var(--muted);font-size:14px}
+.subhelp{margin:0 2px 10px;color:var(--muted);font-size:14px}
 .empty{color:var(--muted);padding:12px 2px}
 .err{background:var(--red-soft);color:var(--red);border-radius:10px;padding:12px;margin-bottom:16px}
 
-/* Jargon */
+/* ---------- Jargon sheet ---------- */
 .term{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:help;text-decoration:underline dotted;text-decoration-color:var(--muted);text-underline-offset:3px}
-.hero .term{text-decoration-color:var(--brand-muted)}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(0,0,0,.18);border-radius:16px 16px 0 0;padding:18px max(16px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))}
-.sheet .in{max-width:760px;margin:0 auto}
+.sheet .in{max-width:640px;margin:0 auto}
 .sheet h3{font-size:20px;margin-bottom:4px}
 .sheet p{margin:0 0 12px}
 .sheet button{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:8px 16px;cursor:pointer}
 
-footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
-footer b{color:var(--ink)}
+.foot{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+.foot b{color:var(--ink)}
+
 @media (max-width:520px){
   .more .grid{grid-template-columns:1fr 1fr}
   .seg button{font-size:13px}
   .job .body{padding-left:14px}
 }
-@media (prefers-reduced-motion:reduce){.open-btn,.open-btn .dot{transition:none}}
+
+/* ---------- Tablet and up: cards in two columns ---------- */
+@media (min-width:760px){
+  .cards.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .toolbar{grid-template-columns:minmax(0,440px) minmax(0,1fr);align-items:center}
+}
+
+/* ---------- Laptop: sidebar + wide content ---------- */
+@media (min-width:1024px){
+  .app{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
+  .side{display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--line);padding:20px 14px}
+  .brandbar{padding:0 4px 14px;border-bottom:1px solid var(--line);margin-bottom:10px}
+  .nav{position:static;flex-direction:column;gap:2px;overflow:visible;padding:0;background:transparent}
+  .nav-label{display:block;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 12px 4px}
+  .nav button{width:100%;border:0;border-radius:10px;padding:9px 12px;background:transparent;justify-content:flex-start;font-size:15px}
+  .nav button .n{margin-left:auto;background:var(--surface-2);border-radius:99px;padding:0 8px;min-width:24px;text-align:center}
+  .nav button:hover{background:var(--surface-2)}
+  .nav button[aria-current="page"]:hover{background:var(--nav-on)}
+  .nav button[aria-current="page"] .n{background:rgba(255,255,255,.12)}
+  .side-note{display:block!important;margin-top:auto;padding:14px 12px 0;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .side-note b{display:block;color:var(--ink);margin-bottom:2px}
+  .main{max-width:1200px;margin:0;padding:28px 40px 64px}
+  .view-h h1{font-size:34px}
+  .hero{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:28px;align-items:center;padding:28px 32px}
+  .hero h1{font-size:44px}
+  .hero-stats{grid-template-columns:1fr;margin-top:0}
+  .hero-stats div{padding:14px 16px}
+  .hero-stats b{font-size:32px}
+  .ov-grid{grid-template-columns:minmax(0,1.6fr) minmax(320px,1fr);gap:28px;align-items:start}
+  .ov-side{position:sticky;top:24px}
+  .foot.mobile-only{display:none}
+}
+.side-note{display:none}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div class="brand">
-      <div class="mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 32 32"><path d="M4 23l8-13 5 7 3-4 8 10z" fill="#f2b632"/></svg></div>
-      <div><b>SmartMotion</b><span id="asof">Launch plan</span></div>
+<div class="app">
+  <aside class="side">
+    <div class="brandbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 32 32"><path d="M4 23l8-13 5 7 3-4 8 10z" fill="#f2b632"/></svg></div>
+        <div><b>SmartMotion</b><span id="asof">Launch plan</span></div>
+      </div>
+      <button class="themebtn" id="theme" type="button" aria-label="Switch between dark and light" title="Dark / light">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="7"/><path d="M10 3a7 7 0 000 14z" fill="currentColor"/></svg>
+      </button>
     </div>
-    <button class="iconbtn" id="theme" type="button">Dark / light</button>
-  </header>
+    <nav class="nav" id="nav" aria-label="Sections"></nav>
+    <div class="side-note"><b>Keeping it up to date</b>Tell Claude what happened in plain words, e.g. "Sent the ADIPS emails today". Claude updates the plan and this page.</div>
+  </aside>
 
-  <div id="error"></div>
+  <main class="main">
+    <div id="error"></div>
 
-  <section class="hero" id="hero" aria-live="polite">
-    <div class="eyebrow">Next big date</div>
-    <h1 id="hero-h">Loading the plan…</h1>
-    <p id="hero-p"></p>
-    <div class="track"><i id="hero-bar" style="width:0"></i></div>
-    <div class="tracklabel" id="hero-bar-l"></div>
-    <div class="hero-stats">
-      <div><b class="num" id="s-riders">–</b><span id="s-riders-l">days until first paying riders</span></div>
-      <div><b class="num" id="s-jobs">–</b><span id="s-jobs-l">jobs done overall</span></div>
-    </div>
-  </section>
+    <!-- Overview -->
+    <section id="view-overview">
+      <section class="hero" aria-live="polite">
+        <div>
+          <div class="eyebrow">Next big date</div>
+          <h1 id="hero-h">Loading the plan…</h1>
+          <p id="hero-p"></p>
+          <div class="track"><i id="hero-bar" style="width:0"></i></div>
+          <div class="tracklabel" id="hero-bar-l"></div>
+        </div>
+        <div class="hero-stats">
+          <div><b class="num" id="s-riders">–</b><span id="s-riders-l">days until first paying riders</span></div>
+          <div><b class="num" id="s-jobs">–</b><span id="s-jobs-l">jobs done overall</span></div>
+        </div>
+      </section>
 
-  <section class="sec" id="week">
-    <div class="sec-h"><h2 id="week-h">This week's jobs</h2><p id="week-p"></p></div>
-    <div class="jobs" id="week-list"></div>
-    <p class="hint">Tap <b>Details</b> on any job to see why it matters and what it's waiting for. Words with a dotted underline are explained when you tap them.</p>
-  </section>
+      <div class="ov-grid">
+        <section aria-labelledby="week-h">
+          <div class="panel-h"><div><div class="label">Step 1 · This week</div><h2 id="week-h">This week's jobs</h2><p id="week-p"></p></div></div>
+          <div class="jobs" id="week-list"></div>
+          <p class="hint">Tap <b>Details</b> on any job to see why it matters and what it's waiting for. Words with a dotted underline are explained when you tap them.</p>
+        </section>
+        <section class="ov-side" aria-labelledby="gates-h">
+          <div class="panel-h"><div><div class="label">Step 2 · Big dates</div><h2 id="gates-h">Must-haves</h2><p>What has to be sorted before each big date. Items tick off by themselves when their jobs are done.</p></div></div>
+          <div class="checks" id="gate-list"></div>
+        </section>
+      </div>
+    </section>
 
-  <section class="sec" id="gates">
-    <div class="sec-h"><h2>Must-haves before each big date</h2><p>Each item ticks itself off when the jobs under it are done.</p></div>
-    <div class="checks" id="gate-list"></div>
-  </section>
+    <!-- Every other section renders here -->
+    <section id="view-other" hidden>
+      <header class="view-h"><h1 id="view-title"></h1><p id="view-sub"></p></header>
+      <div id="panel"></div>
+    </section>
 
-  <nav class="tabs" role="tablist" id="tabs" aria-label="More information"></nav>
-  <main id="panel"></main>
-
-  <footer>
-    <b>How to update this page:</b> tell Claude what happened in plain words, for example "Sent the ADIPS emails today" or "Rundle can inspect on 3 December". Claude updates the plan and this page for you. Each job has a reference (like W1-01) if you want to be exact.
-  </footer>
+    <footer class="foot mobile-only">
+      <b>Keeping it up to date:</b> tell Claude what happened in plain words, for example "Sent the ADIPS emails today" or "Rundle can inspect on 3 December". Claude updates the plan and this page for you. Each job has a reference (like W1-01) if you want to be exact.
+    </footer>
+  </main>
 </div>
 
 <div class="sheet" id="sheet" hidden role="dialog" aria-labelledby="sheet-h">
@@ -267,6 +330,18 @@ const PHASES = {
 };
 const PHASE_ORDER = Object.keys(PHASES);
 const AREA = {Admin:"Business admin",Finance:"Money",Legal:"Legal paperwork",Insurance:"Insurance",Safety:"Safety",Software:"Software",Engineering:"The rig",Operations:"Running the place",Sales:"Selling",Website:"Website",Marketing:"Marketing",Events:"Events",Launch:"Launch","3D Printing":"3D printing","Product Sales":"Selling rigs"};
+
+const I = p => `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const ICON = {
+  overview: I('<path d="M3 9.5L10 4l7 5.5V16a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><path d="M8 17v-5h4v5"/>'),
+  jobs: I('<path d="M3.5 5l1.2 1.2L7 4M3.5 10l1.2 1.2L7 9M3.5 15l1.2 1.2L7 14M10 5h7M10 10h7M10 15h7"/>'),
+  contacts: I('<path d="M5 3h3l1.5 4-2 1.3a9.5 9.5 0 004.2 4.2l1.3-2 4 1.5v3A1.5 1.5 0 0115.5 17 13 13 0 013 4.5 1.5 1.5 0 015 3z"/>'),
+  software: I('<rect x="2.5" y="3.5" width="15" height="10" rx="1.5"/><path d="M7 17h6M10 13.5V17"/>'),
+  paperwork: I('<path d="M5 2.5h7l3 3v12H5z"/><path d="M12 2.5v3h3M7.5 10h5M7.5 13h5"/>'),
+  decisions: I('<circle cx="10" cy="10" r="7.5"/><path d="M8 8a2 2 0 113 1.7c-.7.4-1 .8-1 1.6"/><path d="M10 14v.01"/>'),
+  updates: I('<circle cx="10" cy="10" r="7.5"/><path d="M10 6v4l2.5 1.5"/>'),
+  jargon: I('<path d="M2.5 4.5A1.5 1.5 0 014 3h6v14H4a1.5 1.5 0 01-1.5-1.5zM17.5 4.5A1.5 1.5 0 0016 3h-6v14h6a1.5 1.5 0 001.5-1.5z"/>'),
+};
 
 let D = {};
 const $ = s => document.querySelector(s);
@@ -328,11 +403,12 @@ function jobLink(id){
 function linkOut(l){
   if (/^https?:\/\//.test(l)) return `<a href="${esc(l)}" target="_blank" rel="noopener">${/claude\.ai\/artifact/.test(l) ? "Open the online version" : esc(l.replace(/^https?:\/\/(www\.)?/,""))}</a>`;
   if (/^(docs|data|dashboard)\//.test(l)) return `<a href="${REPO+esc(l)}" target="_blank" rel="noopener">Background notes (${esc(l.split("/").slice(-2).join("/"))})</a>`;
-  if (/^DEC-/.test(l)) { const d = D.decisions.find(x => x.id === l); return d ? `<button type="button" class="linkbtn" data-tab-go="decisions">Decision to make: ${esc(d.question)}</button>` : esc(l); }
+  if (/^DEC-/.test(l)) { const d = D.decisions.find(x => x.id === l); return d ? `<button type="button" class="linkbtn" data-go="decisions">Decision to make: ${esc(d.question)}</button>` : esc(l); }
   if (D.byId[l]) return jobLink(l);
   return esc(l);
 }
 
+const OPEN_BTN = `<span class="open-btn" aria-hidden="true"><span class="when-shut">Details</span><span class="when-open">Close</span><span class="dot"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>`;
 function jobCard(t, opts = {}){
   const late = isLate(t);
   const blocking = (t.depends_on||[]).filter(id => D.byId[id] && D.byId[id].status !== "done");
@@ -354,7 +430,7 @@ function jobCard(t, opts = {}){
     <summary>
       <span class="tick ${tickCls}" aria-hidden="true">${t.status==="done"?"✓":""}</span>
       <span style="min-width:0"><span class="t">${terms(esc(t.title))}</span><span class="m">${meta}</span></span>
-      <span class="open-btn" aria-hidden="true"><span class="when-shut">Details</span><span class="when-open">Close</span><span class="dot"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
+      ${OPEN_BTN}
     </summary>
     <div class="body">${body.join("")}</div>
   </details>`;
@@ -374,7 +450,7 @@ async function load(){
   termMap = Object.fromEntries(D.glossary.map(g => [g.term.toLowerCase(), g]));
   const words = D.glossary.map(g => g.term.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).sort((a,b) => b.length - a.length);
   termRe = new RegExp("(?<![\\w-])(" + words.join("|") + ")(?![\\w-])", "gi");
-  renderHero(); renderWeek(); renderGates(); renderTabs(); renderPanel();
+  renderHero(); renderWeek(); renderGates(); renderNav(); show(view);
 }
 
 function gateDone(g){ return (g.tasks||[]).length ? g.tasks.every(id => D.byId[id] && D.byId[id].status === "done") : g.status === "done"; }
@@ -396,7 +472,7 @@ function renderHero(){
   $("#s-jobs").textContent = `${done} of ${active.length}`;
   $("#s-jobs-l").textContent = "jobs done (not counting ones on hold)";
   const last = D.changelog.map(c => c.date).sort().pop();
-  if (last) $("#asof").textContent = "Launch plan · updated " + pd(last).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+  if (last) $("#asof").textContent = "Launch plan · " + pd(last).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
 }
 
 function renderWeek(){
@@ -406,7 +482,7 @@ function renderWeek(){
   const thisWeek = nextDue ? open.filter(t => t.due === nextDue) : [];
   const started = D.tasks.filter(t => t.status === "in_progress" && !late.includes(t) && !thisWeek.includes(t));
   const phase = thisWeek[0] ? PHASES[thisWeek[0].phase] : null;
-  $("#week-h").textContent = phase ? `This week: ${phase.aim.toLowerCase()}` : "This week's jobs";
+  $("#week-h").textContent = phase ? phase.aim : "This week's jobs";
   $("#week-p").textContent = phase ? `${phase.name} · ${phase.dates} · ${plural(thisWeek.length,"job")} left, all due ${shortDate(nextDue)}` : "";
   const rank = t => (t.priority === "high" ? 0 : 1);
   let html = "";
@@ -433,25 +509,40 @@ function renderGates(){
   }).join("");
 }
 
-/* Tabs */
-const TABS = [
-  ["jobs","All jobs", () => D.tasks.filter(isOpen).length],
-  ["contacts","Who to contact", () => D.contacts.length],
-  ["software","Software", () => D.licences.length],
-  ["paperwork","Paperwork", () => D.documents.length],
-  ["decisions","Decisions", () => D.decisions.filter(d => d.status === "open").length],
-  ["updates","Updates", () => D.changelog.length],
-  ["jargon","Jargon explained", () => D.glossary.length],
+/* Sections (sidebar on laptop, tabs on phone) */
+const VIEWS = [
+  {k:"overview", l:"Overview", g:"Plan", sub:""},
+  {k:"jobs", l:"All jobs", g:"Plan", c:() => D.tasks.filter(isOpen).length, sub:"Every job in the plan, week by week. Filter by progress, type of work or who's doing it."},
+  {k:"contacts", l:"Who to contact", g:"People and things", c:() => D.contacts.length, sub:"Safety inspectors, insurance brokers and software companies, with their phone numbers and emails."},
+  {k:"software", l:"Software", g:"People and things", c:() => D.licences.length, sub:"Which games we can charge for, and what licence each one needs."},
+  {k:"paperwork", l:"Paperwork", g:"People and things", c:() => D.documents.length, sub:"The plan's documents and where to find them."},
+  {k:"decisions", l:"Decisions", g:"Reference", c:() => D.decisions.filter(d => d.status === "open").length, sub:"Questions still to decide, and the ground rules we've agreed."},
+  {k:"updates", l:"Updates", g:"Reference", c:() => D.changelog.length, sub:"What has changed in the plan, newest first."},
+  {k:"jargon", l:"Jargon explained", g:"Reference", c:() => D.glossary.length, sub:"Plain-English meanings of the words and abbreviations used in this plan."},
 ];
-let tab = get("tab", "jobs");
-if (!TABS.some(t => t[0] === tab)) tab = "jobs";
-function renderTabs(){
-  $("#tabs").innerHTML = TABS.map(([k,l,c]) => `<button type="button" role="tab" aria-selected="${k===tab}" data-tab="${k}">${l}<span class="n">${c()}</span></button>`).join("");
+let view = "overview";
+function renderNav(){
+  let h = "", lastG = "";
+  VIEWS.forEach(v => {
+    if (v.g !== lastG){ h += `<div class="nav-label">${esc(v.g)}</div>`; lastG = v.g; }
+    h += `<button type="button" data-go="${v.k}"${v.k===view?' aria-current="page"':""}>${ICON[v.k]}<span>${esc(v.l)}</span>${v.c?`<span class="n">${v.c()}</span>`:""}</button>`;
+  });
+  $("#nav").innerHTML = h;
+  const cur = $("#nav [aria-current]");
+  if (cur && matchMedia("(max-width:1023px)").matches) cur.scrollIntoView({block:"nearest", inline:"center"});
 }
-$("#tabs").addEventListener("click", e => {
-  const b = e.target.closest("[data-tab]"); if (!b) return;
-  tab = b.dataset.tab; put("tab", tab); renderTabs(); renderPanel();
-});
+function show(k, keepScroll){
+  view = k;
+  const v = VIEWS.find(x => x.k === k) || VIEWS[0];
+  $("#view-overview").hidden = k !== "overview";
+  $("#view-other").hidden = k === "overview";
+  if (k !== "overview"){
+    $("#view-title").textContent = v.l; $("#view-sub").textContent = v.sub;
+    renderPanel();
+  }
+  renderNav();
+  if (!keepScroll) window.scrollTo({top:0});
+}
 
 /* All jobs */
 const F = Object.assign({show:"open", area:"", owner:"", group:"phase", q:""}, get("filters", {}));
@@ -460,8 +551,8 @@ function renderJobs(){
   const owners = [...new Set(D.tasks.map(t => t.owner))].sort();
   const o = (v,l,c) => `<option value="${esc(v)}"${v===c?" selected":""}>${esc(l)}</option>`;
   const segs = [["open","Still to do"],["done","Done"],["parked","On hold"],["all","Everything"]];
-  let h = `<div class="seg" role="group" aria-label="Show">${segs.map(([v,l]) => `<button type="button" aria-pressed="${F.show===v}" data-show="${v}">${l}</button>`).join("")}</div>
-    <input class="search" id="f-q" type="search" placeholder="Search jobs, e.g. insurance" value="${esc(F.q)}" aria-label="Search jobs">
+  let h = `<div class="toolbar"><div class="seg" role="group" aria-label="Show">${segs.map(([v,l]) => `<button type="button" aria-pressed="${F.show===v}" data-show="${v}">${l}</button>`).join("")}</div>
+    <input class="search" id="f-q" type="search" placeholder="Search jobs, e.g. insurance" value="${esc(F.q)}" aria-label="Search jobs"></div>
     <details class="more"${F.area||F.owner||F.group!=="phase"?" open":""}><summary>More filters</summary><div class="grid">
       <label for="f-area">Type of work<select id="f-area">${o("","All types",F.area)}${areas.map(a => o(a, AREA[a]||a, F.area)).join("")}</select></label>
       <label for="f-owner">Who's doing it<select id="f-owner">${o("","Everyone",F.owner)}${owners.map(a => o(a,a,F.owner)).join("")}</select></label>
@@ -501,39 +592,38 @@ function renderContacts(){
   const tag = {send_first:'<span class="chip c-in_progress">Contact first</span>', backup:'<span class="chip c-todo">Backup</span>', testing_only:'<span class="chip c-waiting">Testing only</span>'};
   const st = {not_contacted:"Not contacted yet",contacted:"Contacted, waiting for reply",replied:"Replied",quoted:"Sent a quote",engaged:"Working with us",declined:"Said no"};
   return cats.map(cat => { const [name, help] = CAT[cat] || [cat, ""];
-    return `<h3 class="sub">${esc(name)}</h3>${help?`<p class="subhelp">${terms(esc(help))}</p>`:""}<div class="cards">` +
+    return `<h2 class="sub">${esc(name)}</h2>${help?`<p class="subhelp">${terms(esc(help))}</p>`:""}<div class="cards two">` +
     D.contacts.filter(c => c.category === cat).map(c => `<div class="card">
       <div class="h"><b>${esc(c.organisation)}</b>${tag[c.priority]||""}</div>
       ${c.name?`<div class="s"><strong>${esc(c.name)}</strong></div>`:""}
       ${c.notes?`<div class="s">${terms(esc(c.notes))}</div>`:""}
       ${c.address?`<div class="s">${esc(c.address)}</div>`:""}
       ${st[c.status]?`<div class="s">Status: ${st[c.status]}</div>`:""}
-      <div class="btns">
-        ${c.phone?`<a href="${tel(c.phone)}">Call ${esc(c.phone)}</a>`:""}
-        ${c.email?`<a href="mailto:${esc(c.email)}">Email ${esc(c.email)}</a>`:""}
-        ${c.website?`<a href="${esc(c.website)}" target="_blank" rel="noopener">Website</a>`:""}
-      </div></div>`).join("") + `</div>`; }).join("");
+      <div class="btns">${c.phone?`<a href="${tel(c.phone)}">Call ${esc(c.phone)}</a>`:""}${c.email?`<a href="mailto:${esc(c.email)}">Email ${esc(c.email)}</a>`:""}${c.website?`<a href="${esc(c.website)}" target="_blank" rel="noopener">Website</a>`:""}</div></div>`).join("") + `</div>`; }).join("");
 }
 
 /* Software */
 function renderSoftware(){
   const st = {to_buy:["Need to buy","c-todo"],to_request:["Need to ask the company","c-todo"],requested:["Asked, waiting for reply","c-waiting"],to_confirm:["Need to check","c-waiting"],optional:["Optional extra","c-parked"],available:["Free to use","c-done"],bought:["Bought","c-done"],signed:["Licence signed","c-done"],not_usable:["Can't use for paid rides","c-late"]};
   const paid = {yes:"Yes",yes_with_licence:"Yes, once licensed",no:"No",unknown:"Not sure yet"};
-  return `<div class="intro">${terms("Normal shop-bought copies of games can't be used for paid rides. Each game we charge for needs a Commercial licence from the company that makes it.")}</div><div class="cards">` +
-    D.licences.map(l => { const [lab, cls] = st[l.status] || [l.status,"c-todo"];
-      return `<div class="card"><div class="h"><b>${esc(l.software)}</b><span class="chip ${cls}">${esc(lab)}</span></div>
+  const card = l => { const [lab, cls] = st[l.status] || [l.status,"c-todo"];
+    return `<div class="card"><div class="h"><b>${esc(l.software)}</b><span class="chip ${cls}">${esc(lab)}</span></div>
       <div class="s"><strong>Used for:</strong> ${esc(l.use)}</div>
       <div class="s"><strong>Can we charge for rides?</strong> ${paid[l.allowed_for_paid_use]||"Not sure yet"}</div>
       <div class="s"><strong>Cost:</strong> ${esc(l.cost)}</div>
       <div class="s"><strong>How to get it:</strong> ${terms(esc(l.commercial_route))}</div>
       ${l.notes?`<div class="s">${esc(l.notes)}</div>`:""}
-      ${l.task && D.byId[l.task]?`<div class="s"><strong>Job:</strong> ${jobLink(l.task)}</div>`:""}</div>`; }).join("") + `</div>`;
+      ${l.task && D.byId[l.task]?`<div class="s"><strong>Job:</strong> ${jobLink(l.task)}</div>`:""}</div>`; };
+  const usable = D.licences.filter(l => l.allowed_for_paid_use !== "no"), not = D.licences.filter(l => l.allowed_for_paid_use === "no");
+  return `<div class="intro">${terms("Normal shop-bought copies of games can't be used for paid rides. Each game we charge for needs a Commercial licence from the company that makes it.")}</div>
+    <h2 class="sub">Can be used for paid rides</h2><p class="subhelp">Once the licence is in place.</p><div class="cards two">${usable.map(card).join("")}</div>
+    <h2 class="sub">Can't be used for paid rides</h2><p class="subhelp">Fine for testing and practice, but never for paying customers.</p><div class="cards two">${not.map(card).join("")}</div>`;
 }
 
 /* Paperwork */
 function renderPaperwork(){
   const st = {in_repo:["Saved","c-done"],awaiting_upload:["Waiting for Sam to send it","c-waiting"],draft:["Draft","c-in_progress"]};
-  return `<div class="intro">The plan's documents. Once a file is sent to Claude it gets saved with the plan and summarised.</div><div class="cards">` +
+  return `<div class="intro">Once a file is sent to Claude it gets saved with the plan and summarised.</div><div class="cards two">` +
     D.documents.map(d => { const [lab, cls] = st[d.status] || [d.status,"c-todo"];
       return `<div class="card"><div class="h"><b>${esc(d.title)}</b><span class="chip ${cls}">${lab}</span></div>
       <div class="s">${esc(d.format)}</div>
@@ -548,8 +638,8 @@ function renderDecisions(){
     ${d.recommendation?`<div class="s"><strong>Suggested:</strong> ${esc(d.recommendation)}</div>`:""}
     ${d.decision && d.status!=="open" && d.decision!=="Agreed working principle."?`<div class="s"><strong>Decided:</strong> ${esc(d.decision)}</div>`:""}
     ${(d.related_tasks||[]).length?`<div class="s"><strong>Affects:</strong><br>${d.related_tasks.map(jobLink).join("<br>")}</div>`:""}</div>`;
-  return `<h3 class="sub">Decisions still to make</h3><div class="cards">${open.map(card).join("") || '<div class="empty">None right now.</div>'}</div>
-    <h3 class="sub">Our ground rules</h3><div class="cards">${done.map(card).join("")}</div>`;
+  return `<h2 class="sub">Still to decide</h2><div class="cards two">${open.map(card).join("") || '<div class="empty">None right now.</div>'}</div>
+    <h2 class="sub">Our ground rules</h2><p class="subhelp">Agreed rules that every decision has to follow.</p><div class="cards two">${done.map(card).join("")}</div>`;
 }
 
 /* Updates */
@@ -561,32 +651,31 @@ function renderUpdates(){
 
 /* Jargon */
 function renderJargon(){
-  return `<div class="intro">Words and abbreviations that come up in the plan. Words with a dotted underline anywhere on this page open these explanations too.</div><div class="cards">` +
+  return `<div class="intro">Words with a dotted underline anywhere on this page open these explanations too.</div><div class="cards two">` +
     [...D.glossary].sort((a,b) => a.term.localeCompare(b.term)).map(g => `<div class="card"><b>${esc(g.term)}</b><div class="s" style="color:var(--ink)">${esc(g.meaning)}</div></div>`).join("") + `</div>`;
 }
 
 function renderPanel(){
   const R = {jobs:renderJobs, contacts:renderContacts, software:renderSoftware, paperwork:renderPaperwork, decisions:renderDecisions, updates:renderUpdates, jargon:renderJargon};
-  $("#panel").innerHTML = R[tab]();
-  if (tab !== "jobs") return;
+  $("#panel").innerHTML = R[view]();
+  if (view !== "jobs") return;
   document.querySelectorAll("[data-show]").forEach(b => b.onclick = () => { F.show = b.dataset.show; put("filters",F); renderPanel(); });
   ["area","owner","group"].forEach(k => $("#f-"+k).onchange = e => { F[k] = e.target.value; put("filters",F); renderPanel(); });
   const qi = $("#f-q");
   qi.oninput = e => { F.q = e.target.value; put("filters",F); const p = qi.selectionStart; renderPanel(); const n = $("#f-q"); n.focus(); n.setSelectionRange(p,p); };
 }
 
-/* Clicks: jargon, jump to a job, jump to a tab */
+/* Clicks: jargon, switch section, jump to a job */
 document.addEventListener("click", e => {
   const term = e.target.closest(".term");
   if (term){ e.preventDefault(); e.stopPropagation(); showTerm(term.dataset.term); return; }
-  const go = e.target.closest("[data-tab-go]");
-  if (go){ e.preventDefault(); tab = go.dataset.tabGo; put("tab",tab); renderTabs(); renderPanel(); $("#tabs").scrollIntoView({behavior:"smooth"}); return; }
+  const go = e.target.closest("[data-go]");
+  if (go){ e.preventDefault(); show(go.dataset.go); return; }
   const j = e.target.closest("[data-job]");
   if (j){
     e.preventDefault();
-    tab = "jobs"; put("tab",tab);
     Object.assign(F, {show:"all", area:"", owner:"", q:""}); put("filters",F);
-    renderTabs(); renderPanel();
+    show("jobs", true);
     const el = document.getElementById("job-" + j.dataset.job);
     if (el){ el.open = true; el.scrollIntoView({behavior:"smooth", block:"center"}); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1800); }
   }
