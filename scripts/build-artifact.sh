@@ -9,9 +9,21 @@ cp data/*.json "$out/data/"
 cp -r dashboard/assets "$out/assets"
 # Print & Design: previews, 3D views and download ZIPs (not the raw STL/STEP; those are inside the ZIPs)
 if [ -d designs ]; then
-  find designs -path '*/v*/*' \( -name preview.png -o -name view.json -o -name '*.zip' \) | while read -r f; do
+  find designs -path '*/v*/*' \( -name preview.png -o -name view.json \) | while read -r f; do
     mkdir -p "$out/$(dirname "$f")"; cp "$f" "$out/$f"
   done
+  # The private page can't host .zip/.stl/.step files, so each ZIP's contents go into a
+  # .bundle.json (base64) and the page rebuilds the ZIP in the browser when Sam downloads.
+  python3 - "$out" <<'PY'
+import base64, glob, json, os, sys, zipfile
+out = sys.argv[1]
+for z in glob.glob("designs/*/v*/*.zip"):
+    with zipfile.ZipFile(z) as zf:
+        files = [{"path": n, "b64": base64.b64encode(zf.read(n)).decode()} for n in zf.namelist()]
+    dst = os.path.join(out, z[:-4] + ".bundle.json")
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    json.dump({"zip": os.path.basename(z), "files": files}, open(dst, "w"), separators=(",", ":"))
+PY
 fi
 python3 - "$out/index.html" <<'PY'
 import re, sys

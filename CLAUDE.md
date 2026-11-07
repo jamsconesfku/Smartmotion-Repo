@@ -43,7 +43,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Always look at the preview PNG before publishing, and check the build output says every part is watertight and fits a printer.
 - Sam's own uploads: put the files in `designs/<slug>/<version>/`, add a `data/designs.json` entry by hand (`origin: "Sam"`), and make a preview with the render script.
 - Print feedback: update `status` and add to `print_log` in `data/designs.json`. Write lessons in plain English; the section is also for learning.
-- Republishing: the build script copies `designs/**/{preview.png,view.json,*.zip}` into `build/artifact/` and lists them in `build/artifact/files.json`. Pass all of them in `files` when publishing (with `capabilities: {downloads: true}` kept).
+- Republishing: the private page can't host .zip/.stl/.step files, so the build script copies `preview.png` and `view.json`, turns each ZIP into a `.bundle.json` (the page rebuilds the ZIP in the browser), and lists everything in `build/artifact/files.json`. Pass all of them in `files` when publishing (with `capabilities: {downloads: true}` kept).
 
 ## Games
 - Each game is one JS file in `dashboard/games/` that exposes `window.<Name>.open({onClose})`, `close()` and `stats()`, injects its own scoped CSS, and draws with canvas/SVG (no libraries).
