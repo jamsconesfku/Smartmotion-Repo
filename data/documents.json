@@ -1,0 +1,61 @@
+[
+  {
+    "id": "DOC-01",
+    "title": "SmartMotion project brief",
+    "format": "Markdown + PDF",
+    "area": "Admin",
+    "status": "in_repo",
+    "path": "docs/brief.md",
+    "links": [],
+    "notes": "",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DOC-02",
+    "title": "SmartMotion 6DOF Simulator Experiences – Business Plan (31 Oct 2026, 22 pages)",
+    "format": "PDF",
+    "area": "Business",
+    "status": "awaiting_upload",
+    "path": "docs/source/",
+    "links": [],
+    "notes": "",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DOC-03",
+    "title": "SmartMotion Launch Checklist",
+    "format": "Claude Doc + PDF",
+    "area": "Launch",
+    "status": "awaiting_upload",
+    "path": "docs/source/SmartMotion_Launch_Checklist.pdf",
+    "links": [
+      "https://claude.ai/artifact/SQ2MhWDLs1xKCTqy4zS7Do"
+    ],
+    "notes": "",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DOC-04",
+    "title": "SmartMotion Operations Manual (draft v0.1)",
+    "format": "Claude Doc + PDF",
+    "area": "Safety",
+    "status": "awaiting_upload",
+    "path": "docs/source/SmartMotion_Operations_Manual.pdf",
+    "links": [
+      "https://claude.ai/artifact/4DUSRs4hFLLmB64XDfLdwz"
+    ],
+    "notes": "",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DOC-05",
+    "title": "Inspection and Insurance Emails pack",
+    "format": "PDF",
+    "area": "Compliance",
+    "status": "awaiting_upload",
+    "path": "docs/source/SmartMotion_Inspection_and_Insurance_Emails.pdf",
+    "links": [],
+    "notes": "",
+    "updated": "2026-11-07"
+  }
+]

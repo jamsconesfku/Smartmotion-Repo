@@ -1,0 +1,150 @@
+[
+  {
+    "id": "DEC-01",
+    "question": "Trading entity: a Skysmart MRO Ltd division, or a new SmartMotion Ltd?",
+    "area": "Admin",
+    "status": "open",
+    "recommendation": "",
+    "decision": "",
+    "related_tasks": [
+      "W1-03"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-02",
+    "question": "VAT treatment of public prices.",
+    "area": "Finance",
+    "status": "open",
+    "recommendation": "",
+    "decision": "",
+    "related_tasks": [
+      "W1-05"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-03",
+    "question": "Final rider limits and rig data for the manual (load, height, age, exclusion zone, E-stop behaviour).",
+    "area": "Safety",
+    "status": "open",
+    "recommendation": "",
+    "decision": "",
+    "related_tasks": [
+      "W2-04",
+      "W2-05"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-04",
+    "question": "Which simulation titles to license first?",
+    "area": "Software",
+    "status": "open",
+    "recommendation": "X-Plane Pro now; ask Eagle Dynamics about DCS; Assetto Corsa Commercial Pro for driving.",
+    "decision": "",
+    "related_tasks": [
+      "W1-07",
+      "W3-01"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-05",
+    "question": "Final prices after the VR Sim comparison.",
+    "area": "Sales",
+    "status": "open",
+    "recommendation": "",
+    "decision": "",
+    "related_tasks": [
+      "W4-07"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-06",
+    "question": "Booking system choice (Bookeo / Checkfront).",
+    "area": "Sales",
+    "status": "open",
+    "recommendation": "",
+    "decision": "",
+    "related_tasks": [
+      "W3-02"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-07",
+    "question": "When to reopen the simulator sales line.",
+    "area": "Product Sales",
+    "status": "open",
+    "recommendation": "",
+    "decision": "",
+    "related_tasks": [
+      "F-01"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-08",
+    "question": "How 3D printing fits into the business.",
+    "area": "3D Printing",
+    "status": "open",
+    "recommendation": "",
+    "decision": "",
+    "related_tasks": [
+      "F-03"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-P1",
+    "question": "Experiences first; simulator sales later.",
+    "area": "",
+    "status": "decided",
+    "recommendation": "",
+    "decision": "Agreed working principle.",
+    "related_tasks": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-P2",
+    "question": "Nothing paid runs on the rig until ADIPS sign-off and insurance are in place.",
+    "area": "",
+    "status": "decided",
+    "recommendation": "",
+    "decision": "Agreed working principle.",
+    "related_tasks": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-P3",
+    "question": "Never charge for sessions on consumer-licensed software.",
+    "area": "",
+    "status": "decided",
+    "recommendation": "",
+    "decision": "Agreed working principle.",
+    "related_tasks": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-P4",
+    "question": "Advertise experiences by type, not by trademarked aircraft or game names.",
+    "area": "",
+    "status": "decided",
+    "recommendation": "",
+    "decision": "Agreed working principle.",
+    "related_tasks": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "DEC-P5",
+    "question": "Keep written records of everything: inspections, checks, training, incidents, licences.",
+    "area": "",
+    "status": "decided",
+    "recommendation": "",
+    "decision": "Agreed working principle.",
+    "related_tasks": [],
+    "updated": "2026-11-07"
+  }
+]

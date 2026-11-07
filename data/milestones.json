@@ -1,0 +1,94 @@
+[
+  {
+    "id": "M-01",
+    "type": "date",
+    "title": "Gift voucher sales go live",
+    "date": "2026-11-30",
+    "status": "todo",
+    "tasks": [
+      "W4-08"
+    ],
+    "notes": "Christmas campaign starts.",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "M-02",
+    "type": "date",
+    "title": "First paying riders (public opening)",
+    "date": "2027-03-01",
+    "status": "todo",
+    "tasks": [
+      "P-01"
+    ],
+    "notes": "Brief says March 2027; 1 March used for the countdown.",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "G-01",
+    "type": "gate",
+    "milestone": "M-01",
+    "title": "Insurance held",
+    "status": "todo",
+    "tasks": [
+      "W2-01"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "G-02",
+    "type": "gate",
+    "milestone": "M-01",
+    "title": "Inspection booked",
+    "status": "todo",
+    "tasks": [
+      "W2-02"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "G-03",
+    "type": "gate",
+    "milestone": "M-01",
+    "title": "Licences signed",
+    "status": "todo",
+    "tasks": [
+      "W3-01"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "G-04",
+    "type": "gate",
+    "milestone": "M-01",
+    "title": "Booking system tested",
+    "status": "todo",
+    "tasks": [
+      "W3-02",
+      "W3-03",
+      "W3-04"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "G-05",
+    "type": "gate",
+    "milestone": "M-01",
+    "title": "Terms and conditions in place",
+    "status": "todo",
+    "tasks": [
+      "W4-01"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "G-06",
+    "type": "gate",
+    "milestone": "M-02",
+    "title": "ADIPS DOC issued",
+    "status": "todo",
+    "tasks": [
+      "P-01"
+    ],
+    "updated": "2026-11-07"
+  }
+]

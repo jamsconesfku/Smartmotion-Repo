@@ -1,0 +1,769 @@
+[
+  {
+    "id": "D-01",
+    "title": "Business plan written (31 Oct 2026)",
+    "area": "Admin",
+    "phase": "Done",
+    "status": "done",
+    "priority": "medium",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "docs/business/README.md"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "D-02",
+    "title": "Research: which games can legally be used commercially",
+    "area": "Software",
+    "phase": "Done",
+    "status": "done",
+    "priority": "medium",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "docs/compliance/software-licences.md"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "D-03",
+    "title": "Research: ADIPS process and registered inspection bodies",
+    "area": "Safety",
+    "phase": "Done",
+    "status": "done",
+    "priority": "medium",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "docs/compliance/adips.md"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "D-04",
+    "title": "Research: specialist insurance brokers",
+    "area": "Insurance",
+    "phase": "Done",
+    "status": "done",
+    "priority": "medium",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "docs/compliance/insurance.md"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "D-05",
+    "title": "Launch checklist written (Docs + PDF)",
+    "area": "Launch",
+    "phase": "Done",
+    "status": "done",
+    "priority": "medium",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "https://claude.ai/artifact/SQ2MhWDLs1xKCTqy4zS7Do"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "D-06",
+    "title": "ADIPS inspection request email drafted",
+    "area": "Safety",
+    "phase": "Done",
+    "status": "done",
+    "priority": "medium",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "D-07",
+    "title": "Insurance quote request email drafted (5-point harness confirmed)",
+    "area": "Insurance",
+    "phase": "Done",
+    "status": "done",
+    "priority": "medium",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "D-08",
+    "title": "Operations manual draft written (11 sections + 3 appendices; Docs + PDF)",
+    "area": "Safety",
+    "phase": "Done",
+    "status": "done",
+    "priority": "medium",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "https://claude.ai/artifact/4DUSRs4hFLLmB64XDfLdwz"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "D-09",
+    "title": "Emails pack PDF (both emails + recipients)",
+    "area": "Admin",
+    "phase": "Done",
+    "status": "done",
+    "priority": "medium",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W1-01",
+    "title": "Send ADIPS email to Rundle, TÜV SÜD, Westlakes",
+    "area": "Safety",
+    "phase": "Week 1",
+    "status": "todo",
+    "priority": "high",
+    "due": "2026-11-09",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "Confirm with Sam whether already sent.",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W1-02",
+    "title": "Send insurance email to Broker2U, Acer, Peacock and Skysmart's broker; ask for quotes by about 14 Nov",
+    "area": "Insurance",
+    "phase": "Week 1",
+    "status": "todo",
+    "priority": "high",
+    "due": "2026-11-09",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "Confirm with Sam whether already sent.",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W1-03",
+    "title": "Decide with Andy: SmartMotion as a Skysmart division or a new Ltd",
+    "area": "Admin",
+    "phase": "Week 1",
+    "status": "todo",
+    "priority": "high",
+    "due": "2026-11-09",
+    "owner": "Sam + Andy",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "DEC-01"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W1-04",
+    "title": "Check the \"SmartMotion\" name and trademark (UK IPO)",
+    "area": "Admin",
+    "phase": "Week 1",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-09",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W1-05",
+    "title": "Accountant: VAT position; separate bank account or cost centre",
+    "area": "Finance",
+    "phase": "Week 1",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-09",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "DEC-02"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W1-06",
+    "title": "Landlord consent and planning-use check for public visitors",
+    "area": "Admin",
+    "phase": "Week 1",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-09",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W1-07",
+    "title": "Licence requests: Eagle Dynamics, Assetto Corsa reseller, FlyPT Mover developer; buy X-Plane Pro",
+    "area": "Software",
+    "phase": "Week 1",
+    "status": "todo",
+    "priority": "high",
+    "due": "2026-11-09",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "DEC-04"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W2-01",
+    "title": "Compare insurance quotes; bind public liability cover",
+    "area": "Insurance",
+    "phase": "Week 2",
+    "status": "waiting",
+    "priority": "high",
+    "due": "2026-11-16",
+    "owner": "Sam",
+    "depends_on": [
+      "W1-02"
+    ],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W2-02",
+    "title": "Choose and book the ADIPS inspection body",
+    "area": "Safety",
+    "phase": "Week 2",
+    "status": "waiting",
+    "priority": "high",
+    "due": "2026-11-16",
+    "owner": "Sam",
+    "depends_on": [
+      "W1-01"
+    ],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W2-03",
+    "title": "Written risk assessment (base + event template)",
+    "area": "Safety",
+    "phase": "Week 2",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-16",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W2-04",
+    "title": "Complete the operations manual [bracketed] values with rig data",
+    "area": "Safety",
+    "phase": "Week 2",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-16",
+    "owner": "Sam",
+    "depends_on": [
+      "W2-05"
+    ],
+    "notes": "",
+    "links": [
+      "docs/product/rig-spec.md"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W2-05",
+    "title": "Set rider restrictions (age, height, weight, medical)",
+    "area": "Safety",
+    "phase": "Week 2",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-16",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "DEC-03"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W2-06",
+    "title": "Gentle, Medium and Strong motion profiles per title",
+    "area": "Engineering",
+    "phase": "Week 2",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-16",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W2-07",
+    "title": "PAT testing of all electrical kit",
+    "area": "Safety",
+    "phase": "Week 2",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-16",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W3-01",
+    "title": "Sign at least one flight and one car commercial licence",
+    "area": "Software",
+    "phase": "Week 3",
+    "status": "todo",
+    "priority": "high",
+    "due": "2026-11-23",
+    "owner": "Sam",
+    "depends_on": [
+      "W1-07"
+    ],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W3-02",
+    "title": "Choose booking system (Bookeo / Checkfront)",
+    "area": "Sales",
+    "phase": "Week 3",
+    "status": "todo",
+    "priority": "high",
+    "due": "2026-11-23",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "DEC-06"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W3-03",
+    "title": "Set up vouchers: unique codes, 12-month expiry, redemption tracking",
+    "area": "Sales",
+    "phase": "Week 3",
+    "status": "todo",
+    "priority": "high",
+    "due": "2026-11-23",
+    "owner": "Sam",
+    "depends_on": [
+      "W3-02"
+    ],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W3-04",
+    "title": "Card payments set up and tested (Stripe / Square / SumUp)",
+    "area": "Sales",
+    "phase": "Week 3",
+    "status": "todo",
+    "priority": "high",
+    "due": "2026-11-23",
+    "owner": "Sam",
+    "depends_on": [
+      "W3-02"
+    ],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W3-05",
+    "title": "Health and eligibility questions in booking flow",
+    "area": "Sales",
+    "phase": "Week 3",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-23",
+    "owner": "Sam",
+    "depends_on": [
+      "W3-02",
+      "W2-05"
+    ],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W4-01",
+    "title": "Booking and voucher terms (solicitor check)",
+    "area": "Legal",
+    "phase": "Week 4",
+    "status": "todo",
+    "priority": "high",
+    "due": "2026-11-30",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W4-02",
+    "title": "Rider declaration and parental consent form",
+    "area": "Legal",
+    "phase": "Week 4",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-30",
+    "owner": "Sam",
+    "depends_on": [
+      "W2-05"
+    ],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W4-03",
+    "title": "UK GDPR privacy notice",
+    "area": "Legal",
+    "phase": "Week 4",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-30",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W4-04",
+    "title": "Website: Experiences page, prices, booking button, Gift Vouchers page, FAQ",
+    "area": "Website",
+    "phase": "Week 4",
+    "status": "todo",
+    "priority": "high",
+    "due": "2026-11-30",
+    "owner": "Sam",
+    "depends_on": [
+      "W3-02",
+      "W4-07"
+    ],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W4-05",
+    "title": "Fix the outdated \"coming to market in 2025\" text and the placeholder launch news post",
+    "area": "Website",
+    "phase": "Week 4",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-30",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W4-06",
+    "title": "Google Business Profile for the Dunmow base",
+    "area": "Marketing",
+    "phase": "Week 4",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-30",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W4-07",
+    "title": "Recheck prices against VR Sim",
+    "area": "Sales",
+    "phase": "Week 4",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2026-11-30",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "DEC-05"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "W4-08",
+    "title": "Go-live gate: insurance certificate held, inspection date confirmed, licences signed, test purchase passed → open voucher sales and start the Christmas campaign",
+    "area": "Launch",
+    "phase": "Week 4",
+    "status": "todo",
+    "priority": "high",
+    "due": "2026-11-30",
+    "owner": "Sam",
+    "depends_on": [
+      "W2-01",
+      "W2-02",
+      "W3-01",
+      "W3-03",
+      "W3-04",
+      "W4-01"
+    ],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "P-01",
+    "title": "ADIPS design review, conformity, initial test; DOC issued",
+    "area": "Safety",
+    "phase": "Before first rider",
+    "status": "todo",
+    "priority": "high",
+    "due": "2027-02-28",
+    "owner": "Sam",
+    "depends_on": [
+      "W2-02",
+      "W2-04"
+    ],
+    "notes": "Due date assumed: before the March 2027 public opening.",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "P-02",
+    "title": "Operator training and written sign-off",
+    "area": "Safety",
+    "phase": "Before first rider",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2027-02-28",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "Due date assumed: before the March 2027 public opening.",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "P-03",
+    "title": "Base fit-out: barrier, waiting area, spectator screen, ventilation",
+    "area": "Operations",
+    "phase": "Before first rider",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2027-02-28",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "Due date assumed: before the March 2027 public opening.",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "P-04",
+    "title": "First-aider, AED plan, hygiene kit, incident log, RIDDOR procedure",
+    "area": "Safety",
+    "phase": "Before first rider",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2027-02-28",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "Due date assumed: before the March 2027 public opening.",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "P-05",
+    "title": "Maintenance log, spares box, spare headset, backup PC image",
+    "area": "Operations",
+    "phase": "Before first rider",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2027-02-28",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "Due date assumed: before the March 2027 public opening.",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "P-06",
+    "title": "Staff and friends trial sessions; tune profiles for motion sickness",
+    "area": "Operations",
+    "phase": "Before first rider",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2027-02-28",
+    "owner": "Sam",
+    "depends_on": [
+      "W2-06"
+    ],
+    "notes": "Due date assumed: before the March 2027 public opening.",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "P-07",
+    "title": "Event pack: insurance, DOC, risk assessment, power spec",
+    "area": "Events",
+    "phase": "Before first rider",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2027-02-28",
+    "owner": "Sam",
+    "depends_on": [
+      "P-01",
+      "W2-01",
+      "W2-03"
+    ],
+    "notes": "Due date assumed: before the March 2027 public opening.",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "P-08",
+    "title": "Book 2027 airshows and car shows",
+    "area": "Events",
+    "phase": "Before first rider",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2027-02-28",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "Due date assumed: before the March 2027 public opening.",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "P-09",
+    "title": "Corporate target list (150 organisations within 60 miles), brochure, demo slots",
+    "area": "Sales",
+    "phase": "Before first rider",
+    "status": "todo",
+    "priority": "medium",
+    "due": "2027-02-28",
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "Due date assumed: before the March 2027 public opening.",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "F-01",
+    "title": "Simulator sales line: pricing, kit packages, design certification for buyers",
+    "area": "Product Sales",
+    "phase": "Parked",
+    "status": "parked",
+    "priority": "low",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "DEC-07"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "F-02",
+    "title": "Custom SmartMotion sim (FlightGear first version)",
+    "area": "Engineering",
+    "phase": "Parked",
+    "status": "parked",
+    "priority": "low",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "F-03",
+    "title": "3D printing workstream (awaiting Sam's documents)",
+    "area": "3D Printing",
+    "phase": "Parked",
+    "status": "parked",
+    "priority": "low",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [
+      "docs/3d-printing/README.md",
+      "DEC-08"
+    ],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "F-04",
+    "title": "Second rig (when weekend utilisation stays above 75% for 3 months)",
+    "area": "Operations",
+    "phase": "Parked",
+    "status": "parked",
+    "priority": "low",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "F-05",
+    "title": "Bulldog DCS module or custom aircraft (ask Eagle Dynamics)",
+    "area": "Marketing",
+    "phase": "Parked",
+    "status": "parked",
+    "priority": "low",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "",
+    "links": [],
+    "updated": "2026-11-07"
+  }
+]

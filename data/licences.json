@@ -1,0 +1,110 @@
+[
+  {
+    "id": "LIC-01",
+    "software": "X-Plane 12 Professional",
+    "use": "Flight",
+    "commercial_route": "Buy direct from x-plane.com. A professional key is required whenever X-Plane is used to generate revenue.",
+    "cost": "$1,000 digital; $1,250 USB key (works offline)",
+    "status": "to_buy",
+    "allowed_for_paid_use": "yes_with_licence",
+    "task": "W1-07",
+    "notes": "Recommended to buy now.",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "LIC-02",
+    "software": "DCS World",
+    "use": "Jets and warbirds",
+    "commercial_route": "Separate commercial site licence from Eagle Dynamics (support@digitalcombatsimulator.com). VR Sim holds one, so there's a precedent.",
+    "cost": "By quote",
+    "status": "to_request",
+    "allowed_for_paid_use": "yes_with_licence",
+    "task": "W1-07",
+    "notes": "",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "LIC-03",
+    "software": "Assetto Corsa Commercial Pro",
+    "use": "Track and rally (rally via mods)",
+    "commercial_route": "Authorised resellers only (Vesaro, FPZERO). Pro tier allows third-party software like FlyPT Mover.",
+    "cost": "About £3,750 per simulator, one-off",
+    "status": "to_request",
+    "allowed_for_paid_use": "yes_with_licence",
+    "task": "W1-07",
+    "notes": "",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "LIC-04",
+    "software": "rFactor 2",
+    "use": "Circuit racing",
+    "commercial_route": "Commercial licence via info@motorsportgames.com.",
+    "cost": "By quote",
+    "status": "optional",
+    "allowed_for_paid_use": "yes_with_licence",
+    "task": "",
+    "notes": "",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "LIC-05",
+    "software": "FlightGear",
+    "use": "Flight (open source, GPL)",
+    "commercial_route": "Free; paid use is allowed.",
+    "cost": "Free",
+    "status": "available",
+    "allowed_for_paid_use": "yes",
+    "task": "F-02",
+    "notes": "",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "LIC-06",
+    "software": "FlyPT Mover",
+    "use": "Motion control",
+    "commercial_route": "Confirm commercial use with the developer (XSimulator forum).",
+    "cost": "To confirm",
+    "status": "to_confirm",
+    "allowed_for_paid_use": "unknown",
+    "task": "W1-07",
+    "notes": "",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "LIC-07",
+    "software": "Microsoft Flight Simulator 2024",
+    "use": "n/a",
+    "commercial_route": "No commercial licence available. Do not use for paid sessions.",
+    "cost": "n/a",
+    "status": "not_usable",
+    "allowed_for_paid_use": "no",
+    "task": "",
+    "notes": "",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "LIC-08",
+    "software": "Prepar3D",
+    "use": "n/a",
+    "commercial_route": "Licensed for training, explicitly not for entertainment.",
+    "cost": "n/a",
+    "status": "not_usable",
+    "allowed_for_paid_use": "no",
+    "task": "",
+    "notes": "",
+    "updated": "2026-11-07"
+  },
+  {
+    "id": "LIC-09",
+    "software": "Automobilista 2, EA WRC, DiRT Rally",
+    "use": "n/a",
+    "commercial_route": "No commercial licence found.",
+    "cost": "n/a",
+    "status": "not_usable",
+    "allowed_for_paid_use": "no",
+    "task": "",
+    "notes": "",
+    "updated": "2026-11-07"
+  }
+]
