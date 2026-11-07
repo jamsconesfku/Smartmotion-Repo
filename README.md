@@ -8,12 +8,10 @@ Knowledge base and launch dashboard for **SmartMotion** — 6-DOF full-motion fl
 
 ## Open the dashboard
 
-### On GitHub Pages (any device, including your phone)
-1. On GitHub, open the repo → **Settings** → **Pages**.
-2. Under **Build and deployment**, set **Source** to *Deploy from a branch*, **Branch** to `main` and folder `/ (root)`. Save.
-3. After a minute the site is at `https://jamsconesfku.github.io/Smartmotion-Repo/` (it redirects to the dashboard).
+**Private link (use this):** https://claude.ai/artifact/2UtrL6HCXVmKdrYJavCaME
+Only you can open it (sign in to claude.ai). Works on any device. Claude Code republishes it whenever the data changes.
 
-Notes: the branch must be merged into `main` first. GitHub Pages on a **private** repo needs a paid GitHub plan, and a Pages site is publicly visible either way.
+GitHub Pages isn't used because the repo is private and Pages on a private repo needs a paid GitHub plan (and would still publish the site openly).
 
 ### Locally
 ```bash

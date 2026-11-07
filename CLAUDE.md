@@ -10,6 +10,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - `docs/source/` — original PDFs/files, unchanged
 - `data/` — `tasks`, `contacts`, `licences`, `documents`, `decisions`, `milestones`, `changelog` (.json)
 - `dashboard/index.html` — single file, no build step, fetches `../data/*.json`
+- `scripts/build-artifact.sh` — builds the private claude.ai copy of the dashboard into `build/artifact/`
 
 ## Data conventions
 - Every record has `id`, `status`, `updated` (YYYY-MM-DD). Dates are ISO.
@@ -27,6 +28,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - **Git:** Sam wants every change committed and pushed straight to `main` (no feature branches or pull requests).
 - **Sam reports progress:** update the record(s) (status, notes, `updated`), add an entry at the end of `data/changelog.json` (`{date, summary, ids}`), commit with a clear message, push.
 - **Sam uploads a document:** put the original in `docs/source/`, summarise it into the right topic doc, add any new tasks/contacts/decisions to `data/`, update `data/documents.json`, log it.
+- **Republish the dashboard after any change to `data/` or `dashboard/`:** run `scripts/build-artifact.sh`, then publish `build/artifact/index.html` with the Artifact tool, `url` = https://claude.ai/artifact/2UtrL6HCXVmKdrYJavCaME, and `files` mapping each `data/<name>.json` to `build/artifact/data/<name>.json`. (`build/` is gitignored.) The repo is private, so GitHub Pages isn't available.
 - Validate JSON before committing: `for f in data/*.json; do python3 -m json.tool "$f" >/dev/null || echo "BAD $f"; done`
 - Preview locally: `python3 -m http.server` in the repo root, open `http://localhost:8000/dashboard/`.
 
@@ -34,4 +36,4 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Keep everything factual; mark assumptions clearly (e.g. P- task due dates are assumed 28 Feb 2027).
 - **Never mark a compliance item (ADIPS, insurance, licences, legal) done without Sam's explicit confirmation.**
 - Nothing paid runs until ADIPS DOC + insurance. Never charge on consumer-licensed software. Advertise by experience type, not game/aircraft brand names.
-- The GitHub Pages site is public if enabled on a public repo: don't put anything private (personal phone numbers, quotes, prices paid) in `data/` without Sam's OK.
+- Keep the repo private: it holds contacts and business documents.
