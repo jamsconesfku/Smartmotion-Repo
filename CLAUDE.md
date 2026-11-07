@@ -36,6 +36,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Preview locally: `python3 -m http.server` in the repo root, open `http://localhost:8000/dashboard/`.
 
 ## Rules
+- The dashboard's name is always **SmartMotion Dashboard** (page title, gallery name, and how to refer to it).
 - Branding: SmartMotion logo (`dashboard/assets/`), navy #02022F and orange #FF4C00. Orange is the brand accent; amber is kept only for "waiting"/"due soon" warnings.
 - Dashboard wording is plain English for a practical, non-technical reader: say what to do and why, avoid business and tech jargon (or add it to the glossary), keep it professional.
 - Keep everything factual; mark assumptions clearly (e.g. P- task due dates are assumed 28 Feb 2027).

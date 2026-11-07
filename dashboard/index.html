@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SmartMotion Launch Plan</title>
+<title>SmartMotion Dashboard</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="SmartMotion launch plan: what to do this week, what must be sorted before vouchers go on sale, contacts, software, paperwork and decisions.">
+<meta name="description" content="SmartMotion Dashboard: what to do this week, what must be sorted before vouchers go on sale, contacts, software, paperwork and decisions.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2302022f'/%3E%3Cpath d='M6 20c4-9 14-13 22-9-7-1-15 2-20 10z' fill='%23ff4c00'/%3E%3Cpath d='M26 13c-4 8-13 11-20 8 7 0 13-3 18-9z' fill='%23ffffff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -260,7 +260,7 @@ h1,h2,h3{font-family:var(--f-display);letter-spacing:.005em;text-wrap:balance;ma
       <div class="brand">
         <img class="logo l" src="assets/logo.png" alt="SmartMotion" width="600" height="240">
         <img class="logo d" src="assets/logo-dark.png" alt="SmartMotion" width="600" height="240">
-        <span id="asof">Launch plan</span>
+        <span id="asof">Dashboard</span>
       </div>
       <button class="themebtn" id="theme" type="button" aria-label="Switch between dark and light" title="Dark / light">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="7"/><path d="M10 3a7 7 0 000 14z" fill="currentColor"/></svg>
@@ -485,7 +485,7 @@ function renderHero(){
   $("#s-jobs").textContent = `${done} of ${active.length}`;
   $("#s-jobs-l").textContent = "jobs done (not counting ones on hold)";
   const last = D.changelog.map(c => c.date).sort().pop();
-  if (last) $("#asof").textContent = "Launch plan · " + pd(last).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+  if (last) $("#asof").textContent = "Dashboard · updated " + pd(last).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
 }
 
 function renderWeek(){

@@ -1,12 +1,12 @@
 # SmartMotion
 
-Knowledge base and launch dashboard for **SmartMotion** — 6-DOF full-motion flight and driving simulator experiences, Great Dunmow, Essex.
+Knowledge base and the **SmartMotion Dashboard** for SmartMotion — 6-DOF full-motion flight and driving simulator experiences, Great Dunmow, Essex.
 
 - **Dashboard:** `dashboard/index.html` — tasks, go-live gates, contacts, licences, documents, decisions and recent changes.
 - **Knowledge base:** `docs/` (start with [`docs/brief.md`](docs/brief.md)).
 - **Data:** `data/*.json` — the dashboard reads these; edit them (or ask Claude Code) to update it.
 
-## Open the dashboard
+## Open the SmartMotion Dashboard
 
 **Private link (use this):** https://claude.ai/artifact/2UtrL6HCXVmKdrYJavCaME
 Only you can open it (sign in to claude.ai). Works on any device. Claude Code republishes it whenever the data changes.
