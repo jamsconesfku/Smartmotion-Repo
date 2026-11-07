@@ -97,8 +97,16 @@ h1,h2,h3{font-family:var(--f-display);letter-spacing:.005em;text-wrap:balance;ma
 .job .t{font-weight:600;line-height:1.35;min-width:0;overflow-wrap:anywhere}
 .job.is-done .t{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
 .job .m{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:6px;font-size:13px;color:var(--muted);align-items:center}
-.chev{color:var(--muted);transition:transform .15s;margin-top:2px;font-size:20px;line-height:1}
-.job[open] .chev{transform:rotate(90deg)}
+.open-btn{display:inline-flex;align-items:center;gap:8px;padding:5px 5px 5px 12px;border-radius:99px;background:var(--ink);color:var(--bg);font-size:13px;font-weight:600;white-space:nowrap;box-shadow:0 2px 6px rgba(20,33,61,.18);transition:transform .15s,box-shadow .15s}
+.open-btn .dot{width:22px;height:22px;border-radius:50%;background:var(--amber);color:#14213d;display:grid;place-items:center;transition:transform .2s}
+.open-btn .dot svg{display:block}
+.open-btn .when-open{display:none}
+.job[open] .open-btn{background:var(--surface-2);color:var(--ink);box-shadow:none}
+.job[open] .open-btn .dot{transform:rotate(180deg)}
+.job[open] .open-btn .when-open{display:inline}
+.job[open] .open-btn .when-shut{display:none}
+.job>summary:hover .open-btn{transform:translateX(-2px);box-shadow:0 4px 10px rgba(20,33,61,.25)}
+.job>summary:active .open-btn{transform:scale(.96)}
 .job .body{padding:0 14px 14px 50px;display:grid;gap:10px;font-size:15px}
 .job .body h4{margin:0 0 2px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
 .job .body p{margin:0}
@@ -185,7 +193,7 @@ footer b{color:var(--ink)}
   .seg button{font-size:13px}
   .job .body{padding-left:14px}
 }
-@media (prefers-reduced-motion:reduce){.chev{transition:none}}
+@media (prefers-reduced-motion:reduce){.open-btn,.open-btn .dot{transition:none}}
 </style>
 </head>
 <body>
@@ -215,7 +223,7 @@ footer b{color:var(--ink)}
   <section class="sec" id="week">
     <div class="sec-h"><h2 id="week-h">This week's jobs</h2><p id="week-p"></p></div>
     <div class="jobs" id="week-list"></div>
-    <p class="hint">Tap a job to see why it matters and what it's waiting for. Words with a dotted underline are explained when you tap them.</p>
+    <p class="hint">Tap <b>Details</b> on any job to see why it matters and what it's waiting for. Words with a dotted underline are explained when you tap them.</p>
   </section>
 
   <section class="sec" id="gates">
@@ -346,7 +354,7 @@ function jobCard(t, opts = {}){
     <summary>
       <span class="tick ${tickCls}" aria-hidden="true">${t.status==="done"?"✓":""}</span>
       <span style="min-width:0"><span class="t">${terms(esc(t.title))}</span><span class="m">${meta}</span></span>
-      <span class="chev" aria-hidden="true">›</span>
+      <span class="open-btn" aria-hidden="true"><span class="when-shut">Details</span><span class="when-open">Close</span><span class="dot"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
     </summary>
     <div class="body">${body.join("")}</div>
   </details>`;
