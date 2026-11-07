@@ -40,6 +40,20 @@ s = re.sub(r'<!doctype html>\s*<html[^>]*>\s*<head>\s*', '', s, flags=re.I)
 s = re.sub(r'<meta charset[^>]*>\s*<meta name="viewport"[^>]*>\s*', '', s)
 s = re.sub(r'</head>\s*<body>\s*', '', s)
 s = re.sub(r'</body>\s*</html>\s*$', '', s)
+# Build the essentials into the page so it still works where the app blocks separate file requests
+# (phones showed "tasks.json could not be loaded (403)"): plan data, logos, model preview pictures.
+import base64, glob, json, os
+inline = {}
+for f in glob.glob("data/*.json"):
+    inline[f.replace(os.sep, "/")] = json.load(open(f, encoding="utf-8"))
+def uri(path):
+    return "data:image/png;base64," + base64.b64encode(open(path, "rb").read()).decode()
+for f in glob.glob("designs/*/v*/preview.png"):
+    inline[f.replace(os.sep, "/")] = uri(f)
+s = s.replace('src="assets/logo.png"', 'src="' + uri("dashboard/assets/logo.png") + '"')
+s = s.replace('src="assets/logo-dark.png"', 'src="' + uri("dashboard/assets/logo-dark.png") + '"')
+blob = json.dumps(inline, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+s = s.replace("<script>\n(function(){", "<script>window.__INLINE=" + blob + ";</script>\n<script>\n(function(){", 1)
 open(sys.argv[1], "w", encoding="utf-8").write(s)
 PY
 python3 - "$out" <<'PY'

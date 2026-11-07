@@ -527,7 +527,8 @@ function jobCard(t, opts = {}){
 /* Load */
 async function load(){
   try {
-    const res = await Promise.all(FILES.map(f => fetch(DATA + f + ".json", {cache:"no-store"}).then(r => { if(!r.ok) throw new Error(f + ".json could not be loaded (" + r.status + ")"); return r.json(); })));
+    const INL = window.__INLINE || {};
+    const res = await Promise.all(FILES.map(f => INL["data/" + f + ".json"] ? Promise.resolve(INL["data/" + f + ".json"]) : fetch(DATA + f + ".json", {cache:"no-store"}).then(r => { if(!r.ok) throw new Error(f + ".json could not be loaded (" + r.status + ")"); return r.json(); })));
     FILES.forEach((f,i) => D[f] = res[i]);
   } catch(e){
     $("#error").innerHTML = `<div class="err"><b>The plan couldn't be loaded.</b> ${esc(e.message)}. If this keeps happening, ask Claude to republish the dashboard.</div>`;
@@ -808,7 +809,7 @@ function renderLibrary(){
     </div>
     <div class="pcards">${list.map(d => { const v = latest(d), f = fitsAll(v);
       return `<button type="button" class="pcard" data-design="${esc(d.id)}">
-        <div class="img"><img src="${ROOT + esc(v.preview)}" alt="${esc(d.title)} preview" loading="lazy"></div>
+        <div class="img"><img src="${imgSrc(v.preview)}" alt="${esc(d.title)} preview" loading="lazy"></div>
         <div class="b"><b>${esc(d.title)}</b>
           <div class="meta">${pchip(d.status)}<span>${esc(d.category)}</span><span>· ${esc(v.v)}</span></div>
           <div class="meta"><span>${esc(sizeText(v))}</span></div>
@@ -823,6 +824,7 @@ function bindLibrary(){
   const qi = $("#pl-q");
   qi.oninput = e => { PF.q = e.target.value; const p = qi.selectionStart; renderPanel(); const n = $("#pl-q"); n.focus(); n.setSelectionRange(p,p); };
 }
+const imgSrc = path => (window.__INLINE && window.__INLINE[path]) || (ROOT + path);
 function openDesign(id){ curDesign = id; show("design"); }
 
 function renderDesign(){
@@ -880,7 +882,7 @@ function loadScript(src){ return new Promise((res, rej) => { if (document.queryS
 async function startViewer(){
   const host = $("#viewer"); if (!host) return;
   const token = {}; VW = {token};
-  const fallback = () => { if (VW && VW.token === token){ host.querySelector(".vload").innerHTML = `<img class="fallback" src="${ROOT + host.dataset.preview}" alt="Model preview">`; host.querySelector(".vhint").textContent = "3D view unavailable here: showing a picture instead"; } };
+  const fallback = () => { if (VW && VW.token === token){ host.querySelector(".vload").innerHTML = `<img class="fallback" src="${imgSrc(host.dataset.preview)}" alt="Model preview">`; host.querySelector(".vhint").textContent = "3D view unavailable here: showing a picture instead"; } };
   try {
     await loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js");
     await loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js");
