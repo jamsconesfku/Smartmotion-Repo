@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 out=build/artifact
 rm -rf "$out" && mkdir -p "$out/data"
 cp data/*.json "$out/data/"
+cp -r dashboard/assets "$out/assets"
 python3 - "$out/index.html" <<'PY'
 import re, sys
 s = open("dashboard/index.html", encoding="utf-8").read()

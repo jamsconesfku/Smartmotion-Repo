@@ -31,11 +31,12 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - **Git:** Sam wants every change committed and pushed straight to `main` (no feature branches or pull requests).
 - **Sam reports progress:** update the record(s) (status, notes, `updated`), add an entry at the end of `data/changelog.json` (`{date, summary, ids}`), commit with a clear message, push.
 - **Sam uploads a document:** put the original in `docs/source/`, summarise it into the right topic doc, add any new tasks/contacts/decisions to `data/`, update `data/documents.json`, log it.
-- **Republish the dashboard after any change to `data/` or `dashboard/`:** run `scripts/build-artifact.sh`, then publish `build/artifact/index.html` with the Artifact tool, `url` = https://claude.ai/artifact/2UtrL6HCXVmKdrYJavCaME, and `files` mapping each `data/<name>.json` to `build/artifact/data/<name>.json`. (`build/` is gitignored.) The repo is private, so GitHub Pages isn't available.
+- **Republish the dashboard after any change to `data/` or `dashboard/`:** run `scripts/build-artifact.sh`, then publish `build/artifact/index.html` with the Artifact tool, `url` = https://claude.ai/artifact/2UtrL6HCXVmKdrYJavCaME, and `files` mapping each `data/<name>.json` to `build/artifact/data/<name>.json` (plus `assets/logo.png` and `assets/logo-dark.png` when the logo changes). (`build/` is gitignored.) The repo is private, so GitHub Pages isn't available.
 - Validate JSON before committing: `for f in data/*.json; do python3 -m json.tool "$f" >/dev/null || echo "BAD $f"; done`
 - Preview locally: `python3 -m http.server` in the repo root, open `http://localhost:8000/dashboard/`.
 
 ## Rules
+- Branding: SmartMotion logo (`dashboard/assets/`), navy #02022F and orange #FF4C00. Orange is the brand accent; amber is kept only for "waiting"/"due soon" warnings.
 - Dashboard wording is plain English for a practical, non-technical reader: say what to do and why, avoid business and tech jargon (or add it to the glossary), keep it professional.
 - Keep everything factual; mark assumptions clearly (e.g. P- task due dates are assumed 28 Feb 2027).
 - **Never mark a compliance item (ADIPS, insurance, licences, legal) done without Sam's explicit confirmation.**
