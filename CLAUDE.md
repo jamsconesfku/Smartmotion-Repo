@@ -50,6 +50,10 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Register it in the dashboard: an entry in `VIEWS` with `g:"Games"`, a tile in `renderGames()`, and a `<script src="games/<file>.js">` tag. The site build copies `dashboard/games/` as is.
 - Save progress in `localStorage` under an `sm2:` key, wrapped in try/catch.
 
+## Versions
+- `VERSION` (repo root) is the dashboard's version, shown under the logo as `v1.1.0 · <commit>` (`version.json` is made by the site build). Bump the **minor** number for a new feature or section, the **patch** number for a fix or design tweak. Data-only updates (tasks, contacts, models) don't need a bump: the commit id shown beside the version already tells each deploy apart.
+- The badge beside it shows login status from Cloudflare Access: green "Signed in", red "No login protection" (Access isn't covering the address), grey "Local preview".
+
 ## Rules
 - The dashboard's name is always **SmartMotion Dashboard** (page title, gallery name, and how to refer to it).
 - Branding: SmartMotion logo (`dashboard/assets/`; run `python3 -I scripts/make_icons.py` after a logo change to refresh the phone icons), navy #02022F and orange #FF4C00. Orange is the brand accent; amber is kept only for "waiting"/"due soon" warnings.

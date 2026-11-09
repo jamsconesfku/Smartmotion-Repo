@@ -80,8 +80,17 @@ h1,h2,h3{font-family:var(--f-display);letter-spacing:.005em;text-wrap:balance;ma
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
 .brand{flex-direction:column;align-items:flex-start;gap:2px}
 .brand .logo{display:block;width:150px;height:auto;max-width:100%}
+.statusline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:6px;max-width:100%;font-size:12px}
+.access{display:inline-flex;align-items:center;gap:6px;max-width:100%;min-width:0;padding:3px 10px 3px 8px;border-radius:99px;font-weight:600;background:var(--grey-soft);color:var(--grey)}
+.access i{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.access span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.access.ok{background:var(--green-soft);color:var(--green)}
+.access.out{background:var(--amber-soft);color:var(--amber-ink)}
+.access.open{background:var(--red-soft);color:var(--red)}
+.statusline a{color:var(--blue);font-weight:600;text-decoration:none}
+.ver{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .brand .logo.l{display:var(--logo-light)} .brand .logo.d{display:var(--logo-dark)}
-.brand span{display:block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.brand #asof{display:block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .themebtn{flex:none;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;color:var(--ink)}
 .nav{position:sticky;top:env(safe-area-inset-top, 0px);z-index:5;background:var(--bg);display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px))}
 .nav::-webkit-scrollbar{display:none}
@@ -342,6 +351,11 @@ a.btn-primary{text-decoration:none}
         <img class="logo l" src="assets/logo.png" alt="SmartMotion" width="600" height="240">
         <img class="logo d" src="assets/logo-dark.png" alt="SmartMotion" width="600" height="240">
         <span id="asof">Dashboard</span>
+        <div class="statusline">
+          <span class="access" id="access" role="status" aria-live="polite"><i></i><span>Checking login…</span></span>
+          <a id="signout" href="/cdn-cgi/access/logout" hidden>Sign out</a>
+          <span class="ver" id="ver" title="Dashboard version">v…</span>
+        </div>
       </div>
       <button class="themebtn" id="theme" type="button" aria-label="Switch between dark and light" title="Dark / light">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="7"/><path d="M10 3a7 7 0 000 14z" fill="currentColor"/></svg>
@@ -1030,6 +1044,41 @@ document.addEventListener("click", e => {
     if (el){ el.open = true; el.scrollIntoView({behavior:"smooth", block:"center"}); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1800); }
   }
 });
+
+/* Login status (Cloudflare Access) and version. Both are only informational. */
+function setAccess(cls, text, title){
+  const el = $("#access"); el.className = "access " + cls; el.title = title || "";
+  el.querySelector("span").textContent = text;
+  $("#signout").hidden = cls !== "ok";
+}
+async function checkAccess(){
+  if (/^(localhost|127\.|192\.168\.|10\.|\[::1\])/.test(location.hostname)){ setAccess("", "Local preview", "You are not on the live website, so there is no login here."); return; }
+  try {
+    const r = await fetch("/cdn-cgi/access/get-identity", {credentials:"include", cache:"no-store"});
+    const type = r.headers.get("content-type") || "";
+    if (r.ok && type.includes("json")){
+      const who = await r.json();
+      const name = who.email || who.name || "you";
+      setAccess("ok", "Signed in · " + name, "Cloudflare Access login is active. Signed in as " + name + ".");
+    } else if (r.status === 401 || r.status === 403){
+      setAccess("out", "Session ended: reload to sign in", "Your login has expired. Reload the page to sign in again.");
+    } else {
+      setAccess("open", "No login protection", "Cloudflare Access is not in front of this address, so anyone with the link can open this site.");
+    }
+  } catch(e){ setAccess("", "Login status unknown", "Couldn't check the login. Check your connection."); }
+}
+async function showVersion(){
+  const el = $("#ver");
+  try {
+    const r = await fetch(ROOT + "version.json", {cache:"no-store"}); if (!r.ok) throw new Error("none");
+    const v = await r.json();
+    el.textContent = "v" + v.version + (v.commit ? " · " + v.commit : "");
+    el.title = "Dashboard version " + v.version + (v.commit ? ", build " + v.commit : "") + (v.built ? ", built " + new Date(v.built).toLocaleString("en-GB") : "");
+  } catch(e){ el.textContent = "dev build"; el.title = "Local preview, not a numbered release"; }
+}
+showVersion(); checkAccess();
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checkAccess(); });
+setInterval(() => { if (!document.hidden) checkAccess(); }, 300000);
 
 load();
 })();

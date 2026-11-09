@@ -28,7 +28,7 @@ Cloudflare's login for this is **Cloudflare Access**, which is part of **Zero Tr
 3. Under **Public hostname**, delete the `*` from the **Subdomain** field and **Save** (rename the application if it complains). It now protects `smartmotion-dashboard.pages.dev`.
 4. Edit the policy so only your email (and anyone you choose) is allowed.
 5. Back on the Pages project, press **Enable access policy** again so previews are protected too. You should now see two Access applications: one for the main address and one for previews.
-6. Test in a private browser window: the main address should ask you to sign in.
+6. Test in a private browser window: the main address should ask you to sign in. Once signed in, the badge under the logo shows green **Signed in · your email**. A red **No login protection** badge means Access is not covering that address.
 
 If you add a custom domain later, it needs its own self-hosted Access application.
 

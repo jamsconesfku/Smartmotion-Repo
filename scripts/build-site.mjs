@@ -5,6 +5,7 @@
 // No dependencies. Only the folders listed below reach the internet: nothing from docs/ (business plan,
 // PDFs) or the design source code is published.
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -25,6 +26,13 @@ writeFileSync(join(dist, "index.html"), html);
 for (const d of ["assets", "games"]) cpSync(join(root, "dashboard", d), join(dist, d), { recursive: true });
 cpSync(join(root, "dashboard", "manifest.webmanifest"), join(dist, "manifest.webmanifest"));
 cpSync(join(root, "site"), dist, { recursive: true });            // _headers, robots.txt
+
+// Version shown on screen: VERSION file (bumped by hand for real changes) plus the commit that was built.
+const version = readFileSync(join(root, "VERSION"), "utf8").trim();
+if (!/^\d+\.\d+\.\d+$/.test(version)) fail(`VERSION must look like 1.2.3 but is "${version}"`);
+let commit = (process.env.CF_PAGES_COMMIT_SHA || "").slice(0, 7);
+if (!commit) { try { commit = execSync("git rev-parse --short=7 HEAD", { cwd: root, stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch { commit = ""; } }
+writeFileSync(join(dist, "version.json"), JSON.stringify({ version, commit, built: new Date().toISOString() }));
 
 // 2. The plan data. A broken file would give a blank site, so stop the deploy instead.
 cpSync(join(root, "data"), join(dist, "data"), { recursive: true });
@@ -60,4 +68,4 @@ for (const d of designs) for (const v of d.versions) {
 }
 
 const size = (dir) => readdirSync(dir, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? size(join(dir, e.name)) : statSync(join(dir, e.name)).size), 0);
-console.log(`Built dist/ (${(size(dist) / 1048576).toFixed(1)} MB): ${designs.length} models, ${files} model files checked.`);
+console.log(`Version ${version}${commit ? " (" + commit + ")" : ""}. Built dist/ (${(size(dist) / 1048576).toFixed(1)} MB): ${designs.length} models, ${files} model files checked.`);

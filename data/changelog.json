@@ -25,5 +25,10 @@
     "date": "2026-11-09",
     "summary": "Dashboard rebuilt as a website for Cloudflare Pages: app icon and phone home-screen support, normal file downloads, and a build that checks the data before every deploy.",
     "ids": []
+  },
+  {
+    "date": "2026-11-09",
+    "summary": "Version 1.1.0: the dashboard now shows whether you're signed in (and warns in red if the website has no login protection), and shows its version number under the logo.",
+    "ids": []
   }
 ]
