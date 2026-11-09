@@ -4,8 +4,8 @@ extends Node3D
 ## villages, woods, clouds, a blimp and the gate course. Everything is built from code.
 
 const TOD := {
-	"day": {"el": 46.0, "az": 205.0, "sun": Color(1, 0.96, 0.88), "top": Color(0.14, 0.36, 0.78), "hor": Color(0.74, 0.84, 0.95), "amb": 0.9, "sun_e": 1.5, "fog": 0.000045},
-	"golden": {"el": 9.0, "az": 252.0, "sun": Color(1, 0.62, 0.32), "top": Color(0.12, 0.2, 0.5), "hor": Color(0.97, 0.74, 0.56), "amb": 0.7, "sun_e": 1.6, "fog": 0.00007},
+	"day": {"el": 46.0, "az": 205.0, "sun": Color(1, 0.96, 0.88), "top": Color(0.14, 0.36, 0.78), "hor": Color(0.74, 0.84, 0.95), "amb": 0.9, "sun_e": 1.6, "fog": 0.000034, "shade": Color(0.6, 0.66, 0.77)},
+	"golden": {"el": 9.0, "az": 252.0, "sun": Color(1, 0.62, 0.32), "top": Color(0.12, 0.2, 0.5), "hor": Color(0.97, 0.74, 0.56), "amb": 0.7, "sun_e": 1.7, "fog": 0.00006, "shade": Color(0.55, 0.45, 0.52)},
 }
 
 var terrain: Terrain
@@ -51,7 +51,7 @@ func build(progress: Callable, quality_: String, tod: String) -> void:
 	_scenery()
 	progress.call(0.92, "Hanging the signs")
 	await _signs()
-	_clouds()
+	await _clouds()
 	_blimp()
 	_gates()
 	set_time_of_day(tod)
@@ -69,20 +69,28 @@ func _environment() -> void:
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_sky_contribution = 1.0
+	sky.radiance_size = Sky.RADIANCE_SIZE_256
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.tonemap_white = 8.0
+	env.tonemap_exposure = 1.05
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
 	env.fog_sky_affect = 0.0
+	env.fog_aerial_perspective = 0.35   # distant land takes on the colour of the sky behind it
+	env.fog_sun_scatter = 0.12
 	env.glow_enabled = true
-	env.glow_intensity = 0.5
-	env.glow_bloom = 0.04
+	env.glow_intensity = 0.6
+	env.glow_bloom = 0.05
+	env.glow_hdr_threshold = 1.1
 	env.ssao_enabled = quality != "low"
 	env.ssao_radius = 2.5
-	env.ssao_intensity = 1.4
+	env.ssao_intensity = 1.6
+	env.ssil_enabled = quality == "high"   # light bouncing between nearby surfaces
+	env.ssil_radius = 6.0
+	env.ssil_intensity = 0.8
 	env.adjustment_enabled = true
-	env.adjustment_saturation = 1.12
-	env.adjustment_contrast = 1.05
+	env.adjustment_saturation = 1.16
+	env.adjustment_contrast = 1.08
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -91,6 +99,7 @@ func _environment() -> void:
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 	sun.directional_shadow_max_distance = 3500.0
 	sun.directional_shadow_blend_splits = true
+	sun.light_angular_distance = 0.5 if quality == "high" else 0.0   # soft shadow edges
 	sun.shadow_bias = 0.05
 	sun.shadow_normal_bias = 1.5
 	add_child(sun)
@@ -110,9 +119,13 @@ func set_time_of_day(name: String) -> void:
 	env.fog_light_color = t["hor"]
 	env.fog_density = t["fog"]
 	env.ambient_light_energy = t["amb"]
-	var tint: Color = Color(minf(1.0, t["hor"].r + 0.15), minf(1.0, t["hor"].g + 0.12), minf(1.0, t["hor"].b + 0.1))
 	if cloud_mat != null:
-		cloud_mat.albedo_color = tint
+		var tint: Color = Color(1, 1, 1).lerp(t["sun"], 0.35)
+		var sh: Color = t["shade"]
+		cloud_mat.set_shader_parameter("tint", Vector3(tint.r, tint.g, tint.b))
+		cloud_mat.set_shader_parameter("shade", Vector3(sh.r, sh.g, sh.b))
+		cloud_mat.set_shader_parameter("sun_col", Vector3(t["sun"].r, t["sun"].g, t["sun"].b))
+		cloud_mat.set_shader_parameter("sun_dir", sd)
 
 
 # ---------------------------------------------------------------- ground
@@ -660,7 +673,7 @@ func _runway_decal() -> void:
 
 
 # ---------------------------------------------------------------- scenery
-var cloud_mat: StandardMaterial3D
+var cloud_mat: ShaderMaterial
 
 
 func _in_road(p: Vector2, pad: float) -> bool:
@@ -744,61 +757,166 @@ func _scenery() -> void:
 	hmi.material_override = hmat
 	hmi.visibility_range_end = 9000.0
 	add_child(hmi)
+	# trees in hedgerows and small copses across the farmland (kept off the airfield, roads and villages)
+	var n_field := int(3200 * q)
+	var tries := 0
+	while n_field > 0 and tries < 40000:
+		tries += 1
+		var c := Vector2((rng.randf() - 0.5) * 14000.0, (rng.randf() - 0.5) * 14000.0)
+		var ru := terrain.to_runway(c.x, c.y)
+		if absf(ru.x) < Terrain.RW_LEN / 2.0 + 350.0 and ru.y > -480.0 and ru.y < 330.0:
+			continue
+		var in_v := false
+		for v2 in Terrain.VILLAGES:
+			if c.distance_to(Vector2(v2["x"], v2["z"])) < float(v2["r"]) * 0.9:
+				in_v = true
+		if in_v or _in_road(c, 10.0):
+			continue
+		var cnt := 1 if rng.randf() < 0.55 else 2 + rng.randi() % 9
+		var line := rng.randf() < 0.5   # a hedgerow line or a round copse
+		var dirv := Vector2.from_angle(rng.randf() * TAU)
+		for k2 in cnt:
+			var off := dirv * (float(k2) * (9.0 + rng.randf() * 6.0)) if line else Vector2((rng.randf() - 0.5), (rng.randf() - 0.5)) * 12.0 * sqrt(float(cnt))
+			trees.append([c.x + off.x, c.y + off.y, 4.0 + rng.randf() * 3.0, 9.0 + rng.randf() * 8.0])
+			n_field -= 1
+	var leafy: Array = []
+	var pines: Array = []
+	for t in trees:
+		(pines if rng.randf() < 0.22 else leafy).append(t)
+	_tree_set(_leafy_mesh(), leafy, rng, 0.55, Color(0.16, 0.32, 0.11), Color(0.30, 0.46, 0.16))
+	_tree_set(_pine_mesh(), pines, rng, 0.42, Color(0.09, 0.22, 0.10), Color(0.16, 0.32, 0.14))
+
+
+func _tree_set(mesh: Mesh, items: Array, rng: RandomNumberGenerator, width: float, c0: Color, c1: Color) -> void:
 	var tm := MultiMesh.new()
 	tm.transform_format = MultiMesh.TRANSFORM_3D
 	tm.use_colors = true
-	var cone := CylinderMesh.new()
-	cone.top_radius = 0.0
-	cone.bottom_radius = 0.5
-	cone.height = 1.0
-	cone.radial_segments = 7
-	cone.rings = 1
-	tm.mesh = cone
-	tm.instance_count = trees.size()
-	for i in trees.size():
-		var t: Array = trees[i]
-		var b2 := Basis.from_euler(Vector3(0, rng.randf() * 6.0, 0)).scaled(Vector3(t[2], t[3], t[2]))
-		tm.set_instance_transform(i, Transform3D(b2, Vector3(t[0], terrain.height(t[0], t[1]) + t[3] * 0.5 - 0.5, t[1])))
-		tm.set_instance_color(i, Color(0.1 + rng.randf() * 0.1, 0.28 + rng.randf() * 0.18, 0.1 + rng.randf() * 0.08).srgb_to_linear())
+	tm.mesh = mesh
+	tm.instance_count = items.size()
+	for i in items.size():
+		var t: Array = items[i]
+		var h: float = t[3]
+		var wd: float = maxf(float(t[2]), h * width) * (0.85 + rng.randf() * 0.3)
+		var b2 := Basis.from_euler(Vector3((rng.randf() - 0.5) * 0.06, rng.randf() * TAU, (rng.randf() - 0.5) * 0.06)).scaled(Vector3(wd, h, wd))
+		tm.set_instance_transform(i, Transform3D(b2, Vector3(t[0], terrain.height(t[0], t[1]) - 0.3, t[1])))
+		tm.set_instance_color(i, c0.lerp(c1, rng.randf()).srgb_to_linear() * (0.85 + rng.randf() * 0.3))
 	var tmi := MultiMeshInstance3D.new()
 	tmi.multimesh = tm
 	var tmat := StandardMaterial3D.new()
 	tmat.vertex_color_use_as_albedo = true
 	tmat.roughness = 1.0
+	tmat.diffuse_mode = BaseMaterial3D.DIFFUSE_LAMBERT_WRAP   # softer, leafier light
+	tmat.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 	tmi.material_override = tmat
-	tmi.visibility_range_end = 7000.0
+	tmi.visibility_range_end = 9000.0
+	tmi.visibility_range_end_margin = 1500.0
+	tmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	add_child(tmi)
 
 
-func _clouds() -> void:
-	var img := Image.create_empty(128, 128, false, Image.FORMAT_RGBA8)
+func _blob(k: MeshKit, c: Vector3, r: Vector3, seg: int, rings: int, rng: RandomNumberGenerator, top_col: Color, bot_col: Color) -> void:
+	# a lumpy, smooth-shaded ball; vertex colours darken towards the underside (fake self-shadow)
+	var pts: Array = []
+	for j in rings + 1:
+		var row: Array = []
+		var th := PI * float(j) / float(rings)
+		for i in seg:
+			var ph := TAU * float(i) / float(seg)
+			var n := Vector3(sin(th) * cos(ph), cos(th), sin(th) * sin(ph))
+			var bump := 1.0 + (rng.randf() - 0.5) * 0.22 if j > 0 and j < rings else 1.0
+			row.append([c + n * r * bump, n])
+		pts.append(row)
+	for j in rings:
+		for i in seg:
+			var i2 := (i + 1) % seg
+			var q4 := [pts[j][i], pts[j][i2], pts[j + 1][i2], pts[j + 1][i]]
+			var cols: Array = []
+			for v in q4:
+				cols.append(bot_col.lerp(top_col, clampf(v[1].y * 0.5 + 0.55, 0.0, 1.0)))
+			k.add_smooth_tri(q4[0][0], q4[1][0], q4[2][0], q4[0][1], q4[1][1], q4[2][1], cols[0], cols[1], cols[2])
+			k.add_smooth_tri(q4[0][0], q4[2][0], q4[3][0], q4[0][1], q4[2][1], q4[3][1], cols[0], cols[2], cols[3])
+
+
+func _trunk(k: MeshKit, h: float, r: float) -> void:
+	var col := Color(0.55, 0.42, 0.3)
+	for i in 5:
+		var a0 := TAU * i / 5.0
+		var a1 := TAU * (i + 1) / 5.0
+		var p0 := Vector3(cos(a0), 0, sin(a0)) * r
+		var p1 := Vector3(cos(a1), 0, sin(a1)) * r
+		var n := Vector3(cos((a0 + a1) / 2.0), 0, sin((a0 + a1) / 2.0))
+		k.add_quad(p0, p1, p1 * 0.6 + Vector3(0, h, 0), p0 * 0.6 + Vector3(0, h, 0), n, col)
+
+
+func _leafy_mesh() -> ArrayMesh:
+	# a broadleaf tree (oak/ash style): short trunk and a crown of three overlapping lumps, 1 unit tall
 	var rng := RandomNumberGenerator.new()
-	rng.seed = 9
-	var blobs: Array = []
-	for i in 9:
-		blobs.append([40.0 + rng.randf() * 48.0, 50.0 + rng.randf() * 28.0, 18.0 + rng.randf() * 20.0])
-	for y in 128:
-		for x in 128:
-			var a := 0.0
-			for b in blobs:
-				var d := Vector2(x - float(b[0]), y - float(b[1])).length() / float(b[2])
-				if d < 1.0:
-					a += 0.55 * (1.0 - d) * (1.0 - d)
-			img.set_pixel(x, y, Color(1, 1, 1, clampf(a, 0.0, 1.0)))
-	var tex := ImageTexture.create_from_image(img)
-	cloud_mat = StandardMaterial3D.new()
-	cloud_mat.albedo_texture = tex
-	cloud_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	cloud_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	cloud_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	cloud_mat.billboard_keep_scale = true
-	cloud_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	cloud_mat.disable_fog = true
+	rng.seed = 3
+	var k := MeshKit.new()
+	_trunk(k, 0.4, 0.06)
+	var top := Color(1, 1, 1)
+	var bot := Color(0.45, 0.5, 0.45)
+	_blob(k, Vector3(0, 0.62, 0), Vector3(0.5, 0.36, 0.5), 9, 6, rng, top, bot)
+	_blob(k, Vector3(0.18, 0.74, 0.1), Vector3(0.32, 0.26, 0.32), 8, 5, rng, top, bot)
+	_blob(k, Vector3(-0.16, 0.7, -0.14), Vector3(0.3, 0.26, 0.3), 8, 5, rng, top, bot)
+	return k.build()
+
+
+func _pine_mesh() -> ArrayMesh:
+	# a conifer: three stacked cones, 1 unit tall
+	var k := MeshKit.new()
+	_trunk(k, 0.25, 0.05)
+	var tiers := [[0.15, 0.55, 0.5], [0.42, 0.8, 0.38], [0.66, 1.0, 0.25]]
+	for t in tiers:
+		var y0: float = t[0]
+		var y1: float = t[1]
+		var r: float = t[2]
+		for i in 8:
+			var a0 := TAU * i / 8.0
+			var a1 := TAU * (i + 1) / 8.0
+			var p0 := Vector3(cos(a0) * r, y0, sin(a0) * r)
+			var p1 := Vector3(cos(a1) * r, y0, sin(a1) * r)
+			var tip := Vector3(0, y1, 0)
+			var am := (a0 + a1) / 2.0
+			var n := Vector3(cos(am), r / (y1 - y0), sin(am)).normalized()
+			k.add_smooth_tri(p0, p1, tip, Vector3(cos(a0), n.y, sin(a0)).normalized(), Vector3(cos(a1), n.y, sin(a1)).normalized(), Vector3(0, 1, 0), Color(0.55, 0.6, 0.55), Color(0.55, 0.6, 0.55), Color(1, 1, 1))
+	return k.build()
+
+
+func _cloud_atlas() -> Texture2D:
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://shaders/cloud_paint.gdshader")
+	var vp := SubViewport.new()
+	vp.size = Vector2i(1024, 1024)
+	vp.disable_3d = true
+	vp.transparent_bg = true
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	var rect := ColorRect.new()
+	rect.size = Vector2(1024, 1024)
+	rect.material = mat
+	vp.add_child(rect)
+	add_child(vp)
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	var img := vp.get_texture().get_image()
+	vp.queue_free()
+	if img == null or img.is_empty():
+		img = Image.create_empty(16, 16, false, Image.FORMAT_RGBA8)
+		img.fill(Color(1, 1, 1, 0))
+	img.generate_mipmaps()
+	return ImageTexture.create_from_image(img)
+
+
+func _clouds() -> void:
+	cloud_mat = ShaderMaterial.new()
+	cloud_mat.shader = load("res://shaders/cloud.gdshader")
+	cloud_mat.set_shader_parameter("atlas", await _cloud_atlas())
 	var quad := QuadMesh.new()
-	quad.size = Vector2(1, 0.55)
-	var n: int = {"low": 40, "medium": 90, "high": 140}.get(quality, 90)
+	quad.size = Vector2(1, 1)
+	var n: int = {"low": 40, "medium": 90, "high": 150}.get(quality, 90)
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_custom_data = true
 	mm.mesh = quad
 	var items: Array = []
 	var r2 := RandomNumberGenerator.new()
@@ -806,14 +924,19 @@ func _clouds() -> void:
 	for i in n:
 		var cx := (r2.randf() - 0.5) * 30000.0
 		var cz := (r2.randf() - 0.5) * 30000.0
-		var cy := 1100.0 + r2.randf() * 700.0
-		var k := 3 + int(floor(r2.randf() * 4.0))
+		var cy := 1050.0 + r2.randf() * 650.0
+		var size := 0.7 + r2.randf() * 0.8
+		# each cloud is a few overlapping cards: a wide base and smaller tops
+		var k := 4 + int(floor(r2.randf() * 4.0))
 		for j in k:
-			var w := 350.0 + r2.randf() * 550.0
-			items.append([Vector3(cx + (r2.randf() - 0.5) * 700.0, cy + (r2.randf() - 0.5) * 80.0, cz + (r2.randf() - 0.5) * 700.0), w])
+			var up := float(j) / float(k)
+			var w := (520.0 + r2.randf() * 420.0) * size * (1.0 - up * 0.45)
+			var spread := 520.0 * size * (1.0 - up * 0.5)
+			items.append([Vector3(cx + (r2.randf() - 0.5) * spread, cy + up * 160.0 * size + w * 0.22, cz + (r2.randf() - 0.5) * spread), w, float(r2.randi() % 4)])
 	mm.instance_count = items.size()
 	for i in items.size():
 		mm.set_instance_transform(i, Transform3D(Basis.IDENTITY.scaled(Vector3(items[i][1], items[i][1], 1.0)), items[i][0]))
+		mm.set_instance_custom_data(i, Color(items[i][2], 0, 0, 0))
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
 	mmi.material_override = cloud_mat

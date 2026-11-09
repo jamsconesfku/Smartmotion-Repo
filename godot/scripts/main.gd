@@ -1,7 +1,7 @@
 extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 
-const APP_VERSION := "1.3.5"
+const APP_VERSION := "1.4.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -45,6 +45,7 @@ var xr_right: XRController3D
 var vr_label: Label3D
 var vr_frames := 0
 var vr_edge := {}
+var focus_hint_t := 0.0
 
 
 func _ready() -> void:
@@ -230,6 +231,8 @@ func start_flight() -> void:
 	_apply_view()
 	cam_init = false
 	throttle = float(pose.get("throttle", 0.0))
+	if fm.assist and fm.i["on_ground"]:
+		throttle = 1.0   # Easy mode: full power is set for you, so the aircraft speeds up straight away
 	flaps_idx = 0
 	trim = 0.0
 	kb = {"pitch": 0.0, "roll": 0.0, "yaw": 0.0}
@@ -243,8 +246,10 @@ func start_flight() -> void:
 	ui.show_pause(false)
 	ui.adi.visible = cam_mode != "cockpit" and not vr_active
 	ui.set_message("", false)
-	if fm.i["on_ground"]:
-		_toast("Full power, then pull back at about %d knots" % int(fm.spec["vr"] * 1.12 * KT), 4.5)
+	if fm.i["on_ground"] and fm.assist:
+		_toast("Full power is on. At %d knots hold S to lift off. W/S nose, A/D turn, Shift/Ctrl power" % int(fm.spec["vr"] * 1.12 * KT), 6.0)
+	elif fm.i["on_ground"]:
+		_toast("Hold Shift for full power, then hold S at about %d knots" % int(fm.spec["vr"] * 1.12 * KT), 5.0)
 	elif gate["active"]:
 		_toast("Fly through the orange gates as fast as you can", 4.0)
 
@@ -393,7 +398,7 @@ func _read_input(dt: float) -> void:
 	inp["roll"] = clampf(kb["roll"] + roll, -1.0, 1.0)
 	inp["yaw"] = clampf(kb["yaw"] + yaw, -1.0, 1.0)
 	thr_axis += (_k(KEY_SHIFT) + _k(KEY_PAGEUP) + _k(KEY_X)) - (_k(KEY_CTRL) + _k(KEY_PAGEDOWN) + _k(KEY_Z))
-	throttle = clampf(throttle + thr_axis * 0.35 * dt, 0.0, 1.0)
+	throttle = clampf(throttle + thr_axis * 0.9 * dt, 0.0, 1.0)   # 0 to full power in about a second
 	inp["throttle"] = throttle
 	inp["brake"] = maxf(maxf(_k(KEY_SPACE), _k(KEY_B)), brake)
 	inp["flaps"] = flaps_idx / 2.0
@@ -437,6 +442,7 @@ func _start_vr() -> bool:
 	vr_active = true
 	vr_frames = 0
 	world.env.ssao_enabled = false
+	world.env.ssil_enabled = false
 	xr_origin = XROrigin3D.new()
 	xr_cam = XRCamera3D.new()
 	xr_cam.near = 0.05
@@ -470,7 +476,9 @@ func _start_vr() -> bool:
 		plane.add_child(xr_origin)
 	xr_cam.current = true
 	_apply_view()
-	ui.toast("VR started. Sit upright, then press B to recentre the view.", 5.0)
+	DisplayServer.window_move_to_foreground()
+	Diag.write("VR started; window focused for the keyboard: %s" % str(DisplayServer.window_is_focused()))
+	ui.toast("VR started. Sit upright, then press B (or V) to recentre the view.", 5.0)
 	return true
 
 
@@ -487,6 +495,7 @@ func _stop_vr() -> void:
 		xr_origin = null
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
 	world.env.ssao_enabled = quality != "low"
+	world.env.ssil_enabled = quality == "high"
 	cam.current = true
 
 
@@ -497,6 +506,7 @@ func _read_vr() -> Dictionary:
 	var r := xr_right.get_vector2("primary")
 	out["roll"] = _dz(r.x)
 	out["pitch"] = -_dz(r.y)
+	out["thr"] = xr_right.get_float("trigger") - xr_right.get_float("grip")   # right trigger more power, right grip less
 	if _edge("vA", xr_right.is_button_pressed("ax_button")):
 		flaps_idx = (flaps_idx + 1) % 3
 		_toast("Flaps " + ["up", "half", "full"][flaps_idx])
@@ -505,7 +515,7 @@ func _read_vr() -> Dictionary:
 	if xr_left != null and xr_left.get_is_active():
 		var l := xr_left.get_vector2("primary")
 		out["yaw"] = _dz(l.x)
-		out["thr"] = _dz(l.y)
+		out["thr"] += _dz(l.y)
 		out["brake"] = xr_left.get_float("trigger")
 		if _edge("vX", xr_left.is_button_pressed("ax_button")):
 			_pause(not paused)
@@ -558,6 +568,11 @@ func _process(delta: float) -> void:
 	_place_plane(0.0 if paused else dt)
 	_update_camera(dt)
 	world.update_world(dt, cam.global_position if not vr_active else xr_cam.global_position)
+	if vr_active and state == "fly":
+		focus_hint_t -= dt
+		if focus_hint_t <= 0.0 and not DisplayServer.window_is_focused():
+			focus_hint_t = 12.0
+			_toast("Keyboard not connected: click the game window on the laptop once", 4.0)
 	if state == "fly":
 		_update_hud()
 		instr_t += dt

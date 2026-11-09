@@ -27,13 +27,15 @@ VR ON A META QUEST 3
   5. Sit upright and press B on the right controller (or V on the keyboard) to recentre.
   You can fly with the keyboard while wearing the headset: click the game window on the laptop once
   BEFORE putting the headset on, and don't click anywhere else afterwards.
-  Controls: right stick = pitch and roll, left stick = power and rudder, left trigger = brakes,
-  A = flaps, B = recentre, X = pause, Y = restart.
+  Controls: right stick = pitch and roll, right trigger / grip = more / less power,
+  left stick = power and rudder, left trigger = brakes, A = flaps, B = recentre, X = pause, Y = restart.
+  If the keyboard does nothing in VR, the game shows a message: click the game window on the laptop once.
 
 CONTROLS (keyboard)
-  Up/Down (W/S) pitch, Left/Right (A/D) roll, Q/E rudder, Shift/Ctrl power (or keys 1-0), Space brakes,
+  W/S nose down/up, A/D bank to turn (arrow keys also work), Shift/Ctrl power (or keys 1-0), Q/E rudder, Space brakes,
   F flaps, V camera, P or Esc pause, R restart, T telemetry panel, M sound, F11 full screen.
   Gamepads work too (right stick, left stick, triggers).
+  Easy mode (the default) sets full power on the runway for you: hold S at take-off speed to lift off.
 
 SEND MOTION DATA TO THE SIMULATOR RIG
   Settings > Motion rig > On. The game sends the flight data 60 times a second as JSON over UDP to the

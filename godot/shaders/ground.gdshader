@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode cull_back, diffuse_burley, specular_disabled;
+render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 // The ground: a ring mesh that follows the aircraft; heights come from one texture, colour from the painted maps.
 uniform sampler2D heightmap : filter_linear, repeat_enable;
 uniform sampler2D near_map : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
@@ -41,14 +41,23 @@ void fragment() {
 	vec3 col = mix(fc.rgb, nc.rgb, w);
 	float dist = length(v_world - CAMERA_POSITION_WORLD);
 	float fade = 1.0 - smoothstep(150.0, 1800.0, dist);
+	// detail at three scales: broad patches (stops fields looking flat), mid texture, and fine grain up close
+	float macro = texture(detail_tex, v_world.xz / 230.0).r;
+	col *= 1.0 + (macro - 0.5) * 0.28;
 	float dn = texture(detail_tex, v_world.xz / 11.0).r;
 	col *= 1.0 + (dn - 0.5) * 0.5 * fade;
+	float fine = texture(detail_tex, v_world.xz / 1.7).r;
+	col *= 1.0 + (fine - 0.5) * 0.45 * (1.0 - smoothstep(20.0, 260.0, dist));
 	float a = nc.a * w;
 	if (a > 0.01 && dist < 520.0) {
 		float ang = a * 6.2831;
 		float s = sin(dot(v_world.xz, vec2(cos(ang), sin(ang))) * 6.2831 / 3.2);
 		col *= 1.0 + 0.08 * s * (1.0 - smoothstep(60.0, 520.0, dist));
 	}
+	// water (the river) is blue-ish in the painted map: make it shiny so it reflects the sky and sun
+	float water = smoothstep(0.06, 0.12, col.b - col.g);
 	ALBEDO = col;
-	ROUGHNESS = 0.95;
+	ROUGHNESS = mix(0.95, 0.08, water);
+	SPECULAR = mix(0.15, 0.5, water);
+	METALLIC = 0.0;
 }

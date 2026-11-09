@@ -42,5 +42,12 @@
     "ids": [
       "F-02"
     ]
+  },
+  {
+    "date": "2026-11-09",
+    "summary": "Version 1.4.0: Sam flew the native game in VR on the Quest 3 for the first time; it worked but was hard to control. Flying is now easier (Easy mode sets full power on the runway, power keys respond three times faster, WASD flies in VR too, the right trigger adds power on the Quest controller) and the graphics are better (puffy clouds, a richer sky, proper trees across the countryside, more ground detail, softer light and shadows).",
+    "ids": [
+      "F-02"
+    ]
   }
 ]

@@ -27,6 +27,7 @@ lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
 environment/defaults/default_clear_color=Color(0.007, 0.007, 0.18, 1)
 textures/vram_compression/import_etc2_astc=true
 textures/canvas_textures/default_texture_filter=2
+textures/default_filters/anisotropic_filtering_level=4
 
 [xr]
 
