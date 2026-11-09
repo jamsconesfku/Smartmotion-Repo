@@ -6,7 +6,7 @@ Original brief: `docs/source/Sky_Barrage_Brief.pdf`.
 
 ## How it plugs into the dashboard
 - Game code: `dashboard/games/sky-barrage.js` (one file, canvas + inline SVG, no libraries). It adds `window.SkyBarrage` with `open()`, `close()` and `stats()`.
-- The dashboard loads it with `<script src="games/sky-barrage.js">`. `scripts/build-artifact.sh` inlines it into the private page.
+- The dashboard loads it with `<script src="games/sky-barrage.js">`. The site build copies it to the website as is.
 - The **Games** menu section (`games` view in `dashboard/index.html`) shows the tile. "Play Sky Barrage" opens the game full-screen over the dashboard, and "Back to dashboard" closes it.
 - Deep link: `#sky-barrage` on the dashboard link opens the game straight away.
 - Progress is saved in the browser's `localStorage` under `sm2:skybarrage`, the same way the dashboard saves its own settings. It's per device and wrapped in try/catch, so the game still runs if storage is blocked.

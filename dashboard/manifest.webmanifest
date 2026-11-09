@@ -1,0 +1,16 @@
+{
+  "name": "SmartMotion Dashboard",
+  "short_name": "SmartMotion",
+  "description": "SmartMotion launch plan, contacts, 3D print library and games.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#02022f",
+  "theme_color": "#02022f",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

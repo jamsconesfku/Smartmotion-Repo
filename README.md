@@ -8,17 +8,14 @@ Knowledge base and the **SmartMotion Dashboard** for SmartMotion — 6-DOF full-
 
 ## Open the SmartMotion Dashboard
 
-**Private link (use this):** https://claude.ai/artifact/2UtrL6HCXVmKdrYJavCaME
-Only you can open it (sign in to claude.ai). Works on any device. Claude Code republishes it whenever the data changes.
-
-GitHub Pages isn't used because the repo is private and Pages on a private repo needs a paid GitHub plan (and would still publish the site openly).
+It's a website hosted on Cloudflare Pages: **https://smartmotion-dashboard.pages.dev** (once set up; steps in [`docs/deploy-cloudflare.md`](docs/deploy-cloudflare.md)). Every push to `main` redeploys it automatically.
 
 ### Locally
 ```bash
-python3 -m http.server   # from the repo root
-# then open http://localhost:8000/dashboard/
+node scripts/build-site.mjs && python3 -m http.server -d dist 8788
+# then open http://localhost:8788
 ```
-Opening `dashboard/index.html` straight from disk won't work, because browsers block it from reading the JSON files.
+You can also run `python3 -m http.server` in the repo root and open `/dashboard/`.
 
 ## Updating
 Tell Claude Code what changed ("W1-01 sent today", "booked Rundle for 3 Dec", "here's the business plan PDF"). It updates `data/`, the change log and the docs, then commits. See [`CLAUDE.md`](CLAUDE.md) for conventions.

@@ -4,8 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SmartMotion Dashboard</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="SmartMotion Dashboard: what to do this week, what must be sorted before vouchers go on sale, contacts, software, paperwork and decisions.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#f2f3f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#05061f" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SmartMotion">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SmartMotion Dashboard">
+<meta property="og:description" content="SmartMotion launch plan: this week's jobs, must-haves, contacts, 3D print library and more.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2302022f'/%3E%3Cpath d='M6 20c4-9 14-13 22-9-7-1-15 2-20 10z' fill='%23ff4c00'/%3E%3Cpath d='M26 13c-4 8-13 11-20 8 7 0 13-3 18-9z' fill='%23ffffff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -218,6 +230,7 @@ h1,h2,h3{font-family:var(--f-display);letter-spacing:.005em;text-wrap:balance;ma
 .gt-name{position:absolute;left:16px;bottom:12px;color:#fff;font:italic 800 34px/0.9 var(--f-display)}
 .gt-name b{display:block;color:#ff4c00;font-weight:800}
 .btn-primary{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:10px 18px;background:var(--accent);color:#fff;font:italic 700 18px var(--f-display);letter-spacing:.02em;cursor:pointer;box-shadow:0 3px 0 #a83200;transition:transform .1s}
+a.btn-primary{text-decoration:none}
 .btn-primary:active{transform:translateY(2px);box-shadow:0 1px 0 #a83200}
 .btn-primary svg{width:18px;height:18px}
 .ws{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin:6px max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));background:var(--surface-2);border-radius:12px}
@@ -321,6 +334,7 @@ h1,h2,h3{font-family:var(--f-display);letter-spacing:.005em;text-wrap:balance;ma
 </style>
 </head>
 <body>
+<noscript><p style="padding:24px;font-family:system-ui,sans-serif">The SmartMotion Dashboard needs JavaScript. Please turn it on in your browser settings.</p></noscript>
 <div class="app">
   <aside class="side">
     <div class="brandbar">
@@ -527,8 +541,7 @@ function jobCard(t, opts = {}){
 /* Load */
 async function load(){
   try {
-    const INL = window.__INLINE || {};
-    const res = await Promise.all(FILES.map(f => INL["data/" + f + ".json"] ? Promise.resolve(INL["data/" + f + ".json"]) : fetch(DATA + f + ".json", {cache:"no-store"}).then(r => { if(!r.ok) throw new Error(f + ".json could not be loaded (" + r.status + ")"); return r.json(); })));
+    const res = await Promise.all(FILES.map(f => fetch(DATA + f + ".json", {cache:"no-store"}).then(r => { if(!r.ok) throw new Error(f + ".json could not be loaded (" + r.status + ")"); return r.json(); })));
     FILES.forEach((f,i) => D[f] = res[i]);
   } catch(e){
     $("#error").innerHTML = `<div class="err"><b>The plan couldn't be loaded.</b> ${esc(e.message)}. If this keeps happening, ask Claude to republish the dashboard.</div>`;
@@ -824,7 +837,7 @@ function bindLibrary(){
   const qi = $("#pl-q");
   qi.oninput = e => { PF.q = e.target.value; const p = qi.selectionStart; renderPanel(); const n = $("#pl-q"); n.focus(); n.setSelectionRange(p,p); };
 }
-const imgSrc = path => (window.__INLINE && window.__INLINE[path]) || (ROOT + path);
+const imgSrc = path => ROOT + path;
 function openDesign(id){ curDesign = id; show("design"); }
 
 function renderDesign(){
@@ -845,8 +858,8 @@ function renderDesign(){
       <h2>${esc(d.title)}</h2>
       <p style="margin:0">${terms(esc(d.summary))}</p>
       ${d.purpose ? `<p style="margin:0;color:var(--muted)">${terms(esc(d.purpose))}</p>` : ""}
-      <div class="dlrow"><button type="button" class="btn-primary" data-dl="${esc(v.zip)}">${ICON.paperwork}Download ${esc(v.v)} (ZIP)</button></div>
-      <div class="dlnote" id="dl-msg">The ZIP has the ${terms("STL file")} to print, the ${terms("STEP file")} to edit in your CAD software, and the design source with notes. About ${Math.round(totalG)} g of filament in total.</div>
+      <div class="dlrow"><a class="btn-primary" href="${ROOT + esc(v.zip)}" download>${ICON.paperwork}Download ${esc(v.v)} (ZIP)</a></div>
+      <div class="dlnote">The ZIP has the ${terms("STL file")} to print, the ${terms("STEP file")} to edit in your CAD software, and the design source with notes. About ${Math.round(totalG)} g of filament in total.</div>
       ${d.assumptions && d.assumptions.length ? `<div class="warnbox"><b>Check before printing</b><ul>${d.assumptions.map(a => `<li>${terms(esc(a))}</li>`).join("")}</ul></div>` : ""}
     </div>
   </div>
@@ -859,7 +872,7 @@ function renderDesign(){
         <td>${Object.keys(PRINTERS).map(k => `<span class="fit">${p.fits[k] ? "✓" : "✗"} ${PRINTERS[k]}</span>`).join("<br>")}</td></tr>`).join("")}
       </tbody></table></div>
       <div class="s">Filament is a rough guide at the suggested infill. Every part is checked to be a closed, printable shape${v.parts.every(p => p.watertight) ? " and passed" : ": one part did NOT pass, ask Claude to fix it"}.</div>
-      <div class="btns">${v.parts.map(p => `<a href="${REPO + esc(p.stl)}" target="_blank" rel="noopener">${esc(p.name)} STL on GitHub</a><a href="${REPO + esc(p.step)}" target="_blank" rel="noopener">${esc(p.name)} STEP</a>`).join("")}</div></div>
+      <div class="btns">${v.parts.map(p => `<a href="${ROOT + esc(p.stl)}" download>${esc(p.name)} STL</a><a href="${ROOT + esc(p.step)}" download>${esc(p.name)} STEP</a>`).join("")}</div></div>
     <div class="card"><h2 class="sub" style="margin-top:0">Measurements you can change</h2>
       <p class="s" style="margin-top:0">Tell Claude, for example: "${esc(d.title)}: make the ${esc((d.params[0] || {label:"width"}).label.toLowerCase())} ${esc(String(Math.round((d.params[0] || {value:100}).value * 1.1)))} mm". You get a new version straight away.</p>
       <table class="ptable"><tbody>${d.params.map(p => `<tr><th scope="row">${esc(p.label)}</th><td class="num">${esc(String(p.value))} ${esc(p.unit || "")}</td></tr>`).join("")}</tbody></table></div>
@@ -869,7 +882,7 @@ function renderDesign(){
       <ul class="lessons">${(d.learning || []).map(l => `<li>${terms(esc(l))}</li>`).join("")}</ul></div>
     <div class="card"><h2 class="sub" style="margin-top:0">Versions and print log</h2>
       <ul class="lessons">${[...d.versions].reverse().map(x => `<li><small>${esc(x.v)} · ${esc(longDate(x.date))}${x.v === d.current ? " · current" : ""}</small>${esc(x.changes || "")}
-        ${x.v !== d.current ? ` <button type="button" class="linkbtn" data-dl="${esc(x.zip)}">Download ${esc(x.v)}</button>` : ""}</li>`).join("")}
+        ${x.v !== d.current ? ` <a href="${ROOT + esc(x.zip)}" download>Download ${esc(x.v)}</a>` : ""}</li>`).join("")}
       ${(d.print_log || []).slice().reverse().map(l => `<li><small>Printed · ${esc(longDate(l.date))}${l.version ? " · " + esc(l.version) : ""}</small>${terms(esc(l.note))}</li>`).join("")}</ul>
       ${d.notes ? `<p class="s">${terms(esc(d.notes))}</p>` : ""}
       <p class="s">Printed it? Tell Claude how it went ("lid too tight", "printed fine in PETG") and it's logged here, or turned into the next version.</p></div>
@@ -922,57 +935,6 @@ async function startViewer(){
 }
 function resetViewer(){ if (VW && VW.home){ VW.ctl.autoRotate = true; VW.home(); } }
 function stopViewer(){ if (!VW) return; cancelAnimationFrame(VW.raf); if (VW.ro) VW.ro.disconnect(); if (VW.r) VW.r.dispose(); VW = null; }
-
-/* Builds a standard ZIP (stored, no compression) from a .bundle.json of base64 files */
-const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
-function crc32(b){ let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
-async function zipFromBundle(url){
-  const bundle = await fetch(url).then(r => { if (!r.ok) throw new Error("bundle"); return r.json(); });
-  const enc = new TextEncoder(), parts = [], central = [];
-  const now = new Date(), dtime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
-  const ddate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
-  let offset = 0;
-  for (const f of bundle.files){
-    const bin = atob(f.b64), data = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i);
-    const name = enc.encode(f.path), crc = crc32(data);
-    const h = new DataView(new ArrayBuffer(30));
-    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
-    h.setUint16(10, dtime, true); h.setUint16(12, ddate, true); h.setUint32(14, crc, true);
-    h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
-    parts.push(h, name, data);
-    const c = new DataView(new ArrayBuffer(46));
-    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
-    c.setUint16(12, dtime, true); c.setUint16(14, ddate, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true);
-    c.setUint16(28, name.length, true); c.setUint32(42, offset, true);
-    central.push(c, name);
-    offset += 30 + name.length + data.length;
-  }
-  const cdSize = central.reduce((a, x) => a + x.byteLength, 0);
-  const end = new DataView(new ArrayBuffer(22));
-  end.setUint32(0, 0x06054b50, true); end.setUint16(8, bundle.files.length, true); end.setUint16(10, bundle.files.length, true);
-  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
-  return new Blob([...parts, ...central, end], {type:"application/zip"});
-}
-
-/* Downloads: on the private claude.ai page files go through the platform's save prompt; locally a normal link */
-async function downloadFile(path, btn){
-  const name = path.split("/").pop(), msg = $("#dl-msg");
-  const say = t => { if (msg) msg.textContent = t; };
-  try {
-    const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
-    if (dl){
-      const blob = await zipFromBundle(ROOT + path.replace(/\.zip$/, ".bundle.json"))
-        .catch(() => fetch(ROOT + path).then(r => { if (!r.ok) throw new Error("missing"); return r.blob(); }));
-      await dl.save({filename:name, data:blob}); say(`Saved ${name}. Unzip it and open the STL in your slicer.`); return;
-    }
-    if (window.claude) { say("Downloads aren't available in this view. Use the GitHub links below instead."); return; }
-    const a = document.createElement("a"); a.href = ROOT + path; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-  } catch(e){
-    if (e && e.code === "declined") say("Download cancelled.");
-    else say("That download didn't work. Use the GitHub links below to get the files.");
-  }
-}
 
 function renderLearn(){
   const rules = [
@@ -1049,8 +1011,6 @@ document.addEventListener("click", e => {
   if (wsb){ e.preventDefault(); show(WS.find(w => w.k === wsb.dataset.ws).home); return; }
   const dz = e.target.closest("[data-design]");
   if (dz){ e.preventDefault(); openDesign(dz.dataset.design); return; }
-  const dl = e.target.closest("[data-dl]");
-  if (dl){ e.preventDefault(); downloadFile(dl.dataset.dl, dl); return; }
   const cp = e.target.closest("[data-copy]");
   if (cp){ e.preventDefault(); const el = document.getElementById(cp.dataset.copy); const txt = el.textContent;
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { cp.textContent = "Copied"; setTimeout(() => cp.textContent = "Copy template", 1500); })
