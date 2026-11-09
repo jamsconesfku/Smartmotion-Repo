@@ -134,6 +134,12 @@ func _on_fly(vr: bool) -> void:
 	start_flight()
 
 
+func _xr_mode_flag() -> bool:
+	# true when this run was started in VR mode (by the VR .bat file or by the game's own restart);
+	# the marker stops the game from restarting itself more than once
+	return args.has("xr")
+
+
 func showcase() -> void:
 	state = "menu"
 	paused = false
@@ -394,8 +400,14 @@ func _start_vr() -> bool:
 	if xr == null:
 		ui.set_vr_note("This copy of the game has no VR support.")
 		return false
-	if not xr.is_initialized() and not xr.initialize():
-		ui.set_vr_note("Couldn't start VR. Check that: (1) the Meta Quest Link app is open on this laptop, (2) in the headset you've started Link (you see the white Link room), (3) in the Link app, Settings > General > 'Set Meta Quest Link as active OpenXR runtime' is switched ON. Then press the button again.")
+	if not xr.is_initialized():
+		if not _xr_mode_flag():
+			# VR has to be switched on when the game starts, so restart the game in VR mode
+			ui.set_vr_note("Restarting the game in VR mode…")
+			OS.create_process(OS.get_executable_path(), ["--xr-mode", "on", "--", "--vr", "--xr"])
+			get_tree().quit()
+			return false
+		ui.set_vr_note("The game restarted in VR mode but couldn't reach the headset. Check that: (1) the Meta Quest Link app is open on this laptop, (2) in the headset you see the white Link room, (3) in the Link app, Settings > General > 'Set Meta Quest Link as active OpenXR runtime' is ON. Then close the game and start it again with 'Play (VR - Meta Quest).bat'.")
 		print("OpenXR failed to initialize")
 		return false
 	get_viewport().use_xr = true
