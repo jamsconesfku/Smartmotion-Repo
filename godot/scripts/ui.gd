@@ -7,6 +7,7 @@ signal resume_pressed
 signal restart_pressed
 signal menu_pressed
 signal setting_changed(key: String, value)
+signal diag_pressed
 
 const NAVY := Color("#02022f")
 const ORANGE := Color("#ff4c00")
@@ -279,6 +280,11 @@ func _build_menu() -> void:
 	vr_note.custom_minimum_size = Vector2(480, 0)
 	vr_note.visible = false
 	v.add_child(vr_note)
+	var diag_btn := Button.new()
+	diag_btn.text = "Copy diagnostics (paste to Claude if something doesn't work)"
+	diag_btn.add_theme_font_size_override("font_size", 14)
+	diag_btn.pressed.connect(func(): diag_pressed.emit())
+	v.add_child(diag_btn)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	var hb := Button.new()

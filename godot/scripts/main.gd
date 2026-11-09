@@ -1,6 +1,7 @@
 extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 
+const APP_VERSION := "1.3.5"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -50,6 +51,8 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		var kv := a.lstrip("-").split("=", true, 1)
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
+	Diag.start(not args.has("xr"))
+	Diag.write("SmartMotion Flight native v%s started" % APP_VERSION)
 	for k in ["aircraft", "start", "mode", "tod", "wind"]:
 		if args.has(k):
 			Settings.data[k] = args[k]
@@ -79,9 +82,10 @@ func _ready() -> void:
 	ui.restart_pressed.connect(start_flight)
 	ui.menu_pressed.connect(to_menu)
 	ui.setting_changed.connect(_on_setting)
+	ui.diag_pressed.connect(_copy_diag)
 	var gpu := RenderingServer.get_video_adapter_name()
 	ui.set_gpu_text("Graphics: %s  ·  %s  ·  F11 for full screen. If that isn't your NVIDIA/AMD card, set Windows Graphics Settings to High performance for this app." % [gpu, RenderingServer.get_current_rendering_method()])
-	print("GPU: ", gpu, " | renderer: ", RenderingServer.get_current_rendering_method())
+	Diag.snapshot()
 	await world.build(ui.set_progress, quality, str(Settings.get_value("tod")))
 	if Settings.get_value("tel"):
 		tel.start(str(Settings.get_value("tel_host")), int(Settings.get_value("tel_port")))
@@ -89,7 +93,7 @@ func _ready() -> void:
 	to_menu()
 	if args.has("auto") or args.has("vr"):
 		await get_tree().create_timer(0.3).timeout
-		_on_fly(args.has("vr"))
+		await _on_fly(args.has("vr"))
 	if args.has("telemetry"):
 		var hp: PackedStringArray = str(args["telemetry"]).split(":")
 		Settings.data["tel"] = true
@@ -129,9 +133,18 @@ func _on_setting(key: String, value) -> void:
 
 
 func _on_fly(vr: bool) -> void:
-	if vr and not _start_vr():
+	Diag.write("CLICK: %s" % ("Fly in VR" if vr else "Fly"))
+	if vr and not await _start_vr():
+		Diag.write("VR did not start")
 		return
 	start_flight()
+
+
+func _copy_diag() -> void:
+	Diag.write("CLICK: Copy diagnostics")
+	Diag.snapshot()
+	DisplayServer.clipboard_set(Diag.full_text())
+	ui.set_vr_note("Diagnostics copied. Paste them into the chat (Ctrl+V). They are also saved in: " + Diag.log_path())
 
 
 func _xr_mode_flag() -> bool:
@@ -397,6 +410,7 @@ func _edge(id: String, down: bool) -> bool:
 func _start_vr() -> bool:
 	var xr := XRServer.find_interface("OpenXR")
 	ui.set_vr_note("")
+	Diag.write("_start_vr: interface found=%s initialized=%s started-in-xr-mode=%s" % [str(xr != null), str(xr != null and xr.is_initialized()), str(_xr_mode_flag())])
 	if xr == null:
 		ui.set_vr_note("This copy of the game has no VR support.")
 		return false
@@ -404,12 +418,20 @@ func _start_vr() -> bool:
 		if not _xr_mode_flag():
 			# VR has to be switched on when the game starts, so restart the game in VR mode
 			ui.set_vr_note("Restarting the game in VR mode…")
-			OS.create_process(OS.get_executable_path(), ["--xr-mode", "on", "--", "--vr", "--xr"])
+			var pid := OS.create_process(OS.get_executable_path(), ["--xr-mode", "on", "--", "--vr", "--xr"])
+			Diag.write("Restarting in VR mode: new process id %d" % pid)
+			await get_tree().create_timer(0.5).timeout
 			get_tree().quit()
 			return false
-		ui.set_vr_note("The game restarted in VR mode but couldn't reach the headset. Check that: (1) the Meta Quest Link app is open on this laptop, (2) in the headset you see the white Link room, (3) in the Link app, Settings > General > 'Set Meta Quest Link as active OpenXR runtime' is ON. Then close the game and start it again with 'Play (VR - Meta Quest).bat'.")
-		print("OpenXR failed to initialize")
-		return false
+		var tried := xr.initialize()
+		Diag.write("OpenXR manual initialize() returned: %s" % str(tried))
+		Diag.snapshot()
+		if not tried:
+			Diag.write("OpenXR FAILED to start. Engine log tail follows.")
+			Diag.write(Diag.engine_log_tail(60))
+			ui.set_vr_note("The game restarted in VR mode but couldn't reach the headset. Press 'Copy diagnostics' below and paste the result to Claude. Also check: (1) Meta Quest Link app open on this laptop, (2) the headset shows the white Link room, (3) Link app > Settings > General > 'Set Meta Quest Link as active OpenXR runtime' is ON.")
+			return false
+		Diag.write("OpenXR started on the second try")
 	get_viewport().use_xr = true
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	vr_active = true
