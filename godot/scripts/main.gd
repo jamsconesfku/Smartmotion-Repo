@@ -387,11 +387,13 @@ func _edge(id: String, down: bool) -> bool:
 # ------------------------------------------------------------ VR (OpenXR: Meta Quest via Link / Air Link)
 func _start_vr() -> bool:
 	var xr := XRServer.find_interface("OpenXR")
+	ui.set_vr_note("")
 	if xr == null:
-		ui.toast("This build has no OpenXR support", 4.0)
+		ui.set_vr_note("This copy of the game has no VR support.")
 		return false
 	if not xr.is_initialized() and not xr.initialize():
-		ui.toast("Couldn't start VR. Open the Meta Quest Link app, put the headset on, and try again.", 6.0)
+		ui.set_vr_note("Couldn't start VR. Check that: (1) the Meta Quest Link app is open on this laptop, (2) in the headset you've started Link (you see the white Link room), (3) in the Link app, Settings > General > 'Set Meta Quest Link as active OpenXR runtime' is switched ON. Then press the button again.")
+		print("OpenXR failed to initialize")
 		return false
 	get_viewport().use_xr = true
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)

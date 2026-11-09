@@ -26,6 +26,7 @@ var help_sheet: Control
 var settings_sheet: Control
 var vr_btn: Button
 var gpu_label: Label
+var vr_note: Label
 var seg_buttons := {}
 var ital: Font
 var logo_dark: Texture2D
@@ -272,6 +273,11 @@ func _build_menu() -> void:
 	vr_btn.custom_minimum_size = Vector2(0, 46)
 	vr_btn.pressed.connect(func(): fly_pressed.emit(true))
 	v.add_child(vr_btn)
+	vr_note = _lbl("", 14, Color("#ffb347"))
+	vr_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vr_note.custom_minimum_size = Vector2(480, 0)
+	vr_note.visible = false
+	v.add_child(vr_note)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	var hb := Button.new()
@@ -294,6 +300,11 @@ func _build_menu() -> void:
 	gpu_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	gpu_label.custom_minimum_size = Vector2(480, 0)
 	v.add_child(gpu_label)
+
+
+func set_vr_note(t: String) -> void:
+	vr_note.text = t
+	vr_note.visible = t != ""
 
 
 func set_gpu_text(t: String) -> void:
