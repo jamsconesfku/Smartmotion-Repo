@@ -56,6 +56,7 @@ var end_lab: Label
 var set_tel_btn: Button
 var set_status: Label
 var toast_t := 0.0
+var fit := {}   # sheet -> [scroll container, content]
 
 
 func _ready() -> void:
@@ -475,6 +476,7 @@ func _sheet(title: String) -> Array:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sc.add_child(v)
 	v.add_child(_lbl(title, 34, Color.WHITE, true))
+	fit[s] = [sc, v]
 	return [s, v]
 
 
@@ -557,10 +559,20 @@ func _build_sheets() -> void:
 	v.add_child(sd)
 
 
+func _fit_sheet(s: Control) -> void:
+	# a scroll container has no height of its own, so give it the height of its content (capped to the window)
+	var pair: Array = fit[s]
+	var sc: ScrollContainer = pair[0]
+	var v: VBoxContainer = pair[1]
+	var h := minf(v.get_combined_minimum_size().y + 44.0, maxf(get_viewport().get_visible_rect().size.y * 0.9, 300.0))
+	sc.custom_minimum_size = Vector2(540, h)
+
+
 func open_sheet(s: Control) -> void:
 	for x in [pause_sheet, help_sheet, settings_sheet]:
 		if x != s:
 			(x as Control).visible = false
+	_fit_sheet(s)
 	s.visible = true
 
 
@@ -597,6 +609,8 @@ func show_hud() -> void:
 
 func show_pause(on: bool) -> void:
 	paused_ui = on
+	if on:
+		_fit_sheet(pause_sheet)
 	pause_sheet.visible = on
 	if not on:
 		help_sheet.visible = false
@@ -609,6 +623,7 @@ func show_end(title: String, label: String, text: String, big: String) -> void:
 	end_text.text = text
 	end_big.text = big
 	end_big.visible = big != ""
+	_fit_sheet(end_sheet)
 	end_sheet.visible = true
 
 

@@ -94,6 +94,9 @@ func _ready() -> void:
 		var hp: PackedStringArray = str(args["telemetry"]).split(":")
 		Settings.data["tel"] = true
 		tel.start(hp[0], int(hp[1]))
+	if args.has("sheet"):
+		await get_tree().create_timer(0.5).timeout
+		ui.open_sheet({"settings": ui.settings_sheet, "help": ui.help_sheet, "pause": ui.pause_sheet}[str(args["sheet"])])
 	if args.has("cam"):
 		cam_mode = args["cam"]
 		_apply_view()
