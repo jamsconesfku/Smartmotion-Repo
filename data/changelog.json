@@ -30,5 +30,10 @@
     "date": "2026-11-09",
     "summary": "Version 1.1.0: the dashboard now shows whether you're signed in (and warns in red if the website has no login protection), and shows its version number under the logo.",
     "ids": []
+  },
+  {
+    "date": "2026-11-09",
+    "summary": "Version 1.2.0: new game SmartMotion Flight, a flight simulator-style game around Duxford with SmartMotion signs, a trainer and a WW2 fighter, a gate race, phone, laptop and Meta Quest (VR) support, and motion telemetry for the simulator rig.",
+    "ids": []
   }
 ]

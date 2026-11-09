@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>SmartMotion Flight</title>
+<meta name="description" content="SmartMotion Flight: a flight game set around Duxford, with VR support and motion telemetry.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#02022f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SM Flight">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="icon" href="../assets/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,600;0,700;1,700;1,800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+:root{--navy:#02022f;--navy2:#0b0d4a;--orange:#ff4c00;--ink:#eceef8;--muted:#a9acd0;--glass:rgba(2,2,47,.62);--line:rgba(255,255,255,.16);--green:#4cc283;--red:#ff5a4f;
+  --fd:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;--fb:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--navy);color:var(--ink);font:16px/1.45 var(--fb);overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--orange);outline-offset:2px;border-radius:8px}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+[hidden]{display:none!important}
+.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+/* loading */
+#loading{background:radial-gradient(circle at 70% 0%,#1a1f7a,var(--navy) 60%);flex-direction:column;gap:18px;z-index:30;text-align:center}
+#loading img{width:min(260px,60vw)}
+#loading h1{font:italic 800 clamp(34px,8vw,54px)/1 var(--fd);margin:0}
+#loading h1 span{color:var(--orange)}
+.bar{width:min(320px,70vw);height:8px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--orange);transition:width .25s}
+#loadmsg{color:var(--muted);font-size:14px;min-height:1.4em}
+/* menu */
+#menu{z-index:20;background:linear-gradient(90deg,rgba(2,2,47,.88),rgba(2,2,47,.35) 60%,rgba(2,2,47,.1));justify-content:flex-start;overflow-y:auto}
+.card{width:min(520px,100%);max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:22px 22px 18px;border-radius:22px;background:var(--glass);border:1px solid var(--line);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.card img.logo{width:150px;display:block;margin-bottom:6px}
+.card h1{font:italic 800 clamp(38px,8vw,52px)/.92 var(--fd);margin:4px 0 6px;letter-spacing:-.005em}
+.card h1 span{color:var(--orange)}
+.card p.sub{margin:0 0 16px;color:var(--muted);font-size:15px}
+.lab{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;border-radius:12px;background:rgba(255,255,255,.08)}
+.seg button{border:0;background:transparent;border-radius:9px;padding:9px 6px;font-weight:600;font-size:14.5px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.planes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.plane{border:2px solid var(--line);background:rgba(255,255,255,.06);border-radius:14px;padding:10px 12px;text-align:left}
+.plane b{display:block;font:italic 800 21px/1.1 var(--fd)}
+.plane span{display:block;font-size:13px;color:var(--muted);margin-top:3px}
+.plane[aria-pressed="true"]{border-color:var(--orange);background:rgba(255,76,0,.16)}
+.go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:56px;border:0;border-radius:16px;margin-top:18px;background:linear-gradient(#ff6a24,var(--orange));color:#fff;font:italic 800 24px var(--fd);letter-spacing:.03em;text-transform:uppercase;box-shadow:0 4px 0 #a83200,0 10px 24px rgba(255,76,0,.3)}
+.go:active{transform:translateY(3px);box-shadow:0 1px 0 #a83200}
+.row{display:flex;gap:8px;margin-top:10px}
+.row>*{flex:1}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;border-radius:13px;border:1px solid var(--line);background:rgba(255,255,255,.09);font-weight:600;font-size:15px;text-decoration:none;color:var(--ink);padding:0 10px}
+.btn:active{background:rgba(255,255,255,.18)}
+.vrnote{font-size:13px;color:var(--muted);margin-top:10px}
+.card a.back{display:block;text-align:center;margin-top:12px;color:var(--muted);font-size:14px;text-decoration:none}
+/* HUD */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:10;padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+.glass{background:var(--glass);border:1px solid var(--line);border-radius:16px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.num{font:italic 800 38px/1 var(--fd);font-variant-numeric:tabular-nums}
+.unit{font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+#hudTop{position:absolute;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+#hudTop img{height:34px;display:block}
+#hdg{padding:6px 14px;text-align:center;min-width:120px}
+#hdg .num{font-size:30px}
+.ibtns{display:flex;gap:8px;pointer-events:auto}
+.ib{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);background:var(--glass);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font:italic 800 17px var(--fd)}
+.ib svg{width:20px;height:20px}
+#hudL,#hudR{position:absolute;bottom:max(12px,env(safe-area-inset-bottom));padding:10px 14px;min-width:132px}
+#hudL{left:max(12px,env(safe-area-inset-left))}
+#hudR{right:max(12px,env(safe-area-inset-right));text-align:right}
+#hudL .num,#hudR .num{font-size:44px}
+.thr{height:8px;border-radius:99px;background:rgba(255,255,255,.16);margin-top:8px;overflow:hidden}
+.thr i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff8a52,var(--orange))}
+.tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.tag{font:600 11.5px var(--fb);letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,.12);color:var(--muted)}
+.tag.on{background:var(--orange);color:#fff}
+#adi{position:absolute;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);width:104px;height:104px;border-radius:50%;border:2px solid var(--line);background:var(--glass)}
+#msg{position:absolute;left:50%;top:22%;transform:translateX(-50%);text-align:center;font:italic 800 clamp(26px,6vw,46px)/1.05 var(--fd);letter-spacing:.02em;text-shadow:0 3px 14px rgba(0,0,0,.6);white-space:nowrap}
+#msg.warn{color:var(--red);animation:blink .5s infinite}
+@keyframes blink{50%{opacity:.35}}
+#toast{position:absolute;left:50%;top:max(64px,calc(env(safe-area-inset-top) + 54px));transform:translate(-50%,-10px);opacity:0;padding:9px 16px;border-radius:99px;background:#fff3ea;color:var(--navy);font-weight:600;transition:opacity .25s,transform .3s;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#gateBox{position:absolute;left:50%;top:max(80px,calc(env(safe-area-inset-top) + 72px));transform:translateX(-50%);padding:6px 14px;text-align:center;display:flex;gap:12px;align-items:center}
+#gateBox .num{font-size:26px}
+#arrow{width:34px;height:34px}
+#tel{position:absolute;right:max(10px,env(safe-area-inset-right));top:max(64px,calc(env(safe-area-inset-top) + 56px));padding:10px 12px;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;min-width:210px;pointer-events:auto}
+#tel b{color:var(--orange)}
+#tel .st{font-family:var(--fb);margin-bottom:4px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#777;margin-right:6px}
+.dot.ok{background:var(--green)}.dot.bad{background:var(--red)}
+/* touch controls */
+#touch{position:fixed;inset:0;z-index:9;pointer-events:none}
+#stick{position:absolute;right:max(24px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid var(--line);pointer-events:auto;touch-action:none}
+#stick i{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px;border-radius:50%;background:rgba(255,76,0,.85);box-shadow:0 4px 14px rgba(0,0,0,.4)}
+#thrS{position:absolute;left:max(24px,env(safe-area-inset-left));bottom:max(24px,env(safe-area-inset-bottom));width:64px;height:190px;border-radius:32px;background:rgba(255,255,255,.08);border:2px solid var(--line);pointer-events:auto;touch-action:none}
+#thrS i{position:absolute;left:4px;right:4px;bottom:4px;height:0;border-radius:28px;background:linear-gradient(0deg,#ff8a52,var(--orange))}
+#thrS span{position:absolute;left:0;right:0;top:8px;text-align:center;font:600 11px var(--fb);letter-spacing:.08em;color:var(--muted)}
+.tb{position:absolute;pointer-events:auto;touch-action:none;min-width:58px;height:46px;padding:0 12px;border-radius:23px;border:1px solid var(--line);background:var(--glass);font:italic 800 15px var(--fd);letter-spacing:.04em}
+.tb:active,.tb.on{background:var(--orange)}
+/* sheets */
+.sheet{z-index:25;background:rgba(1,1,28,.6)}
+.sheet .card{width:min(480px,100%)}
+.sheet h2{font:italic 800 30px/1 var(--fd);margin:0 0 12px}
+.sheet table{width:100%;border-collapse:collapse;font-size:14.5px;margin:6px 0 10px}
+.sheet td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.sheet td:first-child{white-space:nowrap;color:var(--orange);font-weight:600;padding-right:12px}
+.sheet label.f{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.sheet input[type=text]{width:100%;font:inherit;font-size:15px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.1);color:var(--ink);margin:6px 0}
+.sw{width:50px;height:30px;border-radius:99px;border:0;background:rgba(255,255,255,.2);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .15s}
+.sw[aria-pressed="true"]{background:var(--orange)}
+.sw[aria-pressed="true"]::after{transform:translateX(20px)}
+.small{font-size:13px;color:var(--muted);margin:6px 0}
+#end h2{font-size:clamp(34px,7vw,46px)}
+#end .big{font:italic 800 56px/1 var(--fd);font-variant-numeric:tabular-nums;margin:4px 0}
+.touch #hudL,.touch #hudR{bottom:auto;top:calc(max(10px,env(safe-area-inset-top)) + 56px);min-width:0;padding:6px 12px}
+.touch #hudL .num,.touch #hudR .num{font-size:30px}
+.touch #hudL .thr,.touch #hudL .tags{display:none}
+.touch #hudR .unit:last-child{margin-top:2px!important}
+.touch #adi{display:none}
+.touch #gateBox{top:calc(max(10px,env(safe-area-inset-top)) + 64px)}
+.touch #toast{top:calc(max(10px,env(safe-area-inset-top)) + 120px)}
+@media (max-width:640px){#menu{align-items:flex-end;padding:0}#menu .card{border-radius:22px 22px 0 0;max-height:92%}.num{font-size:32px}#hudL .num,#hudR .num{font-size:34px}#hudL,#hudR{min-width:104px;padding:8px 10px}#adi{display:none}}
+@media (max-height:480px){#menu .card{padding:14px}#menu h1{font-size:34px}#adi{display:none}}
+@media (prefers-reduced-motion:reduce){#msg.warn{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<div id="loading" class="ov">
+  <img src="../assets/logo-dark.png" alt="SmartMotion">
+  <h1>Smart<span>Flight</span></h1>
+  <div class="bar"><i id="loadbar"></i></div>
+  <div id="loadmsg">Starting up…</div>
+</div>
+
+<div id="menu" class="ov" hidden>
+  <div class="card">
+    <img class="logo" src="../assets/logo-dark.png" alt="SmartMotion">
+    <h1>Smart<span>Flight</span></h1>
+    <p class="sub">Fly the skies around Duxford. Works on a laptop, a phone, and in VR on a Meta Quest.</p>
+    <div class="lab">Aircraft</div>
+    <div class="planes" id="planes">
+      <button type="button" class="plane" data-v="trainer"><b>Light Trainer</b><span>Forgiving and slow. Easy to land.</span></button>
+      <button type="button" class="plane" data-v="fighter"><b>WW2 Fighter</b><span>Fast and lively. Needs a firm hand.</span></button>
+    </div>
+    <div class="lab">Start</div>
+    <div class="seg" data-key="start"><button type="button" data-v="runway">On the runway</button><button type="button" data-v="air">In the air</button></div>
+    <div class="lab">Game</div>
+    <div class="seg" data-key="mode"><button type="button" data-v="free">Free flight</button><button type="button" data-v="gates">Gate run</button></div>
+    <div class="lab">Flying style</div>
+    <div class="seg" data-key="assist"><button type="button" data-v="true">Easy (assisted)</button><button type="button" data-v="false">Pro (manual)</button></div>
+    <div class="row"><div><div class="lab">Time of day</div><div class="seg" data-key="tod"><button type="button" data-v="day">Day</button><button type="button" data-v="golden">Golden hour</button></div></div>
+      <div><div class="lab">Wind</div><div class="seg" data-key="wind"><button type="button" data-v="calm">Calm</button><button type="button" data-v="breezy">Breezy</button></div></div></div>
+    <button type="button" class="go" id="fly">Fly</button>
+    <div class="row"><button type="button" class="btn" id="vrBtn" hidden>Enter VR</button><button type="button" class="btn" id="helpBtn">Controls</button><button type="button" class="btn" id="setBtn">Settings</button></div>
+    <div class="vrnote" id="vrNote"></div>
+    <a class="back" href="../#games">‹ Back to the SmartMotion Dashboard</a>
+  </div>
+</div>
+
+<div id="hud" hidden>
+  <div id="hudTop">
+    <img src="../assets/logo-dark.png" alt="SmartMotion">
+    <div id="hdg" class="glass"><div class="num" id="hdgN">000°</div><div class="unit">Heading</div></div>
+    <div class="ibtns">
+      <button type="button" class="ib" id="camBtn" aria-label="Change camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+      <button type="button" class="ib" id="hudVr" aria-label="Enter VR" hidden>VR</button>
+      <button type="button" class="ib" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg></button>
+    </div>
+  </div>
+  <div id="gateBox" class="glass" hidden><svg id="arrow" viewBox="0 0 24 24"><path d="M12 2l7 18-7-4-7 4z" fill="#ff4c00"/></svg><div><div class="num" id="gateN">Gate 1/11</div><div class="unit" id="gateT">0:00.0</div></div></div>
+  <div id="msg" hidden></div>
+  <div id="toast"></div>
+  <div id="tel" class="glass" hidden></div>
+  <div id="hudL" class="glass"><div class="num" id="spd">0</div><div class="unit">Knots</div><div class="thr"><i id="thr"></i></div><div class="tags"><span class="tag" id="tFlaps">Flaps</span><span class="tag" id="tBrake">Brake</span><span class="tag" id="tAssist">Easy</span></div></div>
+  <canvas id="adi" width="208" height="208"></canvas>
+  <div id="hudR" class="glass"><div class="num" id="alt">0</div><div class="unit">Feet</div><div class="unit" style="margin-top:8px"><span id="vs">0</span> ft/min</div></div>
+</div>
+
+<div id="touch" hidden>
+  <div id="thrS"><span>POWER</span><i id="thrFill"></i></div>
+  <div id="stick"><i id="stickKnob"></i></div>
+  <button type="button" class="tb" id="tbL" style="left:max(100px,calc(env(safe-area-inset-left) + 98px));bottom:max(24px,env(safe-area-inset-bottom))">◀ RUD</button>
+  <button type="button" class="tb" id="tbR" style="left:max(100px,calc(env(safe-area-inset-left) + 98px));bottom:calc(max(24px,env(safe-area-inset-bottom)) + 54px)">RUD ▶</button>
+  <button type="button" class="tb" id="tbBrake" style="left:max(100px,calc(env(safe-area-inset-left) + 98px));bottom:calc(max(24px,env(safe-area-inset-bottom)) + 108px)">BRAKE</button>
+  <button type="button" class="tb" id="tbFlaps" style="left:max(100px,calc(env(safe-area-inset-left) + 98px));bottom:calc(max(24px,env(safe-area-inset-bottom)) + 162px)">FLAPS</button>
+</div>
+
+<div id="pause" class="ov sheet" hidden><div class="card"><h2>Paused</h2>
+  <button type="button" class="go" id="resume" style="margin-top:4px">Resume</button>
+  <div class="row"><button type="button" class="btn" id="restart">Restart</button><button type="button" class="btn" id="toMenu">Menu</button></div>
+  <div class="row"><button type="button" class="btn" id="helpBtn2">Controls</button><button type="button" class="btn" id="setBtn2">Settings</button></div></div></div>
+
+<div id="end" class="ov sheet" hidden><div class="card"><div class="lab" id="endLab"></div><h2 id="endH"></h2><div class="big" id="endBig" hidden></div><p class="small" id="endP"></p>
+  <button type="button" class="go" id="again" style="margin-top:6px">Fly again</button><div class="row"><button type="button" class="btn" id="endMenu">Menu</button></div></div></div>
+
+<div id="help" class="ov sheet" hidden><div class="card"><h2>Controls</h2>
+  <div class="lab">Keyboard</div>
+  <table><tr><td>↑ / W</td><td>Nose down (push forward)</td></tr><tr><td>↓ / S</td><td>Nose up (pull back)</td></tr><tr><td>← → / A D</td><td>Roll left and right</td></tr><tr><td>Q / E</td><td>Rudder (steers on the ground)</td></tr>
+  <tr><td>Shift / Ctrl</td><td>More / less power (or keys 1 to 0)</td></tr><tr><td>Space</td><td>Brakes (hold)</td></tr><tr><td>F</td><td>Flaps</td></tr><tr><td>V</td><td>Change camera</td></tr><tr><td>P</td><td>Pause</td></tr><tr><td>R</td><td>Restart</td></tr><tr><td>T</td><td>Telemetry panel</td></tr><tr><td>M</td><td>Sound on/off</td></tr></table>
+  <div class="lab">Gamepad</div><table><tr><td>Right stick</td><td>Pitch and roll</td></tr><tr><td>Left stick</td><td>Up/down power, left/right rudder</td></tr><tr><td>LT</td><td>Brakes</td></tr><tr><td>A / B</td><td>Flaps / camera</td></tr><tr><td>Start</td><td>Pause</td></tr></table>
+  <div class="lab">Touch</div><table><tr><td>Right pad</td><td>Pitch and roll</td></tr><tr><td>Left slider</td><td>Power</td></tr><tr><td>Buttons</td><td>Rudder, brake, flaps</td></tr><tr><td>Drag</td><td>Look around (cockpit view)</td></tr></table>
+  <div class="lab">VR (Meta Quest)</div><table><tr><td>Right stick</td><td>Pitch and roll</td></tr><tr><td>Left stick</td><td>Up/down power, left/right rudder</td></tr><tr><td>Left trigger</td><td>Brakes</td></tr><tr><td>A / B</td><td>Flaps / recentre view</td></tr><tr><td>X</td><td>Pause</td></tr></table>
+  <p class="small"><b>Easy</b>: the aircraft levels itself and turns smoothly. Push or pull to climb or descend. <b>Pro</b>: direct control, like the real thing.</p>
+  <button type="button" class="go" id="helpClose" style="margin-top:6px">Got it</button></div></div>
+
+<div id="settings" class="ov sheet" hidden><div class="card"><h2>Settings</h2>
+  <label class="f"><span>Sound</span><button type="button" class="sw" id="swSound" aria-pressed="true" aria-label="Sound"></button></label>
+  <label class="f"><span>Pitch: pull back = nose up (keyboard stays the same). Turn on to invert.</span><button type="button" class="sw" id="swInvert" aria-pressed="false" aria-label="Invert pitch"></button></label>
+  <div class="lab">Graphics (needs a reload)</div><div class="seg" id="quality"><button type="button" data-v="low">Fast</button><button type="button" data-v="medium">Balanced</button><button type="button" data-v="high">Best</button></div>
+  <div class="lab">Motion telemetry (for the simulator rig)</div>
+  <label class="f"><span>Send flight data</span><button type="button" class="sw" id="swTel" aria-pressed="false" aria-label="Send telemetry"></button></label>
+  <input type="text" id="telUrl" spellcheck="false" autocapitalize="off" value="ws://localhost:8765" aria-label="Telemetry address">
+  <p class="small" id="telSt"></p>
+  <p class="small">The data is sent 60 times a second as JSON to a small program on the PC that runs the rig (tools/telemetry-bridge.mjs). It is always available to other pages as <code>window.SmartMotionTelemetry</code>.</p>
+  <button type="button" class="go" id="setClose" style="margin-top:6px">Done</button></div></div>
+
+<script src="../vendor/three.min.js"></script>
+<script src="flightmodel.js"></script>
+<script src="terrain.js"></script>
+<script src="aircraft.js"></script>
+<script src="world.js"></script>
+<script src="game.js"></script>
+<noscript><p style="position:fixed;inset:0;padding:24px;background:#02022f;color:#fff;font-family:system-ui">SmartMotion Flight needs JavaScript.</p></noscript>
+</body>
+</html>

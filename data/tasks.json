@@ -755,18 +755,18 @@
   },
   {
     "id": "F-02",
-    "title": "Custom SmartMotion sim (FlightGear first version)",
-    "why": "Our own flight software, so we don't rely on game companies. On hold.",
+    "title": "Custom SmartMotion flight game (SmartMotion Flight)",
+    "why": "Our own flight experience, so we don't depend on game companies for paid rides. First version built; next steps are VR and motion-rig testing.",
     "area": "Engineering",
     "phase": "Parked",
-    "status": "parked",
+    "status": "in_progress",
     "priority": "low",
     "due": null,
     "owner": "Sam",
     "depends_on": [],
-    "notes": "",
+    "notes": "v1 built 9 Nov 2026 in the browser (replaces the FlightGear idea). Needs: test on the Quest 3, connect telemetry to the rig, check the Duxford layout, and decide the licence/trademark position for paid use.",
     "links": [],
-    "updated": "2026-11-07"
+    "updated": "2026-11-09"
   },
   {
     "id": "F-03",

@@ -110,5 +110,17 @@
   {
     "term": "Clearance",
     "meaning": "The small gap left between parts that must fit together, so they don't jam."
+  },
+  {
+    "term": "VR",
+    "meaning": "Virtual reality. You wear a headset (like the Meta Quest 3) and the game surrounds you, so you look around by turning your head."
+  },
+  {
+    "term": "WebXR",
+    "meaning": "The browser feature that lets a web page run in VR. SmartMotion Flight uses it to work on the Quest without installing anything."
+  },
+  {
+    "term": "Telemetry",
+    "meaning": "Live numbers from the game (tilt, speed, forces) sent out so the motion rig can move to match what the pilot would feel."
   }
 ]

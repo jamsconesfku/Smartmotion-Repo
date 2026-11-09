@@ -23,7 +23,7 @@ for (const [from, to] of [['const DATA = "../data/";', 'const DATA = "data/";'],
   html = html.replace(from, to);
 }
 writeFileSync(join(dist, "index.html"), html);
-for (const d of ["assets", "games"]) cpSync(join(root, "dashboard", d), join(dist, d), { recursive: true });
+for (const d of ["assets", "games", "fly", "vendor"]) cpSync(join(root, "dashboard", d), join(dist, d), { recursive: true });
 cpSync(join(root, "dashboard", "manifest.webmanifest"), join(dist, "manifest.webmanifest"));
 cpSync(join(root, "site"), dist, { recursive: true });            // _headers, robots.txt
 

@@ -45,6 +45,11 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Print feedback: update `status` and add to `print_log` in `data/designs.json`. Write lessons in plain English; the section is also for learning.
 - Deploying designs: the site build copies each version's `preview.png`, `view.json`, ZIP, STL and STEP from `designs/`. Commit those outputs with `data/designs.json`; `model.py` and `README.txt` stay in the repo only.
 
+## SmartMotion Flight (`dashboard/fly/`, served at `/fly/`)
+- Our own flight game for paid experiences (MSFS has no commercial licence). Notes: `docs/games/smartmotion-flight.md`. Physics checks: `node scripts/test-flight.mjs` (run it after any change to `flightmodel.js` or `terrain.js`).
+- Linked from the dashboard Games tile. The site build copies `fly/` and `vendor/`. No outside assets: everything is drawn in code, logos come from `dashboard/assets/`.
+- Telemetry for the rig: `tools/telemetry-bridge.mjs` + `window.SmartMotionTelemetry`. VR is WebXR (needs https).
+
 ## Games
 - Each game is one JS file in `dashboard/games/` that exposes `window.<Name>.open({onClose})`, `close()` and `stats()`, injects its own scoped CSS, and draws with canvas/SVG (no libraries).
 - Register it in the dashboard: an entry in `VIEWS` with `g:"Games"`, a tile in `renderGames()`, and a `<script src="games/<file>.js">` tag. The site build copies `dashboard/games/` as is.

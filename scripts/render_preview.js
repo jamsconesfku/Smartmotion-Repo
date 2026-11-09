@@ -9,7 +9,7 @@ const fs = require('fs'), path = require('path');
   const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'] });
   const p = await b.newPage({ viewport: { width: 900, height: 680 }, deviceScaleFactor: 1 });
   await p.setContent('<html><body style="margin:0;background:transparent"></body></html>');
-  await p.addScriptTag({ path: path.join(__dirname, 'vendor', 'three.min.js') });
+  await p.addScriptTag({ path: path.join(__dirname, '..', 'dashboard', 'vendor', 'three.min.js') });
   await p.evaluate((mesh) => {
     const W = 900, H = 680;
     const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
