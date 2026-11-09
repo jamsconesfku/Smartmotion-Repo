@@ -20,7 +20,17 @@ The dashboard is a static website. Cloudflare Pages builds it from this GitHub r
 ## Keep it private (recommended)
 The site contains the launch plan, decisions, supplier and inspector contacts and the model library. A `.pages.dev` address is public to anyone who has the link. The site is set to stay out of search engines, but that is not security.
 
-To lock it to Sam (and anyone Sam chooses): open the Pages project → **Settings → General → Access policy → Enable**, then in **Zero Trust → Access → Applications** edit the policy so only the right email addresses are allowed. Cloudflare Access is free for up to 50 people. The same lock covers preview deployments.
+Cloudflare's login for this is **Cloudflare Access**, which is part of **Zero Trust**. Cloudflare's product page describes a free plan for teams under 50 people (check current terms when you sign up).
+
+**Important:** the project's **Settings → General → Enable access policy** button protects only the *preview* addresses (`*.smartmotion-dashboard.pages.dev`), not the main `smartmotion-dashboard.pages.dev` address. To lock the main address too (steps from Cloudflare's Pages docs):
+1. Workers & Pages → your project → **Settings → Enable access policy**, then **Manage** on the policy it creates.
+2. In Zero Trust → **Access → Applications**, open the application for the project and choose **Configure**.
+3. Under **Public hostname**, delete the `*` from the **Subdomain** field and **Save** (rename the application if it complains). It now protects `smartmotion-dashboard.pages.dev`.
+4. Edit the policy so only your email (and anyone you choose) is allowed.
+5. Back on the Pages project, press **Enable access policy** again so previews are protected too. You should now see two Access applications: one for the main address and one for previews.
+6. Test in a private browser window: the main address should ask you to sign in.
+
+If you add a custom domain later, it needs its own self-hosted Access application.
 
 ## What is published
 `scripts/build-site.mjs` builds `dist/` from `dashboard/` (page, logo, icons, games), `data/` and the 3D model files in `designs/` (previews, 3D views, ZIP, STL, STEP). Nothing from `docs/` (business plan, PDFs) or the design source code is published. The build stops with a clear message if a data file is broken or a model file is missing, so a bad change can't replace a working site.
