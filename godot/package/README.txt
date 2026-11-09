@@ -24,7 +24,9 @@ VR ON A META QUEST 3
   3. Put the headset on and start Quest Link (you'll see the Link home).
   4. Run SmartMotionFlight.exe and press "Fly in VR (Meta Quest)",
      or double-click "Play (VR - Meta Quest).bat".
-  5. Sit upright and press B on the right controller to recentre.
+  5. Sit upright and press B on the right controller (or V on the keyboard) to recentre.
+  You can fly with the keyboard while wearing the headset: click the game window on the laptop once
+  BEFORE putting the headset on, and don't click anywhere else afterwards.
   Controls: right stick = pitch and roll, left stick = power and rudder, left trigger = brakes,
   A = flaps, B = recentre, X = pause, Y = restart.
 

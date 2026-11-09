@@ -305,6 +305,7 @@ func _cycle_camera() -> void:
 	if state != "fly" and state != "ended":
 		return
 	if vr_active:
+		_recentre_vr()   # V or C recentres the view in VR, so a keyboard alone is enough
 		return
 	cam_mode = {"chase": "cockpit", "cockpit": "orbit", "orbit": "chase"}[cam_mode]
 	_apply_view()
