@@ -1,1 +1,3 @@
 dist/
+build/
+godot/.godot/

@@ -1,0 +1,65 @@
+name: Build SmartMotion Flight (Windows)
+
+# Builds the native Windows game whenever the game changes and publishes it as the "native-latest" release:
+# https://github.com/jamsconesfku/Smartmotion-Repo/releases/tag/native-latest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "godot/**"
+      - "scripts/build-native.sh"
+      - "VERSION"
+      - ".github/workflows/build-native.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.6.1"
+
+jobs:
+  windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot and export templates
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}
+
+      - name: Install Godot and export templates
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable"
+          mkdir -p ~/godot ~/.local/share/godot/export_templates
+          curl -fsSL -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl -fsSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q /tmp/godot.zip -d ~/godot
+          unzip -q /tmp/templates.tpz -d /tmp/tpl
+          mv /tmp/tpl/templates ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+
+      - name: Build
+        run: |
+          chmod +x ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          GODOT=~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 scripts/build-native.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SmartMotionFlight-Windows
+          path: build/native/SmartMotionFlight-Windows.zip
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete native-latest --yes --cleanup-tag || true
+          gh release create native-latest build/native/SmartMotionFlight-Windows.zip \
+            --title "SmartMotion Flight for Windows (latest)" \
+            --notes "Native Windows build of SmartMotion Flight, built from commit ${GITHUB_SHA::7}. Unzip it and run SmartMotionFlight.exe. See README.txt inside."

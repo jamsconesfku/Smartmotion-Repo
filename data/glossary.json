@@ -122,5 +122,17 @@
   {
     "term": "Telemetry",
     "meaning": "Live numbers from the game (tilt, speed, forces) sent out so the motion rig can move to match what the pilot would feel."
+  },
+  {
+    "term": "Godot",
+    "meaning": "The free game engine the Windows version of SmartMotion Flight is built with. It draws the graphics using your PC's graphics card."
+  },
+  {
+    "term": "UDP",
+    "meaning": "A fast way for programs to send live numbers to each other on a PC or network. The game uses it to feed the motion rig."
+  },
+  {
+    "term": "OpenXR",
+    "meaning": "The standard that lets games talk to VR headsets like the Meta Quest 3, here through the Meta Quest Link app."
   }
 ]

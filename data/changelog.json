@@ -35,5 +35,12 @@
     "date": "2026-11-09",
     "summary": "Version 1.2.0: new game SmartMotion Flight, a flight simulator-style game around Duxford with SmartMotion signs, a trainer and a WW2 fighter, a gate race, phone, laptop and Meta Quest (VR) support, and motion telemetry for the simulator rig.",
     "ids": []
+  },
+  {
+    "date": "2026-11-09",
+    "summary": "Version 1.3.0: SmartMotion Flight now also exists as a native Windows game (built with the Godot engine) that uses the PC's graphics card, with Meta Quest 3 VR over Link and a direct UDP link to the motion rig. It is built automatically and published as a download.",
+    "ids": [
+      "F-02"
+    ]
   }
 ]

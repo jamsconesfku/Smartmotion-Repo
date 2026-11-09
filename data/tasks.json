@@ -764,7 +764,7 @@
     "due": null,
     "owner": "Sam",
     "depends_on": [],
-    "notes": "v1 built 9 Nov 2026 in the browser (replaces the FlightGear idea). Needs: test on the Quest 3, connect telemetry to the rig, check the Duxford layout, and decide the licence/trademark position for paid use.",
+    "notes": "v1 browser game built 9 Nov 2026; native Windows version (Godot 4.6, GPU, OpenXR for Quest 3, UDP telemetry) built the same day. Needs: test on the MSI laptop and Quest 3, connect the UDP feed to FlyPT Mover, check the Duxford layout, and settle the licence/insurance position for paid use.",
     "links": [],
     "updated": "2026-11-09"
   },

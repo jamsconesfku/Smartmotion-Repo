@@ -11,6 +11,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - `data/` — `tasks`, `contacts`, `licences`, `documents`, `decisions`, `milestones`, `changelog`, `glossary` (.json)
 - `dashboard/index.html` — single file, no build step, fetches `../data/*.json`
 - `dashboard/games/` — games that open full-screen over the dashboard (see `docs/games/`)
+- `godot/` — the native Windows game (Godot project); `dashboard/fly/` — the browser version
 - `scripts/build-site.mjs` — builds the website into `dist/` (Cloudflare Pages: build command `node scripts/build-site.mjs`, output `dist`); `site/` holds root files (`_headers`, `robots.txt`); `docs/deploy-cloudflare.md` has the setup steps
 
 ## Data conventions
@@ -49,6 +50,13 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Our own flight game for paid experiences (MSFS has no commercial licence). Notes: `docs/games/smartmotion-flight.md`. Physics checks: `node scripts/test-flight.mjs` (run it after any change to `flightmodel.js` or `terrain.js`).
 - Linked from the dashboard Games tile. The site build copies `fly/` and `vendor/`. No outside assets: everything is drawn in code, logos come from `dashboard/assets/`.
 - Telemetry for the rig: `tools/telemetry-bridge.mjs` + `window.SmartMotionTelemetry`. VR is WebXR (needs https).
+
+## SmartMotion Flight, native Windows version (`godot/`)
+- Godot 4.6.1 project, same game as `fly/` but on the GPU. Notes: `docs/games/smartmotion-flight-native.md`. Built by `.github/workflows/build-native.yml` into the `native-latest` GitHub release; local build `GODOT=... scripts/build-native.sh`.
+- Get Godot in a fresh session: download `Godot_v4.6.1-stable_linux.x86_64.zip` and `Godot_v4.6.1-stable_export_templates.tpz` from `github.com/godotengine/godot-builds/releases/download/4.6.1-stable/` (github.com release downloads work; tuxfamily mirrors don't), unzip the templates into `~/.local/share/godot/export_templates/4.6.1.stable/`. For screenshots install `mesa-vulkan-drivers xvfb` and run `xvfb-run godot --path godot --rendering-driver vulkan -- --q=low --auto --shot=out.png --shot_after=6` (see the options in the doc).
+- After changing `flight_model.gd` or `terrain.gd` (or `flightmodel.js` / `terrain.js`, keep the two versions in step) run the physics checks: `godot --headless --path godot --script res://tests/test_flight.gd` and `node scripts/test-flight.mjs`.
+- GDScript gotchas hit so far: lambdas capture variables by value (mutate a Dictionary instead), values read from Dictionaries are untyped (declare `var x: float = ...`), Godot front faces are clockwise.
+- Bump `VERSION` for dashboard-visible changes; native releases are built from `main` automatically.
 
 ## Games
 - Each game is one JS file in `dashboard/games/` that exposes `window.<Name>.open({onClose})`, `close()` and `stats()`, injects its own scoped CSS, and draws with canvas/SVG (no libraries).
