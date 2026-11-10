@@ -464,6 +464,8 @@ func _ground() -> void:
 		mat.set_shader_parameter("y_bias", biases[k])
 		mat.set_shader_parameter("rw", Vector4(terrain.dir.x, terrain.dir.y, Terrain.RW_LEN, Terrain.RW_WIDTH))
 		mat.set_shader_parameter("roofmask", roof_tex)
+		if "--ground_debug" in OS.get_cmdline_user_args():
+			mat.set_shader_parameter("debug_view", 1)
 		ground_mats.append(mat)
 		var mi := MeshInstance3D.new()
 		mi.mesh = _ring_mesh(cell, n, hole)

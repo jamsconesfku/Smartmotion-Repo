@@ -17,7 +17,8 @@ uniform sampler2D concrete_col : source_color, filter_linear_mipmap_anisotropic,
 uniform sampler2D concrete_nrm : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D cloud_map : filter_linear, repeat_enable;           // cloud cover, for cloud shadows
 uniform sampler2D roofmask : filter_linear_mipmap, repeat_disable;     // where the real buildings stand (8 m pixels)
-uniform float roof_fade = 7000.0;   // the 3D buildings are drawn this far: beyond it the photo's roofs stay
+uniform float roof_fade = 7000.0;
+uniform int debug_view = 0;         // test option --ground_debug: 1 shows the fine detail, the fades and built-up land   // the 3D buildings are drawn this far: beyond it the photo's roofs stay
 uniform float cell = 32.0;
 uniform float size_cells = 1024.0;
 uniform float half_size = 16384.0;
@@ -193,6 +194,10 @@ void fragment() {
 		col *= 1.0 - cloud_shadow * sh;
 	}
 	ALBEDO = col;
+	if (debug_view == 1) {
+		vec2 w = p + vec2(vnoise(p / 13.0), vnoise(p / 13.0 + 9.0)) * 6.0;
+		ALBEDO = vec3(vnoise(w / 3.3), 1.0 - smoothstep(200.0, 1600.0, dist), built);
+	}
 	ROUGHNESS = mix(mix(0.92, 0.75, runway + built * 0.5), 0.05, water);
 	SPECULAR = mix(0.3, 0.6, water);
 }
