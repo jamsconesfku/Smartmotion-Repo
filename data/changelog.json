@@ -164,5 +164,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.11.3: fixes FlyPT Mover staying on 'waiting'. Like real X-Plane, the game now announces itself on the network once a second so Mover can find it, and it answers Mover's requests on the PC's network address, not only on 127.0.0.1. Windows may ask once to allow the game on networks: allow it.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

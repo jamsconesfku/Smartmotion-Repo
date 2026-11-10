@@ -16,6 +16,8 @@ const DATA_ROWS := [1, 3, 4, 13, 14, 16, 17, 18, 20, 21, 25, 37]
 var enabled := false
 var listen := PacketPeerUDP.new()
 var out := PacketPeerUDP.new()
+var becn := PacketPeerUDP.new()  # X-Plane's "I'm here" beacon, which Mover uses to find X-Plane
+var _next_becn := 0.0
 var listen_port := 49000
 var out_host := "127.0.0.1"
 var out_port := 49001
@@ -44,6 +46,7 @@ func start(lport: int, ohost: String, oport: int) -> void:
 	out_port = oport
 	if out_port > 0:
 		out.connect_to_host(out_host, out_port)
+	becn.set_dest_address("239.255.1.1", 49707)
 	_try_listen()
 	if out_port > 0:
 		status += "; DATA rows to port %d" % out_port
@@ -66,6 +69,7 @@ func _rpos_on() -> bool:
 func stop() -> void:
 	listen.close()
 	out.close()
+	becn.close()
 	listening = false
 	enabled = false
 	clients.clear()
@@ -73,8 +77,10 @@ func stop() -> void:
 
 
 func _try_listen() -> void:
-	# loopback only: Mover runs on the same PC, and Windows doesn't ask about the firewall for it
-	var err := listen.bind(listen_port, "127.0.0.1")
+	# every address, not just 127.0.0.1: Mover sends its requests to the PC's network address or as a broadcast
+	# (Windows may ask once whether to allow the game on the network: allow it)
+	listen.set_broadcast_enabled(true)
+	var err := listen.bind(listen_port, "*")
 	listening = err == OK
 	if listening:
 		status = "waiting: Mover hasn't asked for data yet (port %d)" % listen_port
@@ -89,6 +95,9 @@ func service(frame: Dictionary, now: float) -> void:
 	if not listening and now >= _next_retry:
 		_next_retry = now + 5.0
 		_try_listen()
+	if listening and now >= _next_becn:
+		_next_becn = now + 1.0
+		becn.put_packet(beacon_packet(listen_port))
 	_vals = values(frame, now)
 	if listening:
 		while listen.get_available_packet_count() > 0:
@@ -397,6 +406,27 @@ func _row(n: int) -> Array:
 		37:
 			return [rpm, X, X, X, X, X, X, X]
 	return []
+
+
+## X-Plane 11's network beacon (BECN, sent to 239.255.1.1:49707 once a second): "X-Plane 11.55, master, on port 49000".
+static func beacon_packet(port: int) -> PackedByteArray:
+	var name := "SmartMotion".to_ascii_buffer()
+	var p := PackedByteArray("BECN".to_ascii_buffer())
+	p.append(0)
+	p.append(1)                # beacon major version
+	p.append(2)                # beacon minor version
+	var o := p.size()
+	p.resize(o + 4 + 4 + 4 + 2)
+	p.encode_s32(o, 1)         # application: 1 = X-Plane
+	p.encode_s32(o + 4, 115501)
+	p.encode_u32(o + 8, 1)     # role: 1 = master
+	p.encode_u16(o + 12, port)
+	p.append_array(name)
+	p.append(0)
+	o = p.size()
+	p.resize(o + 2)
+	p.encode_u16(o, 49010)     # raknet port (not used)
+	return p
 
 
 ## X-Plane's RPOS answer: position, attitude, world velocity and body rates.

@@ -115,6 +115,28 @@ func _initialize() -> void:
 	check("unknown dataref answered with 0", got.has(4) and got[4] == 0.0 and xp.unknown.has("sim/made/up/value"))
 	check("DSEL row 17 (pitch, roll) sent", rows.has(17) and absf(rows[17][0] - 10.0) < 1e-3 and absf(rows[17][1] + 20.0) < 1e-3, str(rows.get(17)))
 	check("DATA rows sent to the fixed address", out_rows.has(17) and out_rows.has(3) and out_rows.has(16), str(out_rows.keys()))
+	# a request sent to the PC's network address (not 127.0.0.1), as Mover does, is answered too
+	var lan := ""
+	for ip in IP.get_local_addresses():
+		if ip.count(".") == 3 and not ip.begins_with("127."):
+			lan = ip
+	if lan != "":
+		var m2 := PacketPeerUDP.new()
+		m2.bind(49173, "*")
+		m2.set_dest_address(lan, port)
+		m2.put_packet(rref_req(20, 7, "sim/flightmodel/position/psi"))
+		var ans := false
+		for k in 30:
+			t += 1.0 / 60.0
+			OS.delay_msec(4)
+			xp.service(frame(t, 10.0, -20.0, 90.0), t)
+			while m2.get_available_packet_count() > 0:
+				var p2 := m2.get_packet()
+				if p2.slice(0, 4).get_string_from_ascii() == "RREF" and p2.decode_s32(5) == 7:
+					ans = absf(p2.decode_float(9) - 90.0) < 1e-3
+		check("request to the network address %s answered" % lan, ans)
+	var bp := XPlaneLink.beacon_packet(49000)
+	check("beacon packet", bp.slice(0, 4).get_string_from_ascii() == "BECN" and bp[5] == 1 and bp[6] == 2 and bp.decode_s32(7) == 1 and bp.decode_u16(19) == 49000, str(bp.size()))
 	# stop: RREF at 0 Hz
 	mover.put_packet(rref_req(0, 0, "sim/flightmodel/position/theta"))
 	OS.delay_msec(10)

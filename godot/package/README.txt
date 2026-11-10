@@ -99,7 +99,8 @@ MOVE THE SIMULATOR WITH THE GAME (SmartMotion Motion, replaces FlyPT Mover)
 USE FLYPT MOVER WITH THE GAME (its 3D picture, or to drive the rig)
   The game talks to FlyPT Mover the way X-Plane 11 does, so Mover's ready-made "X-Plane 11 (UDP)" source
   reads it. No plug-in or extra program needed. It works for Flight, Racing, Space and the Coaster.
-    1. Start SmartMotionFlight.exe (Settings > FlyPT Mover is On already).
+    1. Start SmartMotionFlight.exe (Settings > FlyPT Mover is On already). The first time, Windows may ask
+       whether to allow the game on networks: tick Private networks and click Allow (Mover needs it).
     2. In FlyPT Mover, use the "SOURCE :: XPLANE 11 (UDP)" source (leave its address as 127.0.0.1 and
        port 49000, X-Plane's normal settings) and switch it on.
     3. Fly. The 3D rig picture in Mover moves with the game. Press T in the game: the panel shows
