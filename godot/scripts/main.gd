@@ -2,7 +2,7 @@ extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 ## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.8.0"
+const APP_VERSION := "1.9.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -66,6 +66,16 @@ var activating := false
 var vr_panel: VRPanel
 var space_thr := 0.5
 var mkb := {"steer": 0.0}
+var learning := ""
+# what each simulator set-up's controls are, for "Set up controls": [action, name, what to do]
+const RIG_ACTIONS := {
+	"stick": [["roll", "Stick left / right", "Push the stick fully to the RIGHT"], ["pitch", "Stick forward / back", "Pull the stick fully BACK towards you"],
+		["throttle", "Throttle lever", "Push the throttle fully FORWARD"], ["rudder", "Rudder pedals or stick twist (optional)", "Push the RIGHT pedal (or twist the stick RIGHT)"],
+		["fire", "Fire button (Space game)", "Press the fire button"]],
+	"wheel": [["steer", "Steering wheel", "Turn the wheel to the RIGHT (about a quarter turn)"], ["accel", "Accelerator pedal", "Press the accelerator all the way down"],
+		["brake", "Brake pedal", "Press the brake all the way down"]],
+}
+const BIPOLAR := ["roll", "pitch", "rudder", "steer"]
 
 # frame timing (diagnostics log): how smooth the game is running
 var perf := {"n": 0, "sum": 0.0, "worst": 0.0, "late": 0, "last": 0, "t": 0.0, "fm": 0.0, "world": 0.0, "instr": 0.0, "fps": 0.0, "late_pc": 0.0, "gpu": 0.0}
@@ -108,6 +118,8 @@ func _ready() -> void:
 	ui.resume_pressed.connect(func(): _pause(false))
 	ui.restart_pressed.connect(start_game)
 	ui.vr_action.connect(_on_vr_action)
+	ui.learn_pressed.connect(_learn)
+	_refresh_controls_sheet()
 	ui.menu_pressed.connect(to_menu)
 	ui.setting_changed.connect(_on_setting)
 	ui.diag_pressed.connect(_copy_diag)
@@ -119,9 +131,19 @@ func _ready() -> void:
 		tel.start(str(Settings.get_value("tel_host")), int(Settings.get_value("tel_port")))
 	ui.vr_btn.visible = XRServer.find_interface("OpenXR") != null
 	to_menu()
-	if args.has("auto") or args.has("vr"):
+	if args.has("auto") or (args.has("vr") and args.has("go")):
+		# straight into the game (test option, or the game restarted itself in VR from the menu)
 		await get_tree().create_timer(0.3).timeout
 		await _on_fly(args.has("vr"))
+	else:
+		# first screen: how is the simulator set up today?
+		if args.has("vr"):
+			await get_tree().create_timer(0.3).timeout
+			await _start_vr()
+		ui.show_lobby()
+		Diag.write("set-up screen shown")
+		if vr_active:
+			_panel_show(true)
 	if args.has("telemetry"):
 		var hp: PackedStringArray = str(args["telemetry"]).split(":")
 		Settings.data["tel"] = true
@@ -143,6 +165,7 @@ func _ready() -> void:
 		look = Vector2(deg_to_rad(float(lp[0])), deg_to_rad(float(lp[1])))
 	if args.has("shot"):
 		shot_timer = float(args.get("shot_after", "6"))
+		Diag.write("screenshot in %.0f s" % shot_timer)
 
 
 func _apply_window() -> void:
@@ -156,6 +179,16 @@ func _on_setting(key: String, value) -> void:
 		"aircraft":
 			if state == "menu" and game == "flight":
 				showcase()
+		"rig":
+			ui.set_rig(str(value))
+			_refresh_controls_sheet()
+			var allowed: Array = GameUI.RIG_GAMES.get(str(value), GameUI.RIG_GAMES["all"])
+			Diag.write("Simulator set up for: %s" % str(value))
+			if not str(Settings.get_value("game")) in allowed:
+				ui.set_seg("game", allowed[0])
+				await _on_setting("game", allowed[0])
+			if vr_active:
+				_panel_show(true)
 		"game":
 			ui.set_game(str(value))
 			if state == "menu":
@@ -237,11 +270,18 @@ func _activate(g: String) -> void:
 		Diag.write("Building the %s game" % g)
 		var was_menu := ui.menu.visible
 		ui.show_loading()
-		ui.set_progress(0.4, "Building the racing circuit" if g == "race" else "Building the space station and asteroid field")
+		ui.set_progress(0.4, {"race": "Building the racing circuit", "space": "Building the space station and asteroid field", "coaster": "Building the roller coaster"}.get(g, "Building"))
 		await get_tree().process_frame
 		await get_tree().process_frame
 		var t0 := Time.get_ticks_msec()
-		var m: GameMode = RaceMode.new() if g == "race" else SpaceMode.new()
+		var m: GameMode
+		match g:
+			"race":
+				m = RaceMode.new()
+			"space":
+				m = SpaceMode.new()
+			_:
+				m = CoasterMode.new()
 		m.visible = false
 		add_child(m)
 		await m.build(world, quality)
@@ -268,10 +308,10 @@ func _activate(g: String) -> void:
 	else:
 		mode = modes[g]
 		mode.visible = true
-		world.visible = false
-		cam.environment = mode.env
+		world.visible = mode.uses_world()
+		cam.environment = null if mode.uses_world() else mode.env
 		cam.far = mode.camera_far()
-		synth.set_profile("race" if g == "race" else "space")
+		synth.set_profile({"race": "race", "space": "space"}.get(g, "ride"))
 		mode.set_vr(vr_active)
 	if xr_cam != null:
 		xr_cam.environment = cam.environment
@@ -305,8 +345,7 @@ func start_mode() -> void:
 		await _activate(g)
 	if mode == null:
 		return
-	if not cam_mode in mode.camera_modes():
-		cam_mode = "chase"
+	cam_mode = mode.camera_modes()[0]   # chase view (racing, space); the rider's view on the coaster
 	cam_init = false
 	space_thr = 0.5
 	mkb = {"steer": 0.0}
@@ -558,7 +597,7 @@ func _read_input(dt: float) -> void:
 	var thr_axis := 0.0
 	var brake := 0.0
 	var pads := Input.get_connected_joypads()
-	if pads.size() > 0:
+	if pads.size() > 0 and not _has_map():
 		var id: int = pads[0]
 		roll = _dz(Input.get_joy_axis(id, JOY_AXIS_RIGHT_X))
 		pitch = _dz(Input.get_joy_axis(id, JOY_AXIS_RIGHT_Y))
@@ -590,6 +629,19 @@ func _read_input(dt: float) -> void:
 	inp["yaw"] = clampf(kb["yaw"] + yaw, -1.0, 1.0)
 	thr_axis += (_k(KEY_SHIFT) + _k(KEY_PAGEUP) + _k(KEY_X)) - (_k(KEY_CTRL) + _k(KEY_PAGEDOWN) + _k(KEY_Z))
 	throttle = clampf(throttle + thr_axis * 0.9 * dt, 0.0, 1.0)   # 0 to full power in about a second
+	# the simulator's own joystick, throttle and pedals (Set up controls)
+	var mr := _mapped("roll")
+	var mp := _mapped("pitch")
+	var my := _mapped("rudder")
+	var mt := _mapped("throttle")
+	if not is_nan(mr):
+		inp["roll"] = clampf(inp["roll"] + mr, -1.0, 1.0)
+	if not is_nan(mp):
+		inp["pitch"] = clampf(inp["pitch"] + mp * inv, -1.0, 1.0)
+	if not is_nan(my):
+		inp["yaw"] = clampf(inp["yaw"] + my, -1.0, 1.0)
+	if not is_nan(mt) and thr_axis == 0.0:
+		throttle = mt
 	inp["throttle"] = throttle
 	inp["brake"] = maxf(maxf(_k(KEY_SPACE), _k(KEY_B)), brake)
 	inp["flaps"] = flaps_idx / 2.0
@@ -614,7 +666,7 @@ func _start_vr() -> bool:
 		if not _xr_mode_flag():
 			# VR has to be switched on when the game starts, so restart the game in VR mode
 			ui.set_vr_note("Restarting the game in VR mode…")
-			var pid := OS.create_process(OS.get_executable_path(), ["--xr-mode", "on", "--", "--vr", "--xr"])
+			var pid := OS.create_process(OS.get_executable_path(), ["--xr-mode", "on", "--", "--vr", "--xr", "--go"])
 			Diag.write("Restarting in VR mode: new process id %d" % pid)
 			await get_tree().create_timer(0.5).timeout
 			get_tree().quit()
@@ -834,6 +886,7 @@ func _process(delta: float) -> void:
 	var dt := minf(delta, 0.05)
 	run_time += dt
 	_vr_panel_tick(dt)
+	_controls_tick()
 	if state == "fly" or state == "ended":
 		if not paused:
 			if state == "fly":
@@ -1189,6 +1242,7 @@ func _process_mode(dt: float, delta: float) -> void:
 	if state == "menu":
 		mode.idle(dt)
 		orbit_yaw += dt * 0.15
+	_controls_tick()
 	if (state == "fly" or state == "ended") and not paused:
 		var mi := _read_mode_input(dt) if state == "fly" else {"steer": 0.0, "throttle": 0.0, "brake": 0.6, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "fire": false, "boost": false}
 		var t0 := Time.get_ticks_usec()
@@ -1216,6 +1270,11 @@ func _process_mode(dt: float, delta: float) -> void:
 	else:
 		cam.current = true
 		mode.place_camera(cam, cam_mode, dt, {"yaw": orbit_yaw, "pitch": orbit_pitch, "dist": orbit_dist, "look": look})
+	if mode.uses_world():
+		var cp := xr_cam.global_position if vr_active and xr_cam != null else cam.global_position
+		world.focus = Vector2(cp.x, cp.z)
+		world.focus_agl = 500.0   # no building crash checks
+		world.update_world(dt, cp)
 	var snd: Array = mode.sound()
 	synth.set_state(float(snd[0]), float(snd[2]), false, state == "fly" and not paused and bool(Settings.get_value("sound")))
 	var f: Dictionary = mode.tel_frame
@@ -1228,7 +1287,7 @@ func _process_mode(dt: float, delta: float) -> void:
 func _read_mode_input(dt: float) -> Dictionary:
 	var out := {"steer": 0.0, "throttle": 0.0, "brake": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "fire": false, "boost": false}
 	var pads := Input.get_connected_joypads()
-	var pad := -1 if pads.is_empty() else int(pads[0])
+	var pad := -1 if pads.is_empty() or _has_map() else int(pads[0])
 	var vl := xr_left if vr_active and xr_left != null and xr_left.get_is_active() else null
 	var vrr := xr_right if vr_active and xr_right != null and xr_right.get_is_active() else null
 	if vrr != null:
@@ -1261,6 +1320,15 @@ func _read_mode_input(dt: float) -> Dictionary:
 		if vl != null:
 			brk = maxf(brk, vl.get_float("trigger"))
 			steer += _dz(vl.get_vector2("primary").x)
+		var ms := _mapped("steer")
+		var ma := _mapped("accel")
+		var mb := _mapped("brake")
+		if not is_nan(ms):
+			steer += ms
+		if not is_nan(ma):
+			thr = maxf(thr, ma)
+		if not is_nan(mb):
+			brk = maxf(brk, mb)
 		out["steer"] = clampf(steer, -1.0, 1.0)
 		out["throttle"] = clampf(thr, 0.0, 1.0)
 		out["brake"] = clampf(brk, 0.0, 1.0)
@@ -1297,6 +1365,21 @@ func _read_mode_input(dt: float) -> Dictionary:
 		boost = boost or vl.get_float("trigger") > 0.5
 	var inv := -1.0 if Settings.get_value("invert") else 1.0
 	space_thr = clampf(space_thr + thr_axis * 0.8 * dt, 0.0, 1.0)
+	for e in [["roll", "r"], ["pitch", "p"], ["rudder", "y"]]:
+		var mv := _mapped(e[0])
+		if not is_nan(mv):
+			if e[1] == "r":
+				roll += mv
+			elif e[1] == "p":
+				pitch += mv
+			else:
+				yaw += mv
+	var mth := _mapped("throttle")
+	if not is_nan(mth) and thr_axis == 0.0:
+		space_thr = mth
+	var mf := _mapped("fire")
+	if not is_nan(mf) and mf > 0.5:
+		fire = true
 	out["pitch"] = clampf(kb["pitch"] + pitch * inv, -1.0, 1.0)
 	out["roll"] = clampf(kb["roll"] + roll, -1.0, 1.0)
 	out["yaw"] = clampf(kb["yaw"] + yaw, -1.0, 1.0)
@@ -1338,7 +1421,154 @@ func _test_panel() -> void:
 	p._push_action("ui_accept")
 	await get_tree().process_frame
 	print(("PASS" if got.has("fly") else "FAIL") + " A presses the highlighted button (%s)" % str(got))
+	ui.show_lobby()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var card: Button = ui.seg_buttons["rig"][2][1]
+	var cc := card.get_global_rect().get_center()
+	p._push_mouse(cc)
+	p._push_mouse(cc, MOUSE_BUTTON_LEFT, true)
+	p._push_mouse(cc, MOUSE_BUTTON_LEFT, false)
+	await get_tree().process_frame
+	print(("PASS" if got.get("rig") == "ride" and not ui.lobby.visible else "FAIL") + " set-up screen: pointing at 'Hands-free ride' picks it (got %s)" % str(got.get("rig")))
+	ui.set_rig("wheel")
+	var shown := []
+	for e in ui.seg_buttons["game"]:
+		if (e[1] as Button).visible:
+			shown.append(e[0])
+	print(("PASS" if shown == ["race"] else "FAIL") + " steering wheel set-up shows only Racing (%s)" % str(shown))
 	p.teardown()
 	await get_tree().process_frame
 	print(("PASS" if ui.get_parent() == self else "FAIL") + " menus back on the laptop screen after VR")
 	get_tree().quit()
+
+
+# ------------------------------------------------------------ the simulator's own controls (joystick, wheel, pedals)
+func _rig_map() -> Dictionary:
+	var m = Settings.get_value("rig_map")
+	return m if m is Dictionary else {}
+
+
+func _has_map() -> bool:
+	return not _rig_map().is_empty()
+
+
+func _map_device(e: Dictionary) -> int:
+	var pads := Input.get_connected_joypads()
+	for id in pads:
+		if Input.get_joy_name(id) == str(e.get("name", "")):
+			return id
+	return int(e.get("dev", -1)) if int(e.get("dev", -1)) in pads else -1
+
+
+## A control learned in "Set up controls", 0..1 (pedals, throttle) or -1..1 (stick, wheel); NAN if not set up.
+func _mapped(action: String) -> float:
+	var map := _rig_map()
+	if not map.has(action):
+		return NAN
+	var e: Dictionary = map[action]
+	var dev := _map_device(e)
+	if dev < 0:
+		return NAN
+	if e.has("button"):
+		return 1.0 if Input.is_joy_button_pressed(dev, int(e["button"])) else 0.0
+	var raw := Input.get_joy_axis(dev, int(e["axis"]))
+	var span: float = float(e["full"]) - float(e["rest"])
+	if absf(span) < 0.05:
+		return NAN
+	var x: float = (raw - float(e["rest"])) / span
+	if action in BIPOLAR:
+		return 0.0 if absf(x) < 0.04 else clampf(x, -1.0, 1.0)
+	return clampf(x, 0.0, 1.0)
+
+
+func _refresh_controls_sheet() -> void:
+	ui.set_control_actions(RIG_ACTIONS.get(str(Settings.get_value("rig")), []))
+
+
+func _controls_tick() -> void:
+	if ui.controls_sheet == null or not ui.controls_sheet.visible:
+		return
+	var map := _rig_map()
+	for a in RIG_ACTIONS.get(str(Settings.get_value("rig")), []):
+		var act: String = a[0]
+		var v := _mapped(act)
+		var st := "not set (keyboard / gamepad)"
+		if learning == act:
+			st = "move it now…"
+		elif map.has(act):
+			var e: Dictionary = map[act]
+			st = ("button %d" % int(e["button"])) if e.has("button") else ("axis %d" % int(e["axis"]))
+			if is_nan(v):
+				st += " (not plugged in)"
+		ui.set_control_row(act, st, 0.0 if is_nan(v) else v)
+
+
+## "Set" in Set up controls: watches every axis and button of every plugged-in controller and keeps the one
+## that moves most (8 seconds to do it).
+func _learn(action: String) -> void:
+	if action == "clear":
+		Settings.set_value("rig_map", {})
+		ui.ctl_info.text = "All controls cleared: the keyboard and gamepads work as normal."
+		return
+	if learning != "":
+		return
+	var info: Array = []
+	for a in RIG_ACTIONS.get(str(Settings.get_value("rig")), []):
+		if a[0] == action:
+			info = a
+	var pads := Input.get_connected_joypads()
+	if pads.is_empty():
+		ui.ctl_info.text = "No joystick, wheel or gamepad found. Plug it in (USB), wait a few seconds, then press Set again."
+		return
+	learning = action
+	ui.ctl_info.text = "%s: %s, then let go." % [info[1], info[2]]
+	var base := {}
+	var btn0 := {}
+	for id in pads:
+		for ax in JOY_AXIS_SDL_MAX:
+			base[Vector2i(id, ax)] = Input.get_joy_axis(id, ax)
+		for b in 32:
+			btn0[Vector2i(id, b)] = Input.is_joy_button_pressed(id, b)
+	var best_k := Vector2i(-1, -1)
+	var best_d := 0.0
+	var best_v := 0.0
+	var t := 0.0
+	var found := {}
+	while t < 8.0:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+		if action == "fire":
+			for k in btn0.keys():
+				if Input.is_joy_button_pressed(k.x, k.y) and not btn0[k]:
+					found = {"name": Input.get_joy_name(k.x), "dev": k.x, "button": k.y}
+			if not found.is_empty():
+				break
+			continue
+		for k in base.keys():
+			var val := Input.get_joy_axis(k.x, k.y)
+			var d := absf(val - float(base[k]))
+			if d > best_d:
+				best_d = d
+				best_k = k
+				best_v = val
+		if best_d > 0.5 and t > 1.0:
+			# keep watching for a moment to catch the full movement
+			var t2 := 0.0
+			while t2 < 0.6:
+				await get_tree().process_frame
+				t2 += get_process_delta_time()
+				var val2 := Input.get_joy_axis(best_k.x, best_k.y)
+				if absf(val2 - float(base[best_k])) > absf(best_v - float(base[best_k])):
+					best_v = val2
+			found = {"name": Input.get_joy_name(best_k.x), "dev": best_k.x, "axis": best_k.y, "rest": base[best_k], "full": best_v}
+			break
+	learning = ""
+	if found.is_empty():
+		ui.ctl_info.text = "Nothing moved. Check it's plugged in and press Set again."
+		return
+	var map := _rig_map().duplicate()
+	map[action] = found
+	Settings.set_value("rig_map", map)
+	Diag.write("Control set: %s = %s" % [action, str(found)])
+	ui.ctl_info.text = "%s set (%s). Next control, or Done." % [info[1], str(found["name"])]

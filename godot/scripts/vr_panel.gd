@@ -134,7 +134,7 @@ func _edge(k: String, v: bool) -> bool:
 
 func _focus_first() -> void:
 	var layer: Control = null
-	for s in [ui.end_sheet, ui.help_sheet, ui.settings_sheet, ui.pause_sheet]:
+	for s in [ui.lobby, ui.end_sheet, ui.controls_sheet, ui.help_sheet, ui.settings_sheet, ui.pause_sheet]:
 		if (s as Control).visible:
 			layer = s
 			break
@@ -142,16 +142,16 @@ func _focus_first() -> void:
 		layer = ui.menu
 	if layer == null:
 		return
-	var b := _first_button(layer)
+	var b := ui.fly_btn if layer == ui.menu else _first_button(layer, layer == ui.lobby)
 	if b != null:
 		b.grab_focus.call_deferred()
 
 
-func _first_button(n: Node) -> Button:
+func _first_button(n: Node, toggles := false) -> Button:
 	for c in n.get_children():
-		if c is Button and (c as Button).is_visible_in_tree() and not (c as Button).toggle_mode:
+		if c is Button and (c as Button).is_visible_in_tree() and (toggles or not (c as Button).toggle_mode):
 			return c
-		var r := _first_button(c)
+		var r := _first_button(c, toggles)
 		if r != null:
 			return r
 	return null
