@@ -151,7 +151,8 @@ void fragment() {
 		if (dfade > 0.001) {
 			vec2 w = p + vec2(vnoise(p / 13.0), vnoise(p / 13.0 + 9.0)) * 6.0;
 			float d = vnoise(w / 3.3) * 0.55 + vnoise(w / 8.5 + 3.0) * 0.45;
-			col *= mix(1.0, 0.82 + 0.36 * d, dfade * 0.8);
+			d = smoothstep(0.2, 0.8, d);
+			col *= mix(1.0, 0.76 + 0.48 * d, dfade * 0.85);
 			col = mix(col, col * vec3(1.06, 1.0, 0.86), smoothstep(0.62, 0.8, d) * dfade * 0.6 * wsoil_hint(col));
 		}
 	}
