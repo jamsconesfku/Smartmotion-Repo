@@ -10,6 +10,9 @@ const TOD := {
 
 var terrain: Terrain
 var quality := "high"
+var ultra := false          # the Ultra setting: further view, more trees, sharper shadows, reflections
+var view := "normal"        # view distance setting: near / normal / far
+var clouds_on := true       # 3D clouds setting (the flat cloud cards are used when off)
 var logo: Texture2D
 var logo_dark: Texture2D
 var sun: DirectionalLight3D
@@ -68,6 +71,8 @@ func build(progress: Callable, quality_: String, tod: String) -> void:
 	scenery = RealScenery.new()
 	add_child(scenery)
 	scenery.setup(terrain, quality, ortho_tex)
+	scenery.set_extent(ultra, view)
+	_roof_fade()
 	progress.call(0.75, "Planting the woods")
 	lap.call('Planting the woods')
 	await get_tree().process_frame
@@ -114,6 +119,13 @@ func _environment() -> void:
 	env.ssil_enabled = quality == "high"   # light bouncing between nearby surfaces
 	env.ssil_radius = 6.0
 	env.ssil_intensity = 0.8
+	if ultra:
+		# reflections in water and windows, and the shadow map at double resolution
+		env.ssr_enabled = true
+		env.ssr_max_steps = 48
+		env.ssr_fade_in = 0.2
+		env.ssr_fade_out = 2.5
+		RenderingServer.directional_shadow_atlas_set_size(8192, true)
 	env.adjustment_enabled = true
 	env.adjustment_saturation = 1.16
 	env.adjustment_contrast = 1.08
@@ -123,7 +135,7 @@ func _environment() -> void:
 	sun = DirectionalLight3D.new()
 	sun.shadow_enabled = quality != "low"
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-	sun.directional_shadow_max_distance = 3500.0
+	sun.directional_shadow_max_distance = 5000.0 if ultra else 3500.0
 	# cascades: most of the shadow detail close in, so the cockpit, aircraft and nearby buildings get crisp shadows
 	sun.directional_shadow_split_1 = 0.012   # ~40 m
 	sun.directional_shadow_split_2 = 0.06    # ~210 m
@@ -224,7 +236,7 @@ func _volumetric_clouds() -> void:
 	vol_mat.set_shader_parameter("weather", weather)
 	vol_mat.set_shader_parameter("shape_noise", shape)
 	vol_mat.set_shader_parameter("detail_noise", detail)
-	vol_mat.set_shader_parameter("steps", 72 if quality == "high" else 44)
+	vol_mat.set_shader_parameter("steps", (96 if ultra else 72) if quality == "high" else 44)
 	vol_mat.set_shader_parameter("light_steps", 5 if quality == "high" else 4)
 	vol_mat.set_shader_parameter("coverage", 0.48)
 	vol_mi = MeshInstance3D.new()
@@ -243,10 +255,17 @@ func _volumetric_clouds() -> void:
 
 
 ## VR draws two views, so it uses the light cloud cards instead of the 3D clouds.
+## The ground paints over the photo's roofs only as far as the 3D buildings are drawn.
+func _roof_fade() -> void:
+	for m in ground_mats:
+		(m as ShaderMaterial).set_shader_parameter("roof_fade", scenery.radius_bld if scenery != null else 0.0)
+
+
 func set_vr_mode(on: bool) -> void:
 	vr_mode = on
 	if scenery != null:
 		scenery.set_vr(on)
+		_roof_fade()
 	_apply_cloud_mode()
 	_apply_vr_shadows()
 
@@ -266,15 +285,20 @@ func _apply_vr_shadows() -> void:
 		RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_LOW)
 	else:
 		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-		sun.directional_shadow_max_distance = 3500.0
-		sun.directional_shadow_split_1 = 0.012
+		sun.directional_shadow_max_distance = 5000.0 if ultra else 3500.0
+		sun.directional_shadow_split_1 = 0.009 if ultra else 0.012
 		sun.directional_shadow_blend_splits = true
 		sun.light_angular_distance = 0.5 if quality == "high" else 0.0
 		RenderingServer.directional_soft_shadow_filter_set_quality(int(ProjectSettings.get_setting("rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality", 3)) as RenderingServer.ShadowQuality)
 
 
+func set_clouds(on: bool) -> void:
+	clouds_on = on
+	_apply_cloud_mode()
+
+
 func _apply_cloud_mode() -> void:
-	var vol := vol_mi != null and not vr_mode
+	var vol := vol_mi != null and not vr_mode and clouds_on
 	if vol_mi != null:
 		vol_mi.visible = vol
 	if cloud_cards != null:
@@ -414,6 +438,7 @@ func _ground() -> void:
 	var far_tex := await _paint(far_px, far_size, 3.0, 0.0)
 	ortho_tex = load("res://assets/world/ortho.jpg")
 	var lc_tex: Texture2D = load("res://assets/world/landcover.png")
+	var roof_tex: Texture2D = load("res://assets/world/roofmask.png")
 	var shader: Shader = load("res://shaders/ground.gdshader")
 	var cells := [8.0, 32.0, 128.0, 512.0, 2048.0]
 	var biases := [0.0, -0.6, -2.0, -4.0, -8.0]
@@ -438,6 +463,7 @@ func _ground() -> void:
 		mat.set_shader_parameter("far_size", far_size)
 		mat.set_shader_parameter("y_bias", biases[k])
 		mat.set_shader_parameter("rw", Vector4(terrain.dir.x, terrain.dir.y, Terrain.RW_LEN, Terrain.RW_WIDTH))
+		mat.set_shader_parameter("roofmask", roof_tex)
 		ground_mats.append(mat)
 		var mi := MeshInstance3D.new()
 		mi.mesh = _ring_mesh(cell, n, hole)

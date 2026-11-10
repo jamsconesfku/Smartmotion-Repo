@@ -70,17 +70,21 @@ void fragment() {
 			// gaps where the wall is too short for another floor, and a few blank bays
 			win *= step(0.18, h21(floor(cell) + 3.0));
 			if (win > 0.5) {
+				// glass: dark inside, a mirror for the sky at a glancing angle (metallic picks up the sky light)
 				float lit = h21(floor(cell) * 1.7);
-				col = mix(vec3(0.05, 0.07, 0.09), vec3(0.18, 0.22, 0.27), lit * 0.5);
-				rough = 0.08;
+				col = mix(vec3(0.04, 0.05, 0.06), vec3(0.14, 0.17, 0.2), lit * 0.5);
+				rough = 0.04 + 0.08 * lit;
+				metal = 0.75;
 				nm = vec3(0.5, 0.5, 1.0);
 			} else {
 				float frame = step(0.24, f.x) * step(f.x, 0.76) * step(0.18, f.y) * step(f.y, 0.74) * floor_ok * step(0.18, h21(floor(cell) + 3.0));
 				col = mix(col, vec3(0.92), frame * 0.85);
 			}
 		}
-		// ground grime at the foot of the wall
+		// ground grime at the foot of the wall, rain streaks and weathering higher up
 		col *= mix(0.72, 1.0, smoothstep(-0.6, 1.2, uv.y));
+		float wn = h21(floor(vec2(uv.x * 1.3, uv.y * 0.25)) + floor(v_world.xz * 0.05));
+		col *= 0.93 + 0.1 * wn * detail;
 	} else {
 		// roofs: take the colour the satellite sees, mixed with the roof material so it isn't blurry
 		vec2 ouv = v_world.xz / (2.0 * half_size) + 0.5;
@@ -98,6 +102,9 @@ void fragment() {
 			rough = 0.6;
 		}
 		col = mix(col, sat * 1.1, 0.35);
+		// moss and dirt patches, a little darker towards the eaves
+		float pn = h21(floor(v_world.xz * 0.7)) * 0.5 + h21(floor(v_world.xz * 0.23)) * 0.5;
+		col *= 0.88 + 0.2 * pn * detail;
 	}
 	ALBEDO = col;
 	NORMAL_MAP = mix(vec3(0.5, 0.5, 1.0), nm, detail);

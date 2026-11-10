@@ -840,7 +840,15 @@ func _build_sheets() -> void:
 	settings_sheet = r[0]
 	v = r[1]
 	_section(v, "Graphics quality (applies on the next start)")
-	_seg(v, "quality", [["low", "Fast"], ["medium", "Balanced"], ["high", "Best"]], Settings.get_value("quality"))
+	_seg(v, "quality", [["low", "Fast"], ["medium", "Balanced"], ["high", "Best"], ["ultra", "Ultra"]], Settings.get_value("quality"))
+	var qn := _lbl("Ultra: sharper shadows further out, more trees, buildings further away and reflections. Use it if Best runs smoothly; on battery or in VR, Best is safer.", 12, MUTED)
+	qn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	qn.custom_minimum_size = Vector2(420, 0)
+	v.add_child(qn)
+	_section(v, "View distance (applies on the next start)")
+	_seg(v, "view", [["near", "Near (fastest)"], ["normal", "Normal"], ["far", "Far"]], Settings.get_value("view"))
+	_section(v, "3D clouds (the biggest cost on the screen; not used in VR)")
+	_seg(v, "clouds3d", [[true, "On"], [false, "Off"]], Settings.get_value("clouds3d"))
 	_section(v, "Sound")
 	_seg(v, "sound", [[true, "On"], [false, "Off"]], Settings.get_value("sound"))
 	_section(v, "Pitch control")

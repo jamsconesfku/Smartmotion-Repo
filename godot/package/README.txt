@@ -18,6 +18,13 @@ HOW TO START
   5. Choose the options and press Fly / Race / Launch / Ride.
      (Racing, Space and the Coaster take a few seconds to build the first time you pick them.)
 
+GRAPHICS SETTINGS (Settings on the menu)
+  Graphics quality: Fast, Balanced, Best (the default) or Ultra. Ultra draws buildings and trees further,
+  more trees, sharper shadows further out and reflections in water and windows: use it if Best runs
+  smoothly; on battery or in VR, Best is the safe choice. View distance: Near (fastest), Normal or Far.
+  3D clouds: On or Off (Off is the quickest way to win back speed on the screen; VR never uses them).
+  Quality and view distance change the next time you start the game.
+
 USE YOUR GAMING GRAPHICS CARD
   The menu shows which graphics card the game is using ("Graphics: ..."). On a laptop with two
   graphics chips it should say NVIDIA or AMD, not Intel. If it doesn't:

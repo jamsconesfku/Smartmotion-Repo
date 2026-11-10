@@ -16,6 +16,8 @@ uniform sampler2D asphalt_nrm : hint_normal, filter_linear_mipmap_anisotropic, r
 uniform sampler2D concrete_col : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D concrete_nrm : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D cloud_map : filter_linear, repeat_enable;           // cloud cover, for cloud shadows
+uniform sampler2D roofmask : filter_linear_mipmap, repeat_disable;     // where the real buildings stand (8 m pixels)
+uniform float roof_fade = 7000.0;   // the 3D buildings are drawn this far: beyond it the photo's roofs stay
 uniform float cell = 32.0;
 uniform float size_cells = 1024.0;
 uniform float half_size = 16384.0;
@@ -31,6 +33,12 @@ uniform float cloud_cover = 0.5;
 uniform vec2 shadow_shift = vec2(0.0);   // where the cloud above a point is, along the sun direction
 
 varying vec3 v_world;
+
+float h21g(vec2 q) { return fract(sin(dot(q, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 q) {
+	vec2 i = floor(q); vec2 f = fract(q); f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h21g(i), h21g(i + vec2(1.0, 0.0)), f.x), mix(h21g(i + vec2(0.0, 1.0)), h21g(i + vec2(1.0, 1.0)), f.x), f.y);
+}
 
 float hgt(vec2 xz) {
 	vec2 uv = (xz / cell + size_cells * 0.5 + 0.5) / size_cells;
@@ -48,6 +56,27 @@ void vertex() {
 	NORMAL = normalize(vec3(hl - hr, 2.0 * e, hu - hd));
 	TANGENT = normalize(vec3(1.0, 0.0, 0.0) - NORMAL * NORMAL.x);
 	BINORMAL = normalize(vec3(0.0, 0.0, 1.0) - NORMAL * NORMAL.z);
+}
+
+// smooth (cubic) sampling of the photo up close, so its 8 m squares don't show as blocks: 4 filtered taps
+vec4 cubic_w(float v) {
+	vec4 n = vec4(1.0, 2.0, 3.0, 4.0) - v;
+	vec4 s = n * n * n;
+	float x = s.x; float y = s.y - 4.0 * s.x; float z = s.z - 4.0 * s.y + 6.0 * s.x;
+	return vec4(x, y, z, 6.0 - x - y - z) * (1.0 / 6.0);
+}
+vec3 bicubic(sampler2D t, vec2 uv, float size) {
+	uv = uv * size - 0.5;
+	vec2 fxy = fract(uv);
+	uv -= fxy;
+	vec4 xc = cubic_w(fxy.x); vec4 yc = cubic_w(fxy.y);
+	vec4 c = uv.xxyy + vec2(-0.5, 1.5).xyxy;
+	vec4 s = vec4(xc.xz + xc.yw, yc.xz + yc.yw);
+	vec4 off = (c + vec4(xc.yw, yc.yw) / s) / size;
+	vec3 s0 = textureLod(t, off.xz, 0.0).rgb; vec3 s1 = textureLod(t, off.yz, 0.0).rgb;
+	vec3 s2 = textureLod(t, off.xw, 0.0).rgb; vec3 s3 = textureLod(t, off.yw, 0.0).rgb;
+	float sx = s.x / (s.x + s.y); float sy = s.z / (s.z + s.w);
+	return mix(mix(s3, s2, sx), mix(s1, s0, sx), sy);
 }
 
 // sample a tiling texture twice at different scales and angles so the repeat can't be seen
@@ -71,6 +100,21 @@ void fragment() {
 	float inside = 1.0 - smoothstep(half_size - 1800.0, half_size - 150.0, edge);
 
 	vec3 photo = texture(ortho, ouv).rgb;
+	if (dist < 1800.0 && inside > 0.99) {
+		photo = mix(bicubic(ortho, ouv, 4096.0), photo, smoothstep(1200.0, 1800.0, dist));
+	}
+	// close up: sharpen the 10 m photo a little (hedges, tracks and field edges read crisper)
+	float near = 1.0 - smoothstep(600.0, 2600.0, dist);
+	vec3 soft = textureLod(ortho, ouv, 2.0).rgb;
+	photo = max(photo + (photo - soft) * 0.45 * near, vec3(0.0));
+	// the 3D buildings stand here: paint over the photo's blurry roofs with garden and street colours
+	float rm = texture(roofmask, ouv).r * inside * (1.0 - smoothstep(roof_fade * 0.8, roof_fade, dist));
+	if (rm > 0.01) {
+		vec3 around = textureLod(ortho, ouv, 4.0).rgb;
+		vec3 yard = mix(around * vec3(0.78, 0.9, 0.72), vec3(0.11, 0.15, 0.08), 0.45);
+		yard *= 0.85 + 0.3 * vnoise(p / 6.0);
+		photo = mix(photo, yard, clamp(rm * 1.15, 0.0, 1.0));
+	}
 	float l = dot(photo, vec3(0.3, 0.59, 0.11));
 	photo = mix(vec3(l), photo, saturation) * exposure;
 	photo.g *= 1.03;
@@ -86,12 +130,31 @@ void fragment() {
 
 	// what kind of surface: green plants, bare/ripe fields, built-up, tarmac
 	float green = clamp((col.g - max(col.r, col.b)) * 9.0 + 0.3, 0.0, 1.0);
-	float built = clamp(lc.g, 0.0, 1.0) * (1.0 - runway);
+	float built = clamp(lc.g, 0.0, 1.0) * (1.0 - runway) * (1.0 - 0.6 * rm);
 	float wgrass = (1.0 - built) * (1.0 - runway) * max(green, lc.a);
 	float wsoil = (1.0 - built) * (1.0 - runway) * (1.0 - max(green, lc.a));
 
 	float fade = 1.0 - smoothstep(250.0, 2200.0, dist);
+	// patches inside the fields (soil, crop and grass vary over tens of metres, not in 10 m squares)
+	float mfade = 1.0 - smoothstep(1500.0, 6000.0, dist);
+	if (mfade > 0.001) {
+		float m = vnoise(p / 23.0) * 0.6 + vnoise(p / 71.0 + 5.0) * 0.4;
+		col *= mix(1.0, 0.9 + 0.2 * m, mfade * (1.0 - runway) * (1.0 - built));
+	}
+	// arable fields: the pairs of tractor tracks ("tramlines", 24 m apart) that show from the air
+	float arable = clamp(1.0 - (lc.r + lc.g + lc.b + lc.a) * 1.5, 0.0, 1.0) * (1.0 - runway) * (1.0 - rm);
+	if (arable > 0.01 && dist < 4000.0) {
+		float ang = vnoise(p / 1100.0 + 2.0) * 6.2832;
+		float u = dot(p, vec2(cos(ang), sin(ang)));
+		float m = mod(u, 24.0);
+		float d = min(min(m, 24.0 - m), abs(m - 1.9));
+		float fw = fwidth(u);
+		float line = (1.0 - smoothstep(0.18, 0.5 + fw, d)) * (1.0 - smoothstep(0.6, 2.5, fw));
+		col *= 1.0 - 0.16 * line * arable * (1.0 - smoothstep(2500.0, 4000.0, dist));
+	}
 	if (fade > 0.001) {
+		// a coarse layer of the ground textures too, breaking up the smooth patches between photo pixels
+		col *= mix(vec3(1.0), grain(grass_col, p, 19.0) * wgrass + grain(soil_col, p, 23.0) * wsoil + vec3(built + runway), 0.35 * fade);
 		vec3 g = grain(grass_col, p, 3.0) * wgrass + grain(soil_col, p, 4.0) * wsoil
 			+ grain(concrete_col, p, 5.0) * built + grain(asphalt_col, p, 5.0) * runway;
 		col *= mix(vec3(1.0), g, 0.75 * fade);

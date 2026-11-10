@@ -5,6 +5,7 @@ const PATH := "user://settings.cfg"
 var data := {
 	"aircraft": "bulldog", "start": "runway", "mode": "free", "assist": true, "tod": "day", "wind": "calm",
 	"invert": false, "sound": true, "quality": "high", "tel": false, "tel_host": "127.0.0.1", "tel_port": 4123, "fullscreen": false,
+	"clouds3d": true, "view": "normal",
 	"flypt": true, "flypt_port": 49000, "flypt_out": 49001,
 	"vr_hz": 72.0, "game": "flight", "race": "race", "rig": "all", "rig_map": {},
 }

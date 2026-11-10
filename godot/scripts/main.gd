@@ -39,6 +39,7 @@ var args := {}
 var shot_timer := -1.0
 var frame_count := 0
 var quality := "high"
+var ultra := false
 
 # VR
 var vr_active := false
@@ -97,7 +98,13 @@ func _ready() -> void:
 		Settings.data["assist"] = args["assist"] == "true" or args["assist"] == "1"
 	if args.has("q"):
 		Settings.data["quality"] = args["q"]
-	quality = str(Settings.get_value("quality"))
+	if args.has("clouds"):
+		Settings.data["clouds3d"] = args["clouds"] != "off" and args["clouds"] != "false"
+	if args.has("view"):
+		Settings.data["view"] = args["view"]
+	# "ultra" is "high" plus extras (World.ultra, RealScenery.ultra): the rest of the code treats it as high
+	ultra = str(Settings.get_value("quality")) == "ultra"
+	quality = "high" if ultra else str(Settings.get_value("quality"))
 	_apply_window()
 	var vp := get_viewport()
 	vp.msaa_3d = {"low": Viewport.MSAA_DISABLED, "medium": Viewport.MSAA_2X, "high": Viewport.MSAA_4X}.get(quality, Viewport.MSAA_2X)
@@ -130,6 +137,9 @@ func _ready() -> void:
 	ui.set_gpu_text("Graphics: %s  ·  %s  ·  F11 for full screen. If that isn't your NVIDIA/AMD card, set Windows Graphics Settings to High performance for this app." % [gpu, RenderingServer.get_current_rendering_method()])
 	Diag.snapshot()
 	_start_flypt()   # before the world loads, so Mover connects straight away
+	world.ultra = ultra
+	world.view = str(Settings.get_value("view"))
+	world.clouds_on = bool(Settings.get_value("clouds3d"))
 	await world.build(ui.set_progress, quality, str(Settings.get_value("tod")))
 	for g in ["race", "coaster"]:
 		await _build_mode(g)   # part of the same world: built now so you can fly over them
@@ -226,8 +236,10 @@ func _on_setting(key: String, value) -> void:
 				tel.start(str(Settings.get_value("tel_host")), int(Settings.get_value("tel_port")))
 			else:
 				tel.stop()
-		"quality":
-			ui.toast("Graphics quality changes next time you start the game", 3.0)
+		"quality", "view":
+			ui.toast("This changes next time you start the game", 3.0)
+		"clouds3d":
+			world.set_clouds(bool(value))
 
 
 func _on_fly(vr: bool) -> void:
@@ -1016,14 +1028,25 @@ func _process(delta: float) -> void:
 	_shot_tick(delta)
 
 
+var shot_still := -1
 func _shot_tick(delta: float) -> void:
+	if shot_still > 0:
+		shot_still -= 1   # time stopped: a few still frames so the smoothing (TAA) settles before the picture
+		if shot_still == 0:
+			_save_shot()
+		return
 	if shot_timer >= 0.0:
 		shot_timer -= delta
 		if shot_timer < 0.0:
-			var img := get_viewport().get_texture().get_image()
-			img.save_png(str(args["shot"]))
-			print("saved screenshot ", args["shot"])
-			get_tree().quit()
+			Engine.time_scale = 0.0
+			shot_still = 6
+
+
+func _save_shot() -> void:
+	var img := get_viewport().get_texture().get_image()
+	img.save_png(str(args["shot"]))
+	print("saved screenshot ", args["shot"])
+	get_tree().quit()
 
 
 ## Frame timing for the diagnostics log: every 5 s (2 s with --stats) while flying, the average and slowest

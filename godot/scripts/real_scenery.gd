@@ -18,7 +18,7 @@ var lc_data := PackedByteArray()
 var chunks := {}                     # Vector2i -> Node3D
 var coll_grid := {}                  # Vector2i cell -> Array of collider dicts
 var bld_mat: ShaderMaterial
-var tree_mat: StandardMaterial3D
+var tree_mat: ShaderMaterial
 var tree_near: Mesh
 var tree_far: Mesh
 var radius_bld := 6500.0
@@ -56,15 +56,28 @@ func setup(terrain_: Terrain, quality_: String, ortho: Texture2D) -> void:
 	for k in ["brick", "plaster", "roof", "metal", "concrete"]:
 		bld_mat.set_shader_parameter(k + "_col", load("res://assets/textures/%s_col.jpg" % k))
 		bld_mat.set_shader_parameter(k + "_nrm", load("res://assets/textures/%s_nrm.jpg" % k))
-	tree_mat = StandardMaterial3D.new()
-	tree_mat.vertex_color_use_as_albedo = true
-	tree_mat.roughness = 0.95
-	tree_mat.diffuse_mode = BaseMaterial3D.DIFFUSE_LAMBERT_WRAP
-	tree_mat.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
-	tree_mat.backlight_enabled = true
-	tree_mat.backlight = Color(0.05, 0.08, 0.02)
+	tree_mat = ShaderMaterial.new()
+	tree_mat.shader = load("res://shaders/tree.gdshader")   # leaf clumps, light through the leaves, wind
 	tree_near = _leafy_mesh(true)
 	tree_far = _leafy_mesh(false)
+
+
+var ultra := false
+var extra_trees := 0.0                ## Ultra: chance of a second tree in each wooded 8 m square
+
+
+## The Ultra and view-distance settings: how far buildings and trees are drawn, and how many trees.
+func set_extent(ultra_: bool, view: String) -> void:
+	ultra = ultra_
+	if ultra:
+		radius_bld = 9000.0
+		radius_tree = 5500.0
+		near_tree_range = 1800.0
+		extra_trees = 0.45
+	var k: float = {"near": 0.7, "normal": 1.0, "far": 1.35}.get(view, 1.0)
+	radius_bld *= k
+	radius_tree *= k
+	near_tree_range *= minf(k, 1.15)
 
 
 ## VR draws two views at 72-90 fps: draw trees and buildings less far while it is on.
@@ -468,18 +481,24 @@ func _tree_data(c: Vector2i) -> PackedFloat32Array:
 				continue
 			if rng.randf() > tree_density:
 				continue
-			var wx := -HALF + (x + rng.randf()) * 8.0
-			var wz := -HALF + (y + rng.randf()) * 8.0
-			if terrain.paved(wx, wz):
-				continue
-			var h := 7.0 + rng.randf() * 10.0
-			var w := h * (0.55 + rng.randf() * 0.25)
-			var bs := Basis.from_euler(Vector3((rng.randf() - 0.5) * 0.08, rng.randf() * TAU, (rng.randf() - 0.5) * 0.08)).scaled(Vector3(w, h, w))
-			var org := Vector3(wx, terrain.height(wx, wz) - 0.4, wz)
-			var g := rng.randf()
-			var col := Color(0.16, 0.27, 0.10).lerp(Color(0.30, 0.40, 0.15), g).lerp(Color(0.36, 0.34, 0.16), rng.randf() * 0.25).srgb_to_linear()
-			buf.append_array([bs.x.x, bs.y.x, bs.z.x, org.x, bs.x.y, bs.y.y, bs.z.y, org.y, bs.x.z, bs.y.z, bs.z.z, org.z, col.r, col.g, col.b, col.a])
+			for extra in (2 if rng.randf() < extra_trees else 1):
+				_one_tree(buf, rng, x, y)
 	return buf
+
+
+## One tree somewhere in the wooded 8 m land-cover square (x, y).
+func _one_tree(buf: PackedFloat32Array, rng: RandomNumberGenerator, x: int, y: int) -> void:
+	var wx := -HALF + (x + rng.randf()) * 8.0
+	var wz := -HALF + (y + rng.randf()) * 8.0
+	if terrain.paved(wx, wz):
+		return
+	var h := 7.0 + rng.randf() * 10.0
+	var w := h * (0.55 + rng.randf() * 0.25)
+	var bs := Basis.from_euler(Vector3((rng.randf() - 0.5) * 0.08, rng.randf() * TAU, (rng.randf() - 0.5) * 0.08)).scaled(Vector3(w, h, w))
+	var org := Vector3(wx, terrain.height(wx, wz) - 0.4, wz)
+	var g := rng.randf()
+	var col := Color(0.16, 0.27, 0.10).lerp(Color(0.30, 0.40, 0.15), g).lerp(Color(0.36, 0.34, 0.16), rng.randf() * 0.25).srgb_to_linear()
+	buf.append_array([bs.x.x, bs.y.x, bs.z.x, org.x, bs.x.y, bs.y.y, bs.z.y, org.y, bs.x.z, bs.y.z, bs.z.z, org.z, col.r, col.g, col.b, col.a])
 
 
 func _add_trees(buf: PackedFloat32Array, node: Node3D) -> void:
