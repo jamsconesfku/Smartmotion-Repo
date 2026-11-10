@@ -1,7 +1,7 @@
 extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 
-const APP_VERSION := "1.6.3"
+const APP_VERSION := "1.6.4"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -460,14 +460,10 @@ func _start_vr() -> bool:
 	get_viewport().use_taa = false            # TAA smears when you turn your head; MSAA keeps VR sharp
 	# 2x MSAA: 4x on two eyes at headset resolution cost too much time per frame (judder when looking around)
 	get_viewport().msaa_3d = Viewport.MSAA_2X
-	# foveated rendering: full detail where you look through the middle of the lenses, less at the blurry edges
-	# (graphics cards without variable rate shading ignore it)
-	get_viewport().vrs_mode = Viewport.VRS_XR
-	if "vrs_strength" in xr:
-		xr.set("vrs_strength", 1.0)
-		xr.set("vrs_min_radius", 25.0)
+	# v1.6.3 also turned on foveated rendering, depth submission and a 72 Hz request here: VR then stuck on
+	# Quest Link's loading hourglass on Sam's PC, so those are out. The refresh rate is only changed from the VR menu.
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)   # the headset sets the pace, not the laptop screen
-	_apply_vr_hz()
+	Diag.write("VR refresh rates offered: %s; current %.0f Hz" % [str(_vr_rates()), _vr_hz()])
 	vr_active = true
 	vr_frames = 0
 	world.env.ssao_enabled = false
@@ -518,7 +514,6 @@ func _stop_vr() -> void:
 	vr_active = false
 	get_viewport().use_xr = false
 	get_viewport().use_taa = true
-	get_viewport().vrs_mode = Viewport.VRS_DISABLED
 	get_viewport().msaa_3d = {"low": Viewport.MSAA_DISABLED, "medium": Viewport.MSAA_2X, "high": Viewport.MSAA_4X}.get(quality, Viewport.MSAA_2X)
 	var xr := XRServer.find_interface("OpenXR")
 	if xr != null and xr.is_initialized():
@@ -864,8 +859,8 @@ func _vr_rates() -> Array:
 	return out
 
 
-## Asks the headset for the refresh rate chosen in the VR menu (72 Hz by default: the steadiest, as every
-## frame has the most time). The game must finish each frame within 1/rate of a second, or you feel a judder.
+## Asks the headset for the refresh rate picked in the VR menu (only when picked there; otherwise the rate
+## set in the Quest Link app is used). The game must finish each frame within 1/rate of a second, or you feel a judder.
 func _apply_vr_hz() -> void:
 	var rates := _vr_rates()
 	var want := float(Settings.get_value("vr_hz"))

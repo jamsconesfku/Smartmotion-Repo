@@ -91,5 +91,12 @@
     "ids": [
       "F-02"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.6.4: fixes VR not starting in 1.6.3 (the headset stayed on Quest Link's loading hourglass). Foveated rendering, sending depth to the headset and the automatic 72 Hz request are taken out again; the smoother instrument panel, lighter VR shadows, 2x anti-aliasing and spread-out scenery loading stay. The refresh rate can still be changed from the in-headset menu.",
+    "ids": [
+      "F-02"
+    ]
   }
 ]
