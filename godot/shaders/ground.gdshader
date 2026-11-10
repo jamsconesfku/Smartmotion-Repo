@@ -79,6 +79,9 @@ vec3 bicubic(sampler2D t, vec2 uv, float size) {
 	return mix(mix(s3, s2, sx), mix(s1, s0, sx), sy);
 }
 
+// how much a colour looks like bare soil or ripe crop (yellow-brown rather than green)
+float wsoil_hint(vec3 c) { return clamp((c.r - c.g) * 6.0 + 0.5, 0.0, 1.0); }
+
 // sample a tiling texture twice at different scales and angles so the repeat can't be seen
 vec3 tile2(sampler2D t, vec2 p, float s) {
 	vec2 q = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * p;
@@ -140,6 +143,15 @@ void fragment() {
 	if (mfade > 0.001) {
 		float m = vnoise(p / 23.0) * 0.6 + vnoise(p / 71.0 + 5.0) * 0.4;
 		col *= mix(1.0, 0.9 + 0.2 * m, mfade * (1.0 - runway) * (1.0 - built));
+		// detail between the photo's 10 m and the textures' few metres: tufts, patches and worn ground,
+		// drawn here (not from a texture) so it stays sharp when seen at a low angle from the air
+		float dfade = (1.0 - smoothstep(200.0, 1600.0, dist)) * (1.0 - runway) * (1.0 - built);
+		if (dfade > 0.001) {
+			vec2 w = p + vec2(vnoise(p / 13.0), vnoise(p / 13.0 + 9.0)) * 6.0;
+			float d = vnoise(w / 3.3) * 0.55 + vnoise(w / 8.5 + 3.0) * 0.45;
+			col *= mix(1.0, 0.82 + 0.36 * d, dfade * 0.8);
+			col = mix(col, col * vec3(1.06, 1.0, 0.86), smoothstep(0.62, 0.8, d) * dfade * 0.6 * wsoil_hint(col));
+		}
 	}
 	// arable fields: the pairs of tractor tracks ("tramlines", 24 m apart) that show from the air
 	float arable = clamp(1.0 - (lc.r + lc.g + lc.b + lc.a) * 1.5, 0.0, 1.0) * (1.0 - runway) * (1.0 - rm);
