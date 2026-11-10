@@ -156,18 +156,18 @@ func _cockpit(dark: Material, metal: Material) -> void:
 	GameMode.add_box(self, Vector3(0.66, 0.06, 0.16), Vector3(0, 1.8, -2.28), org_m, Vector3(-0.2, 0, 0))
 	# cockpit tub sides
 	# panel
-	var panel := GameMode.add_box(self, Vector3(1.3, 0.42, 0.1), Vector3(0, 1.22, -3.9), dark, Vector3(-0.55, 0, 0))
+	var panel := GameMode.add_box(self, Vector3(1.3, 0.42, 0.1), Vector3(0, 1.15, -3.9), dark, Vector3(-0.55, 0, 0))
 	panel.name = "panel"
-	GameMode.add_box(self, Vector3(1.4, 0.05, 0.5), Vector3(0, 1.4, -4.1), dark)
+	GameMode.add_box(self, Vector3(1.4, 0.05, 0.5), Vector3(0, 1.33, -4.1), dark)
 	# screens with live read-outs
 	var cyan := Color(0.45, 0.9, 1.0)
 	for k in 3:
 		var x := -0.36 + k * 0.36
-		var scr := GameMode.add_box(self, Vector3(0.3, 0.2, 0.01), Vector3(x, 1.23, -3.84), GameMode.glow_mat(Color(0.02, 0.06, 0.1), 1.0), Vector3(-0.55, 0, 0))
+		var scr := GameMode.add_box(self, Vector3(0.3, 0.2, 0.01), Vector3(x, 1.16, -3.84), GameMode.glow_mat(Color(0.02, 0.06, 0.1), 1.0), Vector3(-0.55, 0, 0))
 		scr.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	holo["left"] = _holo_text(Vector3(-0.36, 1.235, -3.83), cyan, 34)
-	holo["mid"] = _holo_text(Vector3(0.0, 1.235, -3.83), Color("#ff4c00"), 34)
-	holo["right"] = _holo_text(Vector3(0.36, 1.235, -3.83), cyan, 34)
+	holo["left"] = _holo_text(Vector3(-0.36, 1.165, -3.83), cyan, 34)
+	holo["mid"] = _holo_text(Vector3(0.0, 1.165, -3.83), Color("#ff4c00"), 34)
+	holo["right"] = _holo_text(Vector3(0.36, 1.165, -3.83), cyan, 34)
 	# flight stick (right hand) and throttle (left hand)
 	stick = Node3D.new()
 	stick.position = Vector3(0.0, 0.76, -3.3)

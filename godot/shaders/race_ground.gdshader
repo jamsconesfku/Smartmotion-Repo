@@ -149,7 +149,9 @@ void fragment() {
 			if (has_ad) {
 				float row = mod(panel, 2.0);
 				float vv = clamp((h - 0.06) / 0.98, 0.0, 1.0);
-				col = texture(ad_tex, vec2(fract(s / 16.0), (row + 1.0 - vv) * 0.5)).rgb;
+				float u = fract(s / 16.0);
+				if (vc.b > 0.5) u = 1.0 - u;
+				col = texture(ad_tex, vec2(u, (row + 1.0 - vv) * 0.5)).rgb;
 				if (h > 1.04) col = vec3(0.75);
 				if (h < 0.06) col = vec3(0.2);
 				rough = 0.55;

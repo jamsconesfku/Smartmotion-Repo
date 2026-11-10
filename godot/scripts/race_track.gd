@@ -457,7 +457,7 @@ func _walls() -> void:
 			var s := i * length / n
 			rows.append(r)
 			uvs.append(PackedVector2Array([Vector2(0, s), Vector2(1.1, s), Vector2(1.1, s), Vector2(0, s)]))
-			var cc := Color(corner[i], 0, 0)
+			var cc := Color(corner[i], 0, 1.0 if side > 0.0 else 0.0)   # blue: right-hand barrier (boards read the other way)
 			cols.append(PackedColorArray([cc, cc, cc, cc]))
 			nms.append(PackedVector3Array([nn, nn, Vector3.UP, -nn]))
 			# debris fence on top of the barrier
