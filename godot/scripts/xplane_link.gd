@@ -36,6 +36,12 @@ var _rate_dot := Vector3.ZERO
 var _dist := 0.0
 var _vals := {}
 var event := ""            # a message for the screen (main.gd shows it and clears it)
+## Mover asks for data only once, when its X-Plane source connects. The game saves what it asked for here and
+## carries on sending it after a restart (including the restart into VR), so Mover doesn't need reconnecting.
+var save_path := "user://flypt_mover.json"
+var restored := false
+var _dirty := false
+var _save_at := 0.0
 
 
 func start(lport: int, ohost: String, oport: int) -> void:
@@ -50,6 +56,54 @@ func start(lport: int, ohost: String, oport: int) -> void:
 	_try_listen()
 	if out_port > 0:
 		status += "; DATA rows to port %d" % out_port
+	_load()
+
+
+## Picks up Mover's requests from the last time the game ran.
+func _load() -> void:
+	restored = false
+	if save_path == "" or not FileAccess.file_exists(save_path):
+		return
+	var j = JSON.parse_string(FileAccess.get_file_as_string(save_path))
+	if not (j is Array):
+		return
+	for e in j:
+		if not (e is Dictionary) or not e.has("ip"):
+			continue
+		var refs := {}
+		var src: Dictionary = e.get("refs", {})
+		for k in src:
+			var r: Array = src[k]
+			refs[int(k)] = [str(r[0]), int(r[1])]
+		var rows: Array = []
+		for r in e.get("rows", []):
+			rows.append(int(r))
+		if refs.is_empty() and rows.is_empty() and int(e.get("rpos_hz", 0)) <= 0:
+			continue
+		var key := "%s:%d" % [str(e["ip"]), int(e["port"])]
+		clients[key] = {"ip": str(e["ip"]), "port": int(e["port"]), "refs": refs, "next": {}, "rows": rows,
+			"rpos_hz": int(e.get("rpos_hz", 0)), "rpos_next": 0.0, "data_next": 0.0}
+		restored = true
+	if restored:
+		status = "CONNECTED (remembered from last time), sending %d values to Mover" % (_count_refs() + _count_rows())
+		Diag.write("FlyPT Mover: carrying on with the requests saved last time (%s)" % ", ".join(clients.keys()))
+
+
+func _save() -> void:
+	_dirty = false
+	if save_path == "":
+		return
+	var out_list := []
+	for k in clients:
+		var c: Dictionary = clients[k]
+		var refs := {}
+		for idx in c["refs"]:
+			refs[str(idx)] = c["refs"][idx]
+		out_list.append({"ip": c["ip"], "port": c["port"], "refs": refs, "rows": c["rows"], "rpos_hz": c["rpos_hz"]})
+	var f := FileAccess.open(save_path, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify(out_list))
+		f.close()
 
 
 ## For the cockpit light: 0 off, 1 waiting for Mover, 2 Mover is reading the game.
@@ -106,6 +160,8 @@ func service(frame: Dictionary, now: float) -> void:
 				_on_request(pkt, listen.get_packet_ip(), listen.get_packet_port(), now)
 	for key in clients:
 		_serve_client(clients[key], now)
+	if _dirty and now >= _save_at:
+		_save()
 	if out_port > 0 and now >= _next_data:
 		_next_data = now + 1.0 / 30.0
 		out.put_packet(data_packet(DATA_ROWS))
@@ -145,11 +201,18 @@ func _on_request(pkt: PackedByteArray, ip: String, port: int, now: float) -> voi
 		_:
 			Diag.write("FlyPT Mover sent a %s request (ignored)" % head)
 	status = "CONNECTED, Mover is reading %d values" % (_count_refs() + _count_rows())
+	if not _dirty:
+		_dirty = true
+		_save_at = now + 1.0    # save once the burst of requests is over
 
 
 func _client(ip: String, port: int) -> Dictionary:
 	var key := "%s:%d" % [ip, port]
 	if not clients.has(key):
+		# Mover reconnected from a new port: forget its old one (from this run or remembered from the last)
+		for k in clients.keys():
+			if clients[k]["ip"] == ip:
+				clients.erase(k)
 		if clients.size() >= MAX_CLIENTS:
 			clients.erase(clients.keys()[0])
 		event = "FlyPT Mover connected: it is reading the game"

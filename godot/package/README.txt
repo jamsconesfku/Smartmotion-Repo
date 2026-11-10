@@ -103,6 +103,9 @@ USE FLYPT MOVER WITH THE GAME (its 3D picture, or to drive the rig)
        whether to allow the game on networks: tick Private networks and click Allow (Mover needs it).
     2. In FlyPT Mover, use the "SOURCE :: XPLANE 11 (UDP)" source (leave its address as 127.0.0.1 and
        port 49000, X-Plane's normal settings) and switch it on.
+       Start the game first, then tick Connect in Mover's X-Plane source window (Mover asks only once, when
+       it connects). After that the game remembers Mover: restarting the game, or switching to VR, carries
+       on without reconnecting. Only if Mover itself was closed or reconnected do you need Connect again.
     3. Fly. The 3D rig picture in Mover moves with the game. Press T in the game: the panel shows
        "FlyPT Mover connected" once Mover is asking for data.
   COCKPIT LIGHT: the Bulldog's warning-light row has a MOVER light (the fighter shows it on the engine dial):

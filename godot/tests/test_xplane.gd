@@ -51,6 +51,8 @@ func _initialize() -> void:
 
 	# 2. values for level flight heading east, accelerating at 0.2 g
 	var xp := XPlaneLink.new()
+	xp.save_path = "user://test_flypt_mover.json"
+	DirAccess.remove_absolute(xp.save_path)
 	var v := xp.values(frame(1.0, 0.0, 0.0, 90.0), 1.0)
 	check("level flight: no vertical acceleration", absf(v["sim/flightmodel/position/local_ay"]) < 0.01, "%.3f" % v["sim/flightmodel/position/local_ay"])
 	check("heading east: speed along +x", absf(v["sim/flightmodel/position/local_vx"] - 50.0) < 0.01, "%.2f" % v["sim/flightmodel/position/local_vx"])
@@ -142,6 +144,30 @@ func _initialize() -> void:
 	OS.delay_msec(10)
 	xp.service(frame(t, 10.0, -20.0, 90.0), t + 1.0)
 	check("RREF at 0 Hz stops that value", not xp.clients.values()[0]["refs"].has(0))
+	xp.service(frame(t, 10.0, -20.0, 90.0), t + 3.0)   # gives it time to save
 	xp.stop()
+	# the game restarts (for example into VR): it carries on answering Mover without a new request
+	var xp2 := XPlaneLink.new()
+	xp2.save_path = xp.save_path
+	xp2.start(port, "127.0.0.1", 0)
+	check("remembered Mover after a restart", xp2.restored and xp2.light() == 2, xp2.status)
+	while mover.get_available_packet_count() > 0:
+		mover.get_packet()
+	var again := false
+	for k in 20:
+		t += 1.0 / 60.0
+		OS.delay_msec(4)
+		xp2.service(frame(t, 5.0, 0.0, 90.0), t)
+		while mover.get_available_packet_count() > 0:
+			var p3 := mover.get_packet()
+			if p3.slice(0, 4).get_string_from_ascii() == "RREF":
+				var o := 5
+				while o + 8 <= p3.size():
+					if p3.decode_s32(o) == 1:
+						again = true
+					o += 8
+	check("sends to Mover again after the restart", again)
+	xp2.stop()
+	DirAccess.remove_absolute(xp.save_path)
 	print("FAILS: %d" % fails)
 	quit(1 if fails > 0 else 0)

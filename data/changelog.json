@@ -171,5 +171,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.11.4: the game remembers FlyPT Mover. Mover asks for data only once, when it connects; the game now saves that and carries on sending after it restarts (including switching to VR), so Mover doesn't need reconnecting each time.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]
