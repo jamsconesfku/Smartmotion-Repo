@@ -105,5 +105,12 @@
     "ids": [
       "F-02"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.7.1: the Games tile for SmartMotion Flight now gives the Windows download (always the latest) with step-by-step instructions, and explains that you can simply ask Claude in a Claude Code session for the latest link. The browser version of the game is no longer on the website.",
+    "ids": [
+      "F-02"
+    ]
   }
 ]

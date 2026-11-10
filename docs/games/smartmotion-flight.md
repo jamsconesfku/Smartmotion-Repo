@@ -1,6 +1,6 @@
 # SmartMotion Flight
 
-A browser flight game set around Duxford, built to replace Microsoft Flight Simulator for SmartMotion's own experiences (MSFS has no commercial licence). Everything is SmartMotion-owned code: no third-party flight software, aircraft or scenery. Open it from **Games → Fly Duxford** on the dashboard, or go to `/fly/` on the site.
+A browser flight game set around Duxford, built to replace Microsoft Flight Simulator for SmartMotion's own experiences (MSFS has no commercial licence). Everything is SmartMotion-owned code: no third-party flight software, aircraft or scenery. **No longer published (v1.7.1):** the website now offers only the Windows version (`docs/games/smartmotion-flight-native.md`); the browser code stays in the repo as the physics reference.
 
 ## What's in v1
 - **Two aircraft:** Light Trainer (forgiving) and WW2 Fighter (fast, lively), both with a cockpit, working instruments and animated controls.

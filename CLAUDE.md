@@ -11,7 +11,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - `data/` — `tasks`, `contacts`, `licences`, `documents`, `decisions`, `milestones`, `changelog`, `glossary` (.json)
 - `dashboard/index.html` — single file, no build step, fetches `../data/*.json`
 - `dashboard/games/` — games that open full-screen over the dashboard (see `docs/games/`)
-- `godot/` — the native Windows game (Godot project); `dashboard/fly/` — the browser version
+- `godot/` — the native Windows game (Godot project); `dashboard/fly/` — the old browser version (kept in the repo, not published)
 - `scripts/build-site.mjs` — builds the website into `dist/` (Cloudflare Pages: build command `node scripts/build-site.mjs`, output `dist`); `site/` holds root files (`_headers`, `robots.txt`); `docs/deploy-cloudflare.md` has the setup steps
 
 ## Data conventions
@@ -46,10 +46,8 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Print feedback: update `status` and add to `print_log` in `data/designs.json`. Write lessons in plain English; the section is also for learning.
 - Deploying designs: the site build copies each version's `preview.png`, `view.json`, ZIP, STL and STEP from `designs/`. Commit those outputs with `data/designs.json`; `model.py` and `README.txt` stay in the repo only.
 
-## SmartMotion Flight (`dashboard/fly/`, served at `/fly/`)
-- Our own flight game for paid experiences (MSFS has no commercial licence). Notes: `docs/games/smartmotion-flight.md`. Physics checks: `node scripts/test-flight.mjs` (run it after any change to `flightmodel.js` or `terrain.js`).
-- Linked from the dashboard Games tile. The site build copies `fly/` and `vendor/`. No outside assets: everything is drawn in code, logos come from `dashboard/assets/`.
-- Telemetry for the rig: `tools/telemetry-bridge.mjs` + `window.SmartMotionTelemetry`. VR is WebXR (needs https).
+## SmartMotion Flight, browser version (`dashboard/fly/`, no longer published)
+- The first version of the game. Since v1.7.1 the website doesn't serve it (the build no longer copies `fly/` or `vendor/`); the Games tile gives the Windows download instead. The code stays in the repo because `flightmodel.js` is the reference for the physics: keep it in step with `flight_model.gd` and run `node scripts/test-flight.mjs` after changing it. Notes: `docs/games/smartmotion-flight.md`.
 
 ## SmartMotion Flight, native Windows version (`godot/`)
 - Godot 4.6.1 project, same game as `fly/` but on the GPU. Notes: `docs/games/smartmotion-flight-native.md`. Built by `.github/workflows/build-native.yml` into the `native-latest` GitHub release; local build `GODOT=... scripts/build-native.sh`.
@@ -58,6 +56,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - After changing `flight_model.gd` or `terrain.gd` (or `flightmodel.js` / `terrain.js`) run the physics checks: `godot --headless --path godot --script res://tests/test_flight.gd` and `node scripts/test-flight.mjs`.
 - GDScript gotchas hit so far: lambdas capture variables by value (mutate a Dictionary instead), values read from Dictionaries are untyped (declare `var x: float = ...`), Godot front faces are clockwise.
 - Bump `VERSION` for dashboard-visible changes; native releases are built from `main` automatically.
+- **Download link** (always the newest build): `https://github.com/jamsconesfku/Smartmotion-Repo/releases/download/native-latest/SmartMotionFlight-Windows.zip`. When Sam asks for the latest download, check the latest `build-native.yml` run has finished successfully and that the `native-latest` release body names the newest commit on `main` that touched `godot/`, then give the link and the steps (they're on the dashboard Games tile and in `godot/package/README.txt`).
 
 ## Games
 - Each game is one JS file in `dashboard/games/` that exposes `window.<Name>.open({onClose})`, `close()` and `stats()`, injects its own scoped CSS, and draws with canvas/SVG (no libraries).

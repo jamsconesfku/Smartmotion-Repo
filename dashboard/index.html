@@ -216,6 +216,7 @@ h1,h2,h3{font-family:var(--f-display);letter-spacing:.005em;text-wrap:balance;ma
 .btns:empty{display:none}
 .btns a{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:14px;background:var(--surface-2);color:var(--ink);text-decoration:none;max-width:100%;overflow-wrap:anywhere}
 .btns a:hover{border-color:var(--muted)}
+.btns a.btn-primary{border:0;background:var(--accent);color:#fff;font-size:18px;padding:10px 18px}
 .sub{font-family:var(--f-display);font-size:20px;margin:26px 2px 2px}
 .sub:first-child{margin-top:0}
 .subhelp{margin:0 2px 10px;color:var(--muted);font-size:14px}
@@ -233,6 +234,7 @@ h1,h2,h3{font-family:var(--f-display);letter-spacing:.005em;text-wrap:balance;ma
 .game-tile{padding:0;overflow:hidden}
 .game-tile>.h,.game-tile>.s,.game-tile>.btns{margin-left:16px;margin-right:16px}
 .game-tile>.btns{padding-bottom:16px}
+.game-tile>.steps{margin:0 16px 16px}
 .game-tile>.h{margin-top:14px}
 .gt-art{position:relative;height:150px;background:radial-gradient(circle at 80% 10%,rgba(255,76,0,.35),transparent 55%),linear-gradient(#02022f,#151b7a);overflow:hidden}
 .gt-art svg{position:absolute;inset:0;width:100%;height:100%}
@@ -639,7 +641,7 @@ const VIEWS = [
   {k:"decisions", l:"Decisions", g:"Reference", c:() => D.decisions.filter(d => d.status === "open").length, sub:"Questions still to decide, and the ground rules we've agreed."},
   {k:"updates", l:"Updates", g:"Reference", c:() => D.changelog.length, sub:"What has changed in the plan, newest first."},
   {k:"jargon", l:"Jargon explained", g:"Reference", c:() => D.glossary.length, sub:"Plain-English meanings of the words and abbreviations used in this plan."},
-  {k:"games", l:"Games", g:"Games", sub:"SmartMotion games: a flight game around Duxford, and an arcade game. Best on a phone or laptop."},
+  {k:"games", l:"Games", g:"Games", sub:"SmartMotion games: SmartMotion Flight around Duxford (a Windows download, with VR) and the Sky Barrage arcade game (plays here, best on a phone or laptop)."},
   {k:"library", l:"Model library", g:"Printing & Design", ws:"print", c:() => D.designs.length, sub:"Every 3D model, ready to view, download and print. Tap a model for its 3D view, print settings and history."},
   {k:"learn", l:"Learn & tips", g:"Printing & Design", ws:"print", sub:"Design rules that work on the Kobra 3, plus the lessons from every model in the library."},
   {k:"request", l:"Ask for a design", g:"Printing & Design", ws:"print", sub:"How to ask Claude to design something new or change a model, and what you get back."},
@@ -784,13 +786,25 @@ function renderUpdates(){
 
 /* Jargon */
 /* Games: each game is a tile here and opens full-screen over the dashboard */
+const FLY_RELEASE = "https://github.com/jamsconesfku/Smartmotion-Repo/releases/tag/native-latest";
+const FLY_ZIP = "https://github.com/jamsconesfku/Smartmotion-Repo/releases/download/native-latest/SmartMotionFlight-Windows.zip";
 function renderGames(){
   const st = window.SkyBarrage ? window.SkyBarrage.stats() : null;
   const fly = `<div class="card game-tile">
     <div class="gt-art fly" aria-hidden="true"><svg viewBox="0 0 320 150" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="fsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b3a8a"/><stop offset="1" stop-color="#9cc0ee"/></linearGradient></defs><rect width="320" height="150" fill="url(#fsky)"/><path d="M0 112 L320 98 L320 150 L0 150Z" fill="#4f7d34"/><path d="M0 128 L320 112 L320 150 L0 150Z" fill="#6c9a3f"/><path d="M120 150 L168 100 L196 100 L210 150Z" fill="#33353d"/><path d="M158 98 L162 98 L168 150 L162 150Z" fill="#e9e9e9"/><g transform="translate(222 52) rotate(-14) scale(1.9)"><path d="M0-11l2.1 6.6 7.4 4.1v2.2L2.1-.2l-.6 4.9 2.6 2.1v1.9L0 7.6l-4.1 1.1V6.8l2.6-2.1-.6-4.9-7.4 2.1v-2.2l7.4-4.1z" fill="#ff4c00"/></g></svg><span class="gt-name">Smart<b>Flight</b></span></div>
-    <div class="h"><b>SmartMotion Flight</b><span class="chip c-in_progress">New</span></div>
-    <div class="s">Fly a light trainer or a WW2 fighter around Duxford: take off, find the SmartMotion signs, and race through the gates. Play it in the browser on a laptop or phone, or download the Windows version, which uses your graphics card for much better graphics and works in VR on a Meta Quest 3. Sends motion data for the simulator rig.</div>
-    <div class="btns"><a class="btn-primary" href="fly/" style="color:#fff">${ICON.games}Fly Duxford</a><a class="btn-primary" href="fly/?auto=1&mode=gates" style="color:#fff">Gate run</a><a class="btn-primary" href="https://github.com/jamsconesfku/Smartmotion-Repo/releases/tag/native-latest" target="_blank" rel="noopener" style="color:#fff;background:var(--brand);box-shadow:0 3px 0 #000">Windows version (best graphics)</a></div>
+    <div class="h"><b>SmartMotion Flight</b><span class="chip c-in_progress">Windows + VR</span></div>
+    <div class="s">Fly Skysmart's Bulldog G-SMAT or a WW2 fighter around the real Duxford: take off, find the SmartMotion signs and race through the gates. It's a Windows program that runs on the laptop's graphics card, on the screen or in VR on the Meta Quest 3, and sends motion data for the simulator rig. It no longer plays in the browser.</div>
+    <div class="btns"><a class="btn-primary" href="${FLY_ZIP}" style="color:#fff">${ICON.games}Download for Windows (latest)</a><a class="btn-primary" href="${FLY_RELEASE}" target="_blank" rel="noopener" style="color:#fff;background:var(--brand);box-shadow:0 3px 0 #000">Release page</a></div>
+    <div class="s" style="color:var(--ink)"><strong>Easiest: ask Claude.</strong> Open a ${terms("Claude Code")} session on the <b>Smartmotion-Repo</b> repository and ask: <i>"Send me the link to the latest SmartMotion Flight download, and the steps."</i> Claude checks the newest version has finished building and includes the latest changes, then gives you the link. You can also ask Claude for changes to the game; once they're pushed, a new download is ready about 4 minutes later.</div>
+    <div class="s" style="color:var(--ink)"><strong>Or download it yourself:</strong></div>
+    <ol class="steps">
+      <li>Sign in to ${terms("GitHub")} first: the download is in the private SmartMotion repository.</li>
+      <li>Press <b>Download for Windows (latest)</b>. It's a ZIP file of about 80 MB and always the newest version.</li>
+      <li>Delete the old game folder, then right-click the ZIP, choose <b>Extract All</b> and open the new folder.</li>
+      <li>On the laptop screen: double-click <b>SmartMotionFlight</b>. If Windows says "Windows protected your PC", press More info, then Run anyway.</li>
+      <li>In VR: connect the Quest 3 with ${terms("Quest Link")}, start Link, then double-click <b>Play (VR - Meta Quest)</b>. The first start can take a minute. Sit upright and press B to recentre.</li>
+      <li>Something wrong? Send Claude the file <b>SmartMotionFlight-log.txt</b> from the game folder.</li>
+    </ol>
   </div>`;
   return `<div class="cards two">${fly}<div class="card game-tile">
     <div class="gt-art" aria-hidden="true"><svg viewBox="0 0 320 150" preserveAspectRatio="xMidYMid slice">

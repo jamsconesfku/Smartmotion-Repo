@@ -134,5 +134,17 @@
   {
     "term": "OpenXR",
     "meaning": "The standard that lets games talk to VR headsets like the Meta Quest 3, here through the Meta Quest Link app."
+  },
+  {
+    "term": "Claude Code",
+    "meaning": "Claude working directly in the SmartMotion repository: it can read and change the files, run checks and publish updates. Start a session on the Smartmotion-Repo repository and ask in plain English."
+  },
+  {
+    "term": "GitHub",
+    "meaning": "The website that stores the SmartMotion repository (all the files, the plan and the game). The game download is kept there too, so you need to be signed in."
+  },
+  {
+    "term": "Quest Link",
+    "meaning": "Meta's app that connects the Quest 3 headset to the laptop (by cable or Wi-Fi, called Air Link), so the laptop runs the game and the headset shows it."
   }
 ]
