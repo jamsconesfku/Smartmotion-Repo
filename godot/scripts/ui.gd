@@ -9,6 +9,7 @@ signal menu_pressed
 signal setting_changed(key: String, value)
 signal diag_pressed
 signal vr_action(what: String)
+signal learn_pressed(action: String)
 
 const NAVY := Color("#02022f")
 const ORANGE := Color("#ff4c00")
@@ -77,7 +78,23 @@ const GAMES := {
 	"flight": ["Flight", "Fly the skies around Duxford in Skysmart's Bulldog or a WW2 fighter.", "Fly"],
 	"race": ["Racing", "Drive an open-wheel racing car round a 4 km circuit: race seven rivals or set a fast lap.", "Race"],
 	"space": ["Space", "Fly a space fighter round a space station and asteroid field and shoot down waves of drones.", "Launch"],
+	"coaster": ["Coaster", "Ride a roller coaster beside Duxford airfield: a 52 m lift hill, a drop to 104 km/h, airtime hills and a helix. Just sit back.", "Ride"],
 }
+## How the simulator is set up (chosen on the first screen): what's fitted and which games suit it.
+const RIGS := {
+	"stick": ["Flight stick", "Flight  ·  Space", "Joystick for pitch and roll, a throttle lever, rudder pedals if fitted"],
+	"wheel": ["Steering wheel", "Racing", "Steering wheel with accelerator and brake pedals"],
+	"ride": ["Hands-free ride", "Roller coaster", "No controls fitted: the rider sits back and holds on"],
+	"all": ["Laptop or gamepad", "All games", "For trying things out: keyboard, mouse or a gamepad"],
+}
+const RIG_GAMES := {"stick": ["flight", "space"], "wheel": ["race"], "ride": ["coaster"], "all": ["flight", "race", "space", "coaster"]}
+var lobby: Control
+var rig_label: Label
+var setup_ctl_btn: Button
+var controls_sheet: Control
+var ctl_rows: VBoxContainer
+var ctl_info: Label
+var ctl_widgets := {}       # action -> [status label, bar]
 
 
 func _ready() -> void:
@@ -91,6 +108,7 @@ func _ready() -> void:
 	_build_hud()
 	_build_menu()
 	_build_sheets()
+	_build_lobby()
 	_build_loading()
 	show_loading()
 
@@ -278,7 +296,7 @@ func _build_menu() -> void:
 	v.add_child(gr)
 	var gg := ButtonGroup.new()
 	seg_buttons["game"] = []
-	for g in ["flight", "race", "space"]:
+	for g in ["flight", "race", "space", "coaster"]:
 		var b := Button.new()
 		b.text = GAMES[g][0]
 		b.toggle_mode = true
@@ -295,6 +313,22 @@ func _build_menu() -> void:
 		b.pressed.connect(func(): setting_changed.emit("game", g))
 		gr.add_child(b)
 		seg_buttons["game"].append([g, b])
+	var rr := HBoxContainer.new()
+	rr.add_theme_constant_override("separation", 8)
+	v.add_child(rr)
+	rig_label = _lbl("", 14, INK)
+	rig_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rr.add_child(rig_label)
+	var chg := Button.new()
+	chg.text = "Change setup"
+	chg.add_theme_font_size_override("font_size", 14)
+	chg.pressed.connect(func(): show_lobby())
+	rr.add_child(chg)
+	setup_ctl_btn = Button.new()
+	setup_ctl_btn.text = "Set up controls"
+	setup_ctl_btn.add_theme_font_size_override("font_size", 14)
+	setup_ctl_btn.pressed.connect(func(): open_sheet(controls_sheet))
+	rr.add_child(setup_ctl_btn)
 	subtitle = _lbl("", 15, MUTED)
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	subtitle.custom_minimum_size = Vector2(480, 0)
@@ -373,6 +407,7 @@ func _build_menu() -> void:
 	gpu_label.custom_minimum_size = Vector2(480, 0)
 	v.add_child(gpu_label)
 	set_game(str(Settings.get_value("game")))
+	set_rig(str(Settings.get_value("rig")))
 
 
 ## Shows the options for the chosen game (Flight, Racing or Space).
@@ -384,22 +419,149 @@ func set_game(g: String) -> void:
 	fly_btn.text = GAMES[g][2]
 	for k in mode_boxes.keys():
 		(mode_boxes[k] as Control).visible = k == g
-	style_cap.text = {"flight": "FLYING STYLE", "race": "DRIVING STYLE", "space": "DIFFICULTY"}[g]
+	style_cap.text = {"flight": "FLYING STYLE", "race": "DRIVING STYLE", "space": "DIFFICULTY", "coaster": ""}[g]
+	style_cap.visible = g != "coaster"
+	for e in seg_buttons.get("assist", []):
+		(e[1] as Button).get_parent().visible = g != "coaster"
 	tod_box.visible = g != "space"
 	if again_btn != null:
-		again_btn.text = {"flight": "Fly again", "race": "Race again", "space": "Play again"}[g]
+		again_btn.text = {"flight": "Fly again", "race": "Race again", "space": "Play again", "coaster": "Ride again"}[g]
 	if cap_speed != null:
 		set_hud_kind(g)
 
 
 ## The speed, height and heading boxes show different things in each game.
 func set_hud_kind(g: String) -> void:
-	cap_speed.text = {"flight": "KNOTS", "race": "KM/H", "space": "M/S"}.get(g, "KNOTS")
-	cap_alt.text = {"flight": "FEET", "race": "GEAR", "space": "SCORE"}.get(g, "FEET")
-	cap_hdg.text = {"flight": "HEADING", "race": "LAP", "space": "WAVE"}.get(g, "HEADING")
+	cap_speed.text = {"flight": "KNOTS", "race": "KM/H", "space": "M/S", "coaster": "KM/H"}.get(g, "KNOTS")
+	cap_alt.text = {"flight": "FEET", "race": "GEAR", "space": "SCORE", "coaster": "METRES UP"}.get(g, "FEET")
+	cap_hdg.text = {"flight": "HEADING", "race": "LAP", "space": "WAVE", "coaster": "FORCE"}.get(g, "HEADING")
 	tag_brake.text = "FIRE" if g == "space" else "BRAKE"
-	arrow.visible = g != "race"
+	arrow.visible = g == "flight" or g == "space"
 	gate_box.visible = g != "flight"
+
+
+## Shows only the games that suit how the simulator is set up.
+func set_rig(rig: String) -> void:
+	if not RIGS.has(rig):
+		rig = "all"
+	var allowed: Array = RIG_GAMES[rig]
+	for e in seg_buttons.get("game", []):
+		(e[1] as Button).visible = e[0] in allowed
+	rig_label.text = "Simulator set up for:  " + RIGS[rig][0]
+	setup_ctl_btn.visible = rig == "stick" or rig == "wheel"
+	for e in seg_buttons.get("rig", []):
+		(e[1] as Button).set_pressed_no_signal(e[0] == rig)
+
+
+func show_lobby() -> void:
+	loading.visible = false
+	lobby.visible = true
+	var cur := str(Settings.get_value("rig"))
+	for e in seg_buttons.get("rig", []):
+		(e[1] as Button).set_pressed_no_signal(e[0] == cur)
+		if e[0] == cur:
+			(e[1] as Button).grab_focus.call_deferred()
+
+
+func _build_lobby() -> void:
+	lobby = ColorRect.new()
+	(lobby as ColorRect).color = Color(0.004, 0.004, 0.13, 0.94)
+	lobby.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lobby.visible = false
+	root.add_child(lobby)
+	var c := CenterContainer.new()
+	c.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lobby.add_child(c)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 16)
+	c.add_child(v)
+	var lg := TextureRect.new()
+	lg.texture = logo_dark
+	lg.custom_minimum_size = Vector2(240, 90)
+	lg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	v.add_child(lg)
+	v.add_child(_lbl("How is the simulator set up?", 46, Color.WHITE, true, HORIZONTAL_ALIGNMENT_CENTER))
+	var sub := _lbl("Pick what's fitted to the SmartMotion simulator today. You'll then see the games that suit it.", 17, MUTED, false, HORIZONTAL_ALIGNMENT_CENTER)
+	v.add_child(sub)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_child(row)
+	seg_buttons["rig"] = []
+	for k in ["stick", "wheel", "ride", "all"]:
+		var info: Array = RIGS[k]
+		var b := Button.new()
+		b.toggle_mode = true
+		b.custom_minimum_size = Vector2(300, 230)
+		b.add_theme_stylebox_override("normal", _sb(Color(1, 1, 1, 0.07), 20, Color(1, 1, 1, 0.18), 1))
+		b.add_theme_stylebox_override("hover", _sb(Color(1, 1, 1, 0.14), 20, ORANGE, 2))
+		b.add_theme_stylebox_override("pressed", _sb(Color(1, 0.3, 0.0, 0.25), 20, ORANGE, 3))
+		b.add_theme_stylebox_override("hover_pressed", _sb(Color(1, 0.3, 0.0, 0.32), 20, ORANGE, 3))
+		b.add_theme_stylebox_override("focus", _sb(Color(0, 0, 0, 0), 20, Color.WHITE, 2))
+		var bv := VBoxContainer.new()
+		bv.set_anchors_preset(Control.PRESET_FULL_RECT)
+		bv.offset_left = 20
+		bv.offset_right = -20
+		bv.offset_top = 22
+		bv.offset_bottom = -18
+		bv.add_theme_constant_override("separation", 10)
+		bv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(bv)
+		var t := _lbl(info[0], 32, Color.WHITE, true)
+		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bv.add_child(t)
+		var gl := _lbl(info[1], 21, ORANGE, true)
+		gl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bv.add_child(gl)
+		var d := _lbl(info[2], 15, MUTED)
+		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		d.custom_minimum_size = Vector2(250, 0)
+		d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bv.add_child(d)
+		b.pressed.connect(func():
+			lobby.visible = false
+			setting_changed.emit("rig", k))
+		row.add_child(b)
+		seg_buttons["rig"].append([k, b])
+
+
+## The "Set up controls" sheet: one row per control with a live bar and a Set button (learns the axis).
+func set_control_actions(actions: Array) -> void:
+	for ch in ctl_rows.get_children():
+		ch.queue_free()
+	ctl_widgets = {}
+	for a in actions:
+		var r := HBoxContainer.new()
+		r.add_theme_constant_override("separation", 8)
+		var nm := _lbl(a[1], 15, INK)
+		nm.custom_minimum_size = Vector2(190, 0)
+		nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		r.add_child(nm)
+		var st := _lbl("", 13, MUTED)
+		st.custom_minimum_size = Vector2(130, 0)
+		r.add_child(st)
+		var bar := ProgressBar.new()
+		bar.min_value = -1.0
+		bar.max_value = 1.0
+		bar.show_percentage = false
+		bar.custom_minimum_size = Vector2(110, 10)
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		r.add_child(bar)
+		var b := Button.new()
+		b.text = "Set"
+		var act: String = a[0]
+		b.pressed.connect(func(): learn_pressed.emit(act))
+		r.add_child(b)
+		ctl_rows.add_child(r)
+		ctl_widgets[act] = [st, bar]
+
+
+func set_control_row(action: String, status: String, value: float) -> void:
+	if not ctl_widgets.has(action):
+		return
+	(ctl_widgets[action][0] as Label).text = status
+	(ctl_widgets[action][1] as ProgressBar).value = value
 
 
 func set_vr(on: bool, hz_text := "") -> void:
@@ -653,6 +815,27 @@ func _build_sheets() -> void:
 	var cl := _big_button("Got it", true)
 	cl.pressed.connect(func(): close_sheet(help_sheet))
 	v.add_child(cl)
+	r = _sheet("Set up controls")
+	controls_sheet = r[0]
+	v = r[1]
+	ctl_info = _lbl("Plug in the joystick or wheel, then press Set beside each control and move it as asked. Leave a control unset to use the keyboard or a gamepad for it.", 15, MUTED)
+	ctl_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	ctl_info.custom_minimum_size = Vector2(480, 0)
+	v.add_child(ctl_info)
+	ctl_rows = VBoxContainer.new()
+	ctl_rows.add_theme_constant_override("separation", 6)
+	v.add_child(ctl_rows)
+	var cr := HBoxContainer.new()
+	cr.add_theme_constant_override("separation", 6)
+	var clr := Button.new()
+	clr.text = "Clear all"
+	clr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	clr.pressed.connect(func(): learn_pressed.emit("clear"))
+	cr.add_child(clr)
+	v.add_child(cr)
+	var cd := _big_button("Done", true)
+	cd.pressed.connect(func(): close_sheet(controls_sheet))
+	v.add_child(cd)
 	r = _sheet("Settings")
 	settings_sheet = r[0]
 	v = r[1]
@@ -699,7 +882,7 @@ func _fit_sheet(s: Control) -> void:
 
 
 func open_sheet(s: Control) -> void:
-	for x in [pause_sheet, help_sheet, settings_sheet]:
+	for x in [pause_sheet, help_sheet, settings_sheet, controls_sheet]:
 		if x != s:
 			(x as Control).visible = false
 	_fit_sheet(s)
@@ -714,11 +897,11 @@ func close_sheet(s: Control) -> void:
 var paused_ui := false
 
 func any_sheet() -> bool:
-	return help_sheet.visible or settings_sheet.visible or pause_sheet.visible or end_sheet.visible
+	return help_sheet.visible or settings_sheet.visible or pause_sheet.visible or end_sheet.visible or controls_sheet.visible or lobby.visible
 
 
 func hide_sheets() -> void:
-	for x in [pause_sheet, help_sheet, settings_sheet, end_sheet]:
+	for x in [pause_sheet, help_sheet, settings_sheet, end_sheet, controls_sheet]:
 		(x as Control).visible = false
 
 

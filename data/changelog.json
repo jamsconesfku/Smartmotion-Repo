@@ -136,5 +136,12 @@
       "F-02",
       "LIC-06"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.10.0: the game now starts by asking how the simulator is set up today: flight stick (Flight and Space games), steering wheel (Racing), hands-free ride (the new Roller coaster) or laptop/gamepad (everything). The menu then shows only the games that suit it. New fourth game: a roller coaster beside Duxford airfield with a 52 m lift hill, a drop to 104 km/h, airtime hills and a helix (forces up to about 3 g). New 'Set up controls' screen learns the simulator's own joystick, throttle, pedals or steering wheel by asking you to move each one.",
+    "ids": [
+      "F-02"
+    ]
   }
 ]

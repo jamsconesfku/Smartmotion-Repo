@@ -1,8 +1,8 @@
 SmartMotion Flight  (Windows, version @VERSION@)
 =================================================
 
-Three games for the SmartMotion simulator in one program: Flight (around the real Duxford), Racing (an
-open-wheel racing car on a 4 km circuit) and Space (a space fighter battle). Choose at the top of the menu.
+Four games for the SmartMotion simulator in one program: Flight (around the real Duxford), Racing (an
+open-wheel racing car on a 4 km circuit), Space (a space fighter battle) and a Roller coaster beside Duxford.
 Runs on your PC's graphics card, no browser.
 
 HOW TO START
@@ -10,8 +10,13 @@ HOW TO START
   2. Double-click  SmartMotionFlight.exe.
      Windows may say "Windows protected your PC" because the game isn't signed.
      Click "More info", then "Run anyway".
-  3. Pick Flight, Racing or Space at the top of the menu, choose the options and press Fly / Race / Launch.
-     (Racing and Space take a few seconds to build the first time you pick them.)
+  3. The first screen asks how the simulator is set up today: Flight stick (Flight and Space games),
+     Steering wheel (Racing), Hands-free ride (Roller coaster) or Laptop or gamepad (every game).
+     The menu then shows the games for that set-up ("Change setup" to pick again).
+  4. With a joystick or wheel fitted, press "Set up controls" once: press Set beside each control and move it
+     as asked (the game remembers it).
+  5. Choose the options and press Fly / Race / Launch / Ride.
+     (Racing, Space and the Coaster take a few seconds to build the first time you pick them.)
 
 USE YOUR GAMING GRAPHICS CARD
   The menu shows which graphics card the game is using ("Graphics: ..."). On a laptop with two
@@ -60,6 +65,8 @@ CONTROLS (keyboard)
   Race: 3 laps against 7 computer cars from a standing start: when the five red lights go out, go.
   Time trial: drive on your own and set your fastest lap (it is saved). Easy mode adds traction control,
   anti-lock brakes and stability control; Pro has none.
+  COASTER
+  No controls: just ride. V changes the view (your seat, behind the train, orbit). R rides again.
   SPACE
   W/S nose down/up, A/D roll, Q/E yaw, Shift/Ctrl speed, Space or left mouse button fire, Tab boost.
   Gamepad: right stick pitch and roll, left stick speed and yaw, right trigger fire, left trigger boost.

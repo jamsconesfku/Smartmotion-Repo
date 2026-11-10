@@ -83,6 +83,11 @@ func camera_modes() -> Array:
 	return ["chase", "cockpit", "orbit"]
 
 
+## True for games that take place in the Duxford world (it stays visible and keeps loading scenery).
+func uses_world() -> bool:
+	return false
+
+
 func mode_name() -> String:
 	return ""
 

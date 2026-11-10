@@ -64,6 +64,10 @@ func _process(delta: float) -> void:
 		f = 70.0 + thr * 430.0          # thr carries the engine revs (0..1)
 		eng_gain = 0.11 + 0.05 * thr
 		wind_gain = pow(clampf(ias / 95.0, 0.0, 1.2), 2.0) * 0.12
+	elif profile == "ride":
+		f = 8.0                         # the chain lift's clack (thr = 1 on the lift)
+		eng_gain = 0.0
+		wind_gain = pow(clampf(ias / 28.0, 0.0, 1.3), 2.0) * 0.3
 	elif profile == "space":
 		f = 34.0 + thr * 42.0
 		eng_gain = 0.12 + 0.06 * thr
@@ -81,6 +85,8 @@ func _process(delta: float) -> void:
 		if horn:
 			ph3 = fmod(ph3 + 1250.0 / rate, 1.0)
 			h = (1.0 if ph3 < 0.5 else -1.0) * 0.04
+		if profile == "ride" and thr > 0.5:
+			e = (1.0 if ph1 < 0.03 else 0.0) * 0.25 * (1.0 - ph1 / 0.03)
 		if profile == "space":
 			e = (absf(ph1 * 2.0 - 1.0) * 2.0 - 1.0) * eng_gain + noise_lp * 0.05
 		var s := (e + w + h) * vol + _fx_sample()
