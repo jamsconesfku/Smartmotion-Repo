@@ -143,10 +143,10 @@ void fragment() {
 	float mfade = 1.0 - smoothstep(1500.0, 6000.0, dist);
 	if (mfade > 0.001) {
 		float m = vnoise(p / 23.0) * 0.6 + vnoise(p / 71.0 + 5.0) * 0.4;
-		col *= mix(1.0, 0.9 + 0.2 * m, mfade * (1.0 - runway) * (1.0 - built));
+		col *= mix(1.0, 0.9 + 0.2 * m, mfade * (1.0 - runway) * (1.0 - 0.5 * built));
 		// detail between the photo's 10 m and the textures' few metres: tufts, patches and worn ground,
 		// drawn here (not from a texture) so it stays sharp when seen at a low angle from the air
-		float dfade = (1.0 - smoothstep(200.0, 1600.0, dist)) * (1.0 - runway) * (1.0 - built);
+		float dfade = (1.0 - smoothstep(200.0, 1600.0, dist)) * (1.0 - runway) * (1.0 - 0.5 * built);
 		if (dfade > 0.001) {
 			vec2 w = p + vec2(vnoise(p / 13.0), vnoise(p / 13.0 + 9.0)) * 6.0;
 			float d = vnoise(w / 3.3) * 0.55 + vnoise(w / 8.5 + 3.0) * 0.45;
