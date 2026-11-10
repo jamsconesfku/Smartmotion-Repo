@@ -317,7 +317,13 @@ func build(model: AircraftModel, with_cockpit: bool) -> void:
 func _fuselage() -> void:
 	var nseg := 40
 	var P: Array = []
-	for st in ST:
+	# the stations, plus extra ones exactly at the paint edges so the red bands have crisp edges
+	var stations: Array = ST.duplicate()
+	for z in [-1.87, -1.85, 2.84, 2.86, 3.19, 3.21]:
+		var f0 := fus_at(z)
+		stations.append([z, f0[0], f0[1], f0[2]])
+	stations.sort_custom(func(a, b): return float(a[0]) < float(b[0]))
+	for st in stations:
 		var ring: Array = []
 		for i in nseg:
 			var t := TAU * i / nseg
@@ -402,12 +408,12 @@ func _wings() -> void:
 		var g := wing_geo(absf(p.x))
 		return Vector3(0, p.y - float(g[2]) - 0.01, (p.z - float(g[1]) - float(g[0]) * 0.35) * 0.3).normalized()
 	var col := func(p: Vector3, n: Vector3) -> Color:
-		if absf(p.x) > 4.35:
+		if absf(p.x) > 4.345:
 			return RED
 		return WHITE if n.y > -0.2 else GREY
 	for s: float in [1.0, -1.0]:
 		# spanwise pieces: root, flap bay, aileron bay, tip
-		var pieces := [[W_X0, 0.62, 0.0, 1.0], [0.62, 2.85, 0.0, 0.74], [2.85, 4.85, 0.0, 0.74], [4.85, W_X1, 0.0, 1.0]]
+		var pieces := [[W_X0, 0.62, 0.0, 1.0], [0.62, 2.85, 0.0, 0.74], [2.85, 4.34, 0.0, 0.74], [4.35, 4.85, 0.0, 0.74], [4.85, W_X1, 0.0, 1.0]]
 		for pc in pieces:
 			var P: Array = []
 			var x0: float = pc[0]
@@ -464,8 +470,9 @@ func _wings() -> void:
 			hinge.add_child(surf)
 			var inv := hinge.transform.affine_inverse()
 			var P2: Array = []
-			for k in 5:
-				var x := s * lerpf(xa + 0.01, xb - 0.01, k / 4.0)
+			var xs: Array = [2.86, 3.4, 3.9, 4.34, 4.35, 4.84] if kind == "aileron" else [0.63, 1.2, 1.8, 2.4, 2.84]
+			for xv in xs:
+				var x := s * float(xv)
 				var ring: Array = []
 				for p in _section(x, 0.74, 1.0, 6):
 					ring.append(inv * (p as Vector3))
@@ -473,7 +480,7 @@ func _wings() -> void:
 			var outl := func(p: Vector3) -> Vector3: return Vector3(0, p.y, p.z * 0.2).normalized()
 			var cl2 := func(p: Vector3, n: Vector3) -> Color:
 				var wp := hinge.transform * p
-				if absf(wp.x) > 4.35:
+				if absf(wp.x) > 4.345:
 					return RED
 				return WHITE if n.y > -0.2 else GREY
 			_grid(P2, true, outl, cl2)
@@ -502,8 +509,8 @@ func _tail() -> void:
 	var out := func(p: Vector3) -> Vector3: return Vector3(0, p.y - 0.17, (p.z - 4.2) * 0.3).normalized()
 	for s: float in [1.0, -1.0]:
 		var P: Array = []
-		for k in 6:
-			P.append(ring_of.call(s * lerpf(0.05, 1.7, k / 5.0), 0.0, 0.6))
+		for xv in [0.05, 0.5, 0.95, 1.37, 1.39, 1.7]:
+			P.append(ring_of.call(s * xv, 0.0, 0.6))
 		_grid(P, true, out, col)
 	_end(paint, am.outer)
 	# elevator on its hinge
@@ -511,8 +518,8 @@ func _tail() -> void:
 	am.elevator.position = Vector3(0, 0.17, hz)
 	am.outer.add_child(am.elevator)
 	var P2: Array = []
-	for k in 7:
-		var x := lerpf(-1.7, 1.7, k / 6.0)
+	for xv in [-1.7, -1.39, -1.37, -0.7, 0.0, 0.7, 1.37, 1.39, 1.7]:
+		var x: float = xv
 		var ring2: Array = []
 		for p in ring_of.call(x, 0.6, 1.0):
 			ring2.append((p as Vector3) - am.elevator.position)
@@ -530,8 +537,8 @@ func _tail() -> void:
 	var fcol := func(p: Vector3, n: Vector3) -> Color: return RED if p.y > 1.02 else WHITE
 	var fout := func(p: Vector3) -> Vector3: return Vector3(p.x, 0, (p.z - 4.3) * 0.2).normalized()
 	var P3: Array = []
-	for k in 7:
-		var y := lerpf(0.2, 1.23, k / 6.0)
+	for yv in [0.2, 0.5, 0.8, 1.01, 1.03, 1.23]:
+		var y: float = yv
 		var ring3: Array = []
 		for i in 9:
 			ring3.append(fin.call(y, 0.62 * (0.5 - 0.5 * cos(PI * (1.0 - i / 8.0))), 1.0))
@@ -560,8 +567,8 @@ func _tail() -> void:
 	hinge.add_child(am.rudder)
 	var inv := hinge.transform.affine_inverse()
 	var P4: Array = []
-	for k in 6:
-		var y := lerpf(0.0, 1.23, k / 5.0)
+	for yv in [0.0, 0.4, 0.8, 1.01, 1.03, 1.23]:
+		var y: float = yv
 		var ring4: Array = []
 		for i in 5:
 			ring4.append(inv * fin.call(y, 0.62 + 0.38 * (1.0 - i / 4.0), 1.0))
@@ -742,8 +749,13 @@ func _markings() -> void:
 			lb.shaded = true
 			lb.alpha_cut = Label3D.ALPHA_CUT_OPAQUE_PREPASS
 			var p: Vector3 = t[1]
-			lb.position = Vector3(s * (fus_x(p.z, p.y) + 0.006), p.y, p.z)
-			lb.rotation.y = s * PI / 2.0
+			# lettering is flat but the fuselage tapers: lean it with the taper and keep it just outside the skin
+			var half_len := float(t[2]) * 1.6
+			var xa := fus_x(p.z - half_len, p.y)
+			var xb := fus_x(p.z + half_len, p.y)
+			var lean := atan2(xa - xb, 2.0 * half_len)
+			lb.position = Vector3(s * (maxf(xa, xb) - absf(xb - xa) / 2.0 + 0.012), p.y, p.z)
+			lb.rotation.y = s * (PI / 2.0 - lean)
 			am.fus.add_child(lb)
 
 
