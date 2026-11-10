@@ -199,5 +199,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.12.0: one world. The racing circuit now sits on real farmland 2.5 km west of Duxford runway and the roller coaster just south-east of it; in Flight you can fly over both, exactly as they are in their games. Switching games no longer swaps whole worlds (the likely cause of the occasional crash going from Racing to Flight), and the game keeps the last run's log so a crash can be traced with 'Copy diagnostics'. VR menu: the panel is now big enough for the whole menu, so Settings and Controls always click. Roller coaster: no support post stands in the way of the track any more (the train used to pass through one near the helix), plus two new big sections: a 32 m hill where you float out of your seat and a high banked turn at 25 m that dives back to the ground.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

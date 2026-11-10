@@ -2,8 +2,9 @@ class_name CoasterMode
 extends GameMode
 ## SmartMotion Coaster: a roller coaster ride in a field beside Duxford airfield (it uses the Duxford world).
 ## For the simulator set up "hands-free": you just ride. 1.07 km of steel track: a 52 m chain lift, a 50 m
-## drop to 104 km/h, an airtime hill, a banked turnaround, a second hill, a helix and an S-bend back into the
-## station. The track banks itself so the force always pushes you into the seat (no sideways g), 0 to 3 g.
+## drop to 104 km/h, a 32 m camelback (you float out of your seat over the top), a high banked turnaround at
+## 25 m that dives back to the ground, a second hill, a helix and an S-bend back into the station (v1.12.0).
+## No support post stands where another part of the track passes (plan_posts / post_blocked). The track banks itself so the force always pushes you into the seat (no sideways g), 0 to 3 g.
 ##
 ## Track: a smooth curve through the points below (metres; x along the field, y above the ground, z across).
 ## Speed: the chain pulls the train up at 4 m/s, then gravity and a little friction and air drag; tyres hold
@@ -12,9 +13,9 @@ extends GameMode
 const POINTS := [Vector3(0, 3, 40), Vector3(0, 3, 0), Vector3(0, 3, -30), Vector3(6, 3.5, -50), Vector3(20, 6, -63), Vector3(38, 13, -68),
 	Vector3(60, 24, -68), Vector3(85, 39, -68), Vector3(105, 50, -68), Vector3(116, 52.5, -68), Vector3(127, 52, -68),
 	Vector3(138, 47, -68), Vector3(150, 36, -68), Vector3(162, 22, -68), Vector3(174, 11, -68), Vector3(188, 5.5, -67), Vector3(204, 5, -66),
-	Vector3(222, 10, -64), Vector3(240, 16.5, -62), Vector3(258, 18.5, -60), Vector3(276, 14.5, -57), Vector3(294, 7, -53), Vector3(312, 5, -48),
-	Vector3(334, 7, -38), Vector3(350, 10, -18), Vector3(354, 13, 6), Vector3(342, 14, 28), Vector3(320, 12, 42), Vector3(300, 9, 47),
-	Vector3(278, 6, 48), Vector3(256, 12, 48), Vector3(236, 14, 48), Vector3(216, 11, 48), Vector3(196, 9.5, 48), Vector3(172, 12.5, 48),
+	Vector3(220, 11, -64), Vector3(236, 22, -62), Vector3(252, 30, -60), Vector3(268, 32, -58), Vector3(284, 27.5, -56), Vector3(300, 17, -53), Vector3(316, 8, -49),
+	Vector3(334, 7, -40), Vector3(350, 13, -20), Vector3(357, 21, 4), Vector3(347, 25, 26), Vector3(326, 22, 41), Vector3(304, 14, 47),
+	Vector3(280, 6.5, 48), Vector3(256, 12, 48), Vector3(236, 14, 48), Vector3(216, 11, 48), Vector3(196, 9.5, 48), Vector3(172, 12.5, 48),
 	Vector3(150, 13.5, 48), Vector3(128, 12.5, 54), Vector3(118, 11, 70), Vector3(126, 9.5, 86), Vector3(140, 8, 92), Vector3(156, 6.5, 86),
 	Vector3(162, 5, 70), Vector3(154, 4, 55), Vector3(140, 3.5, 48),
 	Vector3(118, 4, 50), Vector3(98, 4.5, 62), Vector3(80, 5, 80), Vector3(60, 5, 89), Vector3(36, 4.5, 90), Vector3(16, 4, 85), Vector3(4, 3.5, 72)]
@@ -32,6 +33,7 @@ var Tn: PackedVector3Array         # direction of travel
 var Up: PackedVector3Array         # banked "up" (rails plane)
 var lift_from := 0.0
 var lift_to := 0.0
+const POST_CLEAR := 2.6           # m from a post to the centre of any other part of the track (train 1.6 m wide)
 const S_PARK := 42.0               # where the front car stops in the station (platform from 10 to 45 m)
 var base_y := 0.0
 var cars: Array = []
@@ -229,16 +231,7 @@ func _meshes(w: World) -> void:
 	while i < n:
 		ties.append(frame(i * length / n))
 		i += step
-	var last_post := -100.0
-	for pi in range(0, n, int(2.0 / DS)):
-		var sv := pi * length / n
-		var fr := frame(sv)
-		var bottom := fr.origin - fr.basis.y * 0.75
-		var gy := w.terrain.height(bottom.x, bottom.z) if w != null else base_y
-		var h := bottom.y - gy
-		if sv - last_post >= (7.0 if h > 3.0 else 12.0) and h > 0.4:
-			last_post = sv
-			posts.append([bottom, gy, h])
+	posts = plan_posts(w.terrain if w != null else null)
 	var tie_mesh := BoxMesh.new()
 	tie_mesh.size = Vector3(1.3, 0.12, 0.14)
 	var mm := MultiMesh.new()
@@ -282,6 +275,37 @@ func _meshes(w: World) -> void:
 	cmi.mesh = ck.build()
 	cmi.material_override = steel
 	add_child(cmi)
+
+
+## Support posts down to the ground: [bottom of the track, ground height, post height]. A post is left out
+## wherever another part of the track passes through the space it would stand in (the train must never hit one).
+func plan_posts(terrain: Terrain) -> Array:
+	var posts: Array = []
+	var last_post := -100.0
+	for pi in range(0, n, int(2.0 / DS)):
+		var sv := pi * length / n
+		var fr := frame(sv)
+		var bottom := fr.origin - fr.basis.y * 0.75
+		var gy := terrain.height(bottom.x, bottom.z) if terrain != null else base_y
+		var h := bottom.y - gy
+		if sv - last_post >= (7.0 if h > 3.0 else 12.0) and h > 0.4 and not post_blocked(bottom, gy, sv):
+			last_post = sv
+			posts.append([bottom, gy, h])
+	return posts
+
+
+## True if a post standing at bottom (from the ground at gy) would be in the way of the track elsewhere.
+func post_blocked(bottom: Vector3, gy: float, sv: float) -> bool:
+	for i in n:
+		var d := absf(i * length / n - sv)
+		if minf(d, length - d) < 8.0:
+			continue   # this post's own bit of track
+		var q := P[i]
+		if q.y < gy - 1.0 or q.y > bottom.y + 2.5:
+			continue
+		if Vector2(q.x - bottom.x, q.z - bottom.z).length() < POST_CLEAR:
+			return true
+	return false
 
 
 func _station(w: World) -> void:

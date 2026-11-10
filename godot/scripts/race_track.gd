@@ -1,7 +1,7 @@
 class_name RaceTrack
 extends Node3D
-## SmartMotion Racing: the circuit. A made-up 4 km circuit in gentle English countryside (in the style of the
-## Duxford world): long main straight, a tight first corner, fast esses, a hairpin, a back straight, a chicane
+## SmartMotion Racing: the circuit. A made-up 4 km circuit laid out on real farmland 2.5 km west of Duxford
+## airfield, in the Duxford world (since v1.12.0; before that it had its own made-up countryside): long main straight, a tight first corner, fast esses, a hairpin, a back straight, a chicane
 ## and a sweeping last corner. Built from code: the track, kerbs, gravel, barriers, grandstands with a crowd,
 ## pit building, start gantry with lights, SmartMotion boards and trees.
 ## Queries for the car physics: nearest(), surface(), height().
@@ -15,6 +15,11 @@ const POINTS := [Vector2(-400, 0), Vector2(0, 0), Vector2(450, 0), Vector2(560, 
 	Vector2(100, 560), Vector2(-150, 600), Vector2(-380, 640), Vector2(-560, 560), Vector2(-620, 420), Vector2(-555, 305),
 	Vector2(-640, 200), Vector2(-650, 80), Vector2(-560, 10)]
 const START_XZ := Vector2(-60.0, 0.0)
+## Where the circuit sits in the Duxford world: world x, z = circuit x, z + OFFSET. Chosen by searching the map
+## for open fields with no buildings or woods within 75 m of the track and under 10 m of rise and fall.
+const OFFSET := Vector2(-2500.0, -100.0)
+## The real ground (set when the game runs in the Duxford world; the checks can run without it).
+static var terr: Terrain = null
 const GRID_SLOTS := 8
 
 var n := 0
@@ -37,7 +42,10 @@ var wall_mats: Array = []
 
 
 static func H(x: float, z: float) -> float:
-	## Ground height: gentle rises round the circuit, hills on the horizon.
+	## Ground height, in the circuit's own coordinates: the real Duxford ground under it.
+	if terr != null:
+		return terr.height(x + OFFSET.x, z + OFFSET.y)
+	# no world loaded (old made-up countryside): gentle rises round the circuit, hills on the horizon
 	var h := 3.2 * sin(x * 0.0058 + 0.7) * cos(z * 0.0047 - 0.3) + 2.2 * sin((x + z) * 0.0036) + 1.2 * cos((x - z) * 0.0081)
 	var r := Vector2(x, z).distance_to(CENTRE)
 	var far := smoothstep(1200.0, 2900.0, r)
@@ -64,7 +72,8 @@ func build(world: World, quality: String) -> void:
 	mat_ground = ShaderMaterial.new()
 	mat_ground.shader = load("res://shaders/race_ground.gdshader")
 	mat_ground.set_shader_parameter("centre", Vector3(CENTRE.x, 0, CENTRE.y))
-	_ground(quality)
+	if terr == null:
+		_ground(quality)   # in the Duxford world the real ground is under the circuit
 	_road()
 	_verges()
 	_walls()
@@ -699,8 +708,8 @@ func set_lights(count: int) -> void:
 
 
 func _trees(quality: String) -> void:
-	if w == null or w.scenery == null or w.scenery.tree_near == null:
-		return
+	if w == null or w.scenery == null or w.scenery.tree_near == null or terr != null:
+		return   # in the Duxford world the real trees are there already
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 21
 	var want: int = {"low": 1500, "medium": 3500, "high": 6000}.get(quality, 3500)

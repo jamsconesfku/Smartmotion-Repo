@@ -17,6 +17,7 @@ func _initialize() -> void:
 	root.add_child(st)
 	st.data["race"] = "trial"
 	st.data["assist"] = true
+	RaceTrack.terr = Terrain.new()   # the circuit on the real ground west of Duxford, as in the game
 	var t0 := Time.get_ticks_msec()
 	var track := RaceTrack.new()
 	track.build_data()

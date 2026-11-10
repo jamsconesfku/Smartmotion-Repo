@@ -7,8 +7,8 @@ extends Node3D
 ## Push the stick up/down to scroll. Stick up/down and A also move through
 ## the buttons without pointing. The same picture is shown on the laptop screen, where the mouse still works.
 
-const PX := Vector2i(1600, 900)
-const SIZE_M := Vector2(1.44, 0.81)
+const PX := Vector2i(1920, 1080)   # tall enough for the whole main menu (its bottom row was cut off at 900)
+const SIZE_M := Vector2(1.6, 0.9)
 
 var sub: SubViewport
 var quad: MeshInstance3D
@@ -123,9 +123,9 @@ func show_panel(on: bool, head: Transform3D) -> void:
 		fwd = Vector3.FORWARD
 	fwd = fwd.normalized()
 	var right := fwd.cross(Vector3.UP).normalized()
-	var centre := head.origin + fwd * 0.95 + Vector3(0, -0.08, 0)
+	var centre := head.origin + fwd * 1.0 + Vector3(0, -0.08, 0)
 	if ui.menu.visible and not ui.any_sheet():
-		centre += right * 0.38   # the main menu card sits on the left of the screen: bring it in front of you
+		centre += right * 0.42   # the main menu card sits on the left of the screen: bring it in front of you
 	transform = Transform3D(Basis(right, Vector3.UP, -fwd), centre)
 	for k in ["a", "u", "d", "trig_l", "trig_r"]:
 		edge[k] = true

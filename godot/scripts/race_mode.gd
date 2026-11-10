@@ -72,25 +72,12 @@ func mode_name() -> String:
 
 func build(w: World, q: String) -> void:
 	super.build(w, q)
+	RaceTrack.terr = w.terrain if w != null else null
+	position = Vector3(RaceTrack.OFFSET.x, 0.0, RaceTrack.OFFSET.y) if w != null else Vector3.ZERO
 	track = RaceTrack.new()
 	add_child(track)
 	await track.build(w, q)
-	env = w.env.duplicate() as Environment
-	env.fog_density = 0.00011
-	env.fog_aerial_perspective = 0.5
-	env.ssil_enabled = false
-	sun = DirectionalLight3D.new()
-	sun.shadow_enabled = q != "low"
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-	sun.directional_shadow_max_distance = 900.0
-	sun.directional_shadow_split_1 = 0.02
-	sun.directional_shadow_split_2 = 0.08
-	sun.directional_shadow_split_3 = 0.3
-	sun.shadow_bias = 0.04
-	sun.shadow_normal_bias = 1.2
-	sun.light_angular_distance = 0.4 if q == "high" else 0.0
-	add_child(sun)
-	set_time_of_day(str(opt("tod")))
+	# the Duxford world's own sky, sun and fog light the circuit (one world for every game)
 	car = RaceCar.new(Color("#02022f"), Color("#ff4c00"), 7)
 	add_child(car)
 	vehicle = car
@@ -107,6 +94,8 @@ func make_rivals() -> void:
 
 
 func set_time_of_day(tod: String) -> void:
+	if sun == null:
+		return   # the Duxford world's sun
 	var t: Dictionary = World.TOD.get(tod, World.TOD["day"])
 	var el: float = deg_to_rad(t["el"])
 	var az: float = deg_to_rad(float(t["az"]) - 40.0)
@@ -117,6 +106,10 @@ func set_time_of_day(tod: String) -> void:
 	if env != null:
 		env.fog_light_color = t["hor"]
 		env.ambient_light_energy = t["amb"]
+
+
+func uses_world() -> bool:
+	return world_ref != null   # the circuit is in the Duxford world
 
 
 func set_vr(on: bool) -> void:
@@ -586,7 +579,7 @@ func place_camera(cam: Camera3D, cam_mode: String, dt: float, orbit: Dictionary)
 	var back := Vector3(-sin(cam_yaw), 0, cos(cam_yaw))
 	var spd := clampf(absf(vx) / 90.0, 0.0, 1.0)
 	var cp3 := P + back * (6.2 + spd * 1.2) + Vector3(0, 1.85, 0)
-	var gy := RaceTrack.H(cp3.x, cp3.z) + 0.5
+	var gy := RaceTrack.H(cp3.x - position.x, cp3.z - position.z) + 0.5
 	cp3.y = maxf(cp3.y, gy)
 	var tgt := P + Vector3(sin(cam_yaw), 0, -cos(cam_yaw)) * 4.0 + Vector3(0, 0.9, 0)
 	cam.global_transform = Transform3D(Basis.looking_at((tgt - cp3).normalized(), Vector3.UP), cp3)

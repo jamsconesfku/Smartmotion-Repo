@@ -10,6 +10,10 @@ static var paths: Array = []
 static func start(fresh: bool) -> void:
 	paths = [OS.get_executable_path().get_base_dir().path_join("SmartMotionFlight-log.txt"), "user://smartmotion-log.txt"]
 	if fresh:
+		# keep the last run's log (if the game crashed, that's where it shows)
+		for p in paths:
+			if FileAccess.file_exists(p):
+				DirAccess.copy_absolute(p, p.get_basename() + "-previous.txt")
 		for p in paths:
 			var f := FileAccess.open(p, FileAccess.WRITE)
 			if f:
@@ -73,5 +77,25 @@ static func engine_log_tail(max_lines := 120) -> String:
 	return "\n".join(all.slice(start))
 
 
+## The end of the last run's logs: the game's own and Godot's (a crash report is at the end of Godot's).
+static func previous_text(max_lines := 60) -> String:
+	var out := ""
+	var p := "user://smartmotion-log-previous.txt"
+	if FileAccess.file_exists(p):
+		var all := FileAccess.get_file_as_string(p).split("\n")
+		out += "\n".join(all.slice(maxi(0, all.size() - max_lines)))
+	var logs: Array = []
+	var dir := DirAccess.open("user://logs")
+	if dir != null:
+		for f in dir.get_files():
+			if f.begins_with("godot") and f.ends_with(".log") and f != "godot.log":
+				logs.append(f)
+	logs.sort()
+	if not logs.is_empty():
+		var all2 := FileAccess.get_file_as_string("user://logs/" + str(logs[-1])).split("\n")
+		out += "\n--- engine log of the last run (%s) ---\n" % str(logs[-1]) + "\n".join(all2.slice(maxi(0, all2.size() - max_lines)))
+	return out if out != "" else "(no log from the last run)"
+
+
 static func full_text() -> String:
-	return "\n".join(lines) + "\n\n=== engine log (last lines) ===\n" + engine_log_tail()
+	return "\n".join(lines) + "\n\n=== engine log (last lines) ===\n" + engine_log_tail() + "\n\n=== last run (look here after a crash) ===\n" + previous_text()

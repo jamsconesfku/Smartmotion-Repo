@@ -2,7 +2,7 @@ extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 ## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.11.7"
+const APP_VERSION := "1.12.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -131,6 +131,10 @@ func _ready() -> void:
 	Diag.snapshot()
 	_start_flypt()   # before the world loads, so Mover connects straight away
 	await world.build(ui.set_progress, quality, str(Settings.get_value("tod")))
+	for g in ["race", "coaster"]:
+		await _build_mode(g)   # part of the same world: built now so you can fly over them
+		(modes[g] as GameMode).showcase()
+		(modes[g] as GameMode).visible = true
 	if Settings.get_value("tel"):
 		tel.start(str(Settings.get_value("tel_host")), int(Settings.get_value("tel_port")))
 	mcomp.start()
@@ -156,6 +160,8 @@ func _ready() -> void:
 	if args.has("sheet"):
 		await get_tree().create_timer(0.5).timeout
 		ui.open_sheet({"settings": ui.settings_sheet, "help": ui.help_sheet, "pause": ui.pause_sheet}[str(args["sheet"])])
+	if args.has("switch_test"):
+		_switch_test()
 	if args.has("orbit_dist"):
 		orbit_dist = float(args["orbit_dist"])
 	if args.has("orbit_yaw"):
@@ -280,38 +286,12 @@ func _activate(g: String) -> void:
 	while activating:
 		await get_tree().process_frame   # already being built (e.g. chosen and started at once)
 	if g != "flight" and not modes.has(g):
-		activating = true
-		Diag.write("Building the %s game" % g)
-		var was_menu := ui.menu.visible
-		ui.show_loading()
-		ui.set_progress(0.4, {"race": "Building the racing circuit", "space": "Building the space station and asteroid field", "coaster": "Building the roller coaster"}.get(g, "Building"))
-		await get_tree().process_frame
-		await get_tree().process_frame
-		var t0 := Time.get_ticks_msec()
-		var m: GameMode
-		match g:
-			"race":
-				m = RaceMode.new()
-			"space":
-				m = SpaceMode.new()
-			_:
-				m = CoasterMode.new()
-		m.visible = false
-		add_child(m)
-		await m.build(world, quality)
-		Diag.write("%s built in %.1f s" % [g, (Time.get_ticks_msec() - t0) / 1000.0])
-		m.finished.connect(end_flight)
-		m.toast.connect(func(t: String, secs: float): _toast(t, secs))
-		if m is SpaceMode:
-			(m as SpaceMode).sfx.connect(synth.blip)
-		modes[g] = m
-		activating = false
-		ui.loading.visible = false
-		if was_menu or state == "menu":
-			ui.show_menu()
+		await _build_mode(g)
 	game = g
 	if mode != null:
 		mode.visible = false
+		if mode.running:
+			mode.showcase()   # park it (cars on the grid, the train in the station)
 		mode.running = false
 	if g == "flight":
 		mode = null
@@ -327,10 +307,51 @@ func _activate(g: String) -> void:
 		cam.far = mode.camera_far()
 		synth.set_profile({"race": "race", "space": "space"}.get(g, "ride"))
 		mode.set_vr(vr_active)
+	# the circuit and the coaster are part of the Duxford world: they stay there (parked) in the other games
+	for k in modes:
+		var om: GameMode = modes[k]
+		if om != mode:
+			om.visible = om.uses_world() and world.visible
 	if xr_cam != null:
 		xr_cam.environment = cam.environment
 		xr_cam.far = cam.far
 	_attach_rig()
+
+
+## Builds a game's world (once). Racing and the coaster are built while the game loads, so they are in the
+## Duxford world from the start (you can fly over them).
+func _build_mode(g: String) -> void:
+	if modes.has(g) or activating:
+		return
+	activating = true
+	Diag.write("Building the %s game" % g)
+	var was_menu := ui.menu.visible
+	ui.show_loading()
+	ui.set_progress(0.4, {"race": "Building the racing circuit", "space": "Building the space station and asteroid field", "coaster": "Building the roller coaster"}.get(g, "Building"))
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var t0 := Time.get_ticks_msec()
+	var m: GameMode
+	match g:
+		"race":
+			m = RaceMode.new()
+		"space":
+			m = SpaceMode.new()
+		_:
+			m = CoasterMode.new()
+	m.visible = false
+	add_child(m)
+	await m.build(world, quality)
+	Diag.write("%s built in %.1f s" % [g, (Time.get_ticks_msec() - t0) / 1000.0])
+	m.finished.connect(end_flight)
+	m.toast.connect(func(t: String, secs: float): _toast(t, secs))
+	if m is SpaceMode:
+		(m as SpaceMode).sfx.connect(synth.blip)
+	modes[g] = m
+	activating = false
+	ui.loading.visible = false
+	if was_menu or state == "menu":
+		ui.show_menu()
 
 
 ## In VR the headset's origin rides in the vehicle (aircraft, car or ship).
@@ -449,6 +470,10 @@ func _start_pose() -> Dictionary:
 		var g: Array = Terrain.GATES[0]
 		var hd := fposmod(rad_to_deg(atan2(g[0] - xz.x, -(g[1] - xz.y))), 360.0)
 		return {"x": xz.x, "z": xz.y, "heading": hd, "airborne": true, "agl": 140.0, "speed": spec["cruise"], "throttle": spec["cruiseThrottle"]}
+	if args.has("at"):
+		# test option --at=x,z,heading,height: start in the air there (screenshots of the world)
+		var a: PackedStringArray = str(args["at"]).split(",")
+		return {"x": float(a[0]), "z": float(a[1]), "heading": float(a[2]), "airborne": true, "agl": float(a[3]), "speed": spec["cruise"], "throttle": spec["cruiseThrottle"]}
 	if Settings.get_value("start") == "air":
 		var xz2 := world.terrain.from_runway(-1300.0, 0.0)
 		return {"x": xz2.x, "z": xz2.y, "heading": Terrain.RW_HEADING_DEG, "airborne": true, "agl": 380.0, "speed": spec["cruise"], "throttle": spec["cruiseThrottle"]}
@@ -897,6 +922,11 @@ func _toast(t: String, secs := 2.2) -> void:
 
 func _process(delta: float) -> void:
 	tel.service()
+	if args.has("switch_test") and Engine.get_process_frames() % 10 == 0:
+		Diag.write("frame %d, %.0f ms, state %s, game %s, mode %s | process %.0f ms, physics %.0f ms, draw calls %d, objects %d, nodes %d, prims %d" % [Engine.get_process_frames(), delta * 1000.0, state, game, str(mode),
+			Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.OBJECT_COUNT),
+			Performance.get_monitor(Performance.OBJECT_NODE_COUNT), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)])
 	if tel.xp.event != "":
 		_toast(tel.xp.event, 5.0)
 		tel.xp.event = ""
@@ -1422,6 +1452,26 @@ func _read_mode_input(dt: float) -> Dictionary:
 	return out
 
 
+## Test option --switch_test: goes between the games and back several times (the way a person would, through
+## the menu), so a crash when switching shows up in the log.
+func _switch_test() -> void:
+	var order := ["race", "flight", "race", "flight", "coaster", "flight", "space", "race", "flight"]
+	if str(args["switch_test"]) != "" and str(args["switch_test"]) != "true":
+		order = Array(str(args["switch_test"]).split(","))
+	for g in order:
+		await get_tree().create_timer(6.0).timeout
+		Diag.write("switch test: to the menu, then %s" % g)
+		to_menu()
+		await get_tree().create_timer(1.0).timeout
+		Settings.data["game"] = g
+		await showcase()
+		await get_tree().create_timer(1.0).timeout
+		await start_game()
+		Diag.write("switch test: %s running" % g)
+	Diag.write("switch test: done")
+	get_tree().quit()
+
+
 ## Test option --test_panel (runs headless, before anything else): the VR menu panel passes clicks and
 ## stick/A presses to the real menus. Prints PASS/FAIL lines and quits.
 func _test_panel() -> void:
@@ -1447,6 +1497,26 @@ func _test_panel() -> void:
 	p._click(c, null)   # what a trigger pull does
 	await get_tree().process_frame
 	print(("PASS" if got.get("game") == want else "FAIL") + " pointer click on the %s button (got %s)" % [want, str(got.get("game"))])
+	var cut := []
+	for b in ui.menu.find_children("*", "Button", true, false):
+		if (b as Button).is_visible_in_tree() and (b as Button).get_global_rect().end.y > VRPanel.PX.y:
+			cut.append((b as Button).text)
+	print(("PASS" if cut.is_empty() else "FAIL") + " every menu button fits on the VR panel " + str(cut))
+	for name in ["Settings", "Controls"]:
+		var mb: Button = null
+		for b in ui.menu.find_children("*", "Button", true, false):
+			if (b as Button).text == name:
+				mb = b
+		ui.hide_sheets()
+		await get_tree().process_frame
+		var mc := mb.get_global_rect().get_center()
+		var hov := ""
+		p._click(mc, null)
+		await get_tree().process_frame
+		var sheet: Control = ui.settings_sheet if name == "Settings" else ui.help_sheet
+		print(("PASS" if sheet.visible else "FAIL") + " pointer click on %s at %s opens it" % [name, str(mc)])
+	ui.hide_sheets()
+	await get_tree().process_frame
 	p._focus_first()
 	await get_tree().process_frame
 	p._push_action("ui_accept")

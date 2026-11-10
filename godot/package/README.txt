@@ -60,6 +60,11 @@ CONTROLS (keyboard)
   F flaps, V camera, P or Esc pause, R restart, T telemetry panel, M sound, F11 full screen.
   Gamepads work too (right stick, left stick, triggers).
   Easy mode (the default) sets full power on the runway for you: hold S at take-off speed to lift off.
+  ONE WORLD: the racing circuit (2.5 km west of the runway) and the roller coaster (just south-east of the
+  runway) are in the Duxford world. Fly over them in Flight; they're parked there when you're not using them.
+  IF THE GAME CRASHES: start it again and press "Copy diagnostics" on the menu, then paste it to Claude.
+  It includes the log of the run that crashed.
+
   RACING
   W or Up = accelerate, S or Down (or Space) = brake (hold when stopped to reverse), A/D or Left/Right = steer,
   V camera (chase, cockpit, TV), R restart. Gamepad: left stick steer, right trigger accelerate, left trigger brake.
