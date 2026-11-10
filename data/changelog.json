@@ -206,5 +206,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.13.0: graphics upgrade. Flight: the grey roof smudges in the satellite photo are painted over where the 3D buildings stand (the buildings themselves were already in the right place), the ground is sharper and smoother up close with patches of colour and tractor tracks in the fields, trees have leaf clumps, light through the leaves and sway in the wind, window glass reflects the sky and walls and roofs are weathered. New settings: an Ultra quality (further view, more trees, sharper shadows, reflections), View distance (Near/Normal/Far) and 3D clouds On/Off. Racing and the coaster share the improved world.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

@@ -2,7 +2,7 @@ extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 ## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.12.0"
+const APP_VERSION := "1.13.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -1039,7 +1039,7 @@ func _shot_tick(delta: float) -> void:
 		shot_timer -= delta
 		if shot_timer < 0.0:
 			Engine.time_scale = 0.0
-			shot_still = 6
+			shot_still = 30
 
 
 func _save_shot() -> void:
