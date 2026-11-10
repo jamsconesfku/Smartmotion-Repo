@@ -1,7 +1,7 @@
 extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 
-const APP_VERSION := "1.6.0"
+const APP_VERSION := "1.6.1"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -46,6 +46,11 @@ var vr_label: Label3D
 var vr_frames := 0
 var vr_edge := {}
 var focus_hint_t := 0.0
+var vr_menu: Node3D
+var vr_menu_lines: Array = []
+var vr_menu_title: Label3D
+var vr_menu_idx := 0
+var vr_warn := false
 
 
 func _ready() -> void:
@@ -249,6 +254,7 @@ func start_flight() -> void:
 	ui.tag_assist.text = "EASY" if fm.assist else "PRO"
 	state = "fly"
 	paused = false
+	_vr_menu_show(false, "")
 	ui.show_hud()
 	ui.show_pause(false)
 	ui.adi.visible = cam_mode != "cockpit" and not vr_active
@@ -267,7 +273,8 @@ func end_flight(title: String, label: String, text: String, big: String) -> void
 	if state == "ended":
 		ui.show_end(title, label, text, big)
 		if vr_active:
-			_vr_text("%s\nPress Y to fly again" % title)
+			_vr_text("")
+			_vr_menu_show(true, title)
 
 
 # ------------------------------------------------------------ input
@@ -353,7 +360,8 @@ func _pause(on: bool) -> void:
 	paused = on
 	ui.show_pause(on)
 	if vr_active:
-		_vr_text("Paused\nX resume · Y restart" if on else "")
+		_vr_text("")
+		_vr_menu_show(on, "Paused")
 
 
 func _approach(cur: float, tgt: float, rate: float, dt: float) -> float:
@@ -445,6 +453,8 @@ func _start_vr() -> bool:
 			return false
 		Diag.write("OpenXR started on the second try")
 	get_viewport().use_xr = true
+	get_viewport().use_taa = false            # TAA smears when you turn your head; MSAA keeps VR sharp
+	get_viewport().msaa_3d = Viewport.MSAA_4X
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	vr_active = true
 	vr_frames = 0
@@ -495,12 +505,15 @@ func _stop_vr() -> void:
 		return
 	vr_active = false
 	get_viewport().use_xr = false
+	get_viewport().use_taa = true
 	var xr := XRServer.find_interface("OpenXR")
 	if xr != null and xr.is_initialized():
 		xr.uninitialize()
 	if xr_origin != null:
 		xr_origin.queue_free()
 		xr_origin = null
+	vr_menu = null
+	vr_menu_lines = []
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
 	world.env.ssao_enabled = quality != "low"
 	world.env.ssil_enabled = quality == "high"
@@ -540,6 +553,161 @@ func _recentre_vr() -> void:
 	_toast("View recentred")
 
 
+# ------------------------------------------------------------ VR menu (in the headset, no keyboard needed)
+func _vr_menu_items() -> Array:
+	var ac := "Bulldog G-SMAT" if Settings.get_value("aircraft") == "bulldog" else "WW2 Fighter"
+	return [
+		["resume", "Fly again" if state == "ended" else "Resume"],
+		["restart", "Restart from the start"],
+		["aircraft", "Aircraft:  " + ac],
+		["start", "Start:  " + ("On the runway" if Settings.get_value("start") == "runway" else "In the air")],
+		["mode", "Mode:  " + ("Free flight" if Settings.get_value("mode") == "free" else "Gate run")],
+		["tod", "Time:  " + ("Day" if Settings.get_value("tod") == "day" else "Golden hour")],
+		["assist", "Flying:  " + ("Easy (levels itself)" if Settings.get_value("assist") else "Pro (real controls)")],
+		["recentre", "Recentre my view"],
+		["exit", "Leave VR"],
+	]
+
+
+func _vr_menu_show(on: bool, title: String) -> void:
+	if not vr_active or xr_origin == null:
+		return
+	if vr_menu == null:
+		vr_menu = Node3D.new()
+		xr_origin.add_child(vr_menu)
+		var bg := MeshInstance3D.new()
+		var q := QuadMesh.new()
+		q.size = Vector2(0.5, 0.42)
+		bg.mesh = q
+		var bm := StandardMaterial3D.new()
+		bm.albedo_color = Color(0.008, 0.008, 0.18, 0.88)
+		bm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		bm.no_depth_test = true
+		bm.render_priority = 9
+		bg.mesh.surface_set_material(0, bm)
+		vr_menu.add_child(bg)
+		var bar := MeshInstance3D.new()
+		var bq := QuadMesh.new()
+		bq.size = Vector2(0.5, 0.006)
+		bar.mesh = bq
+		var om := bm.duplicate() as StandardMaterial3D
+		om.albedo_color = Color("#ff4c00")
+		bar.material_override = om
+		bar.position = Vector3(0, 0.21, 0.001)
+		vr_menu.add_child(bar)
+		var f: Font = load("res://assets/fonts/Barlow-SemiBold.ttf")
+		vr_menu_title = _vr_line(f, 46, Vector3(0, 0.17, 0.002))
+		vr_menu_title.font = load("res://assets/fonts/BarlowSemiCondensed-ExtraBoldItalic.ttf")
+		for i in 9:
+			vr_menu_lines.append(_vr_line(f, 30, Vector3(0, 0.115 - i * 0.034, 0.002)))
+		var hint := _vr_line(f, 20, Vector3(0, -0.19, 0.002))
+		hint.modulate = Color("#a9acd0")
+		hint.text = "Stick up/down to choose · A to select · B or X to resume"
+	vr_menu.visible = on
+	for k in ["ma", "mb", "mx", "my", "vA", "vB", "vX", "vY"]:
+		vr_edge[k] = true   # a button must be released and pressed again (no double actions from one press)
+	if on:
+		# fixed in the cockpit, just in front of where your head is now (comfortable, doesn't follow your head)
+		vr_menu.position = xr_cam.position + Vector3(0, -0.06, -0.55)
+		vr_menu_title.text = title
+		vr_menu_idx = 0
+		_vr_menu_refresh()
+
+
+func _vr_set(key: String, value) -> void:
+	_on_setting(key, value)
+	ui.set_seg(key, value)   # keep the desktop screens in step
+
+
+func _vr_line(f: Font, size: int, pos: Vector3) -> Label3D:
+	var l := Label3D.new()
+	l.font = f
+	l.font_size = size
+	l.pixel_size = 0.0005
+	l.position = pos
+	l.no_depth_test = true
+	l.render_priority = 11
+	l.outline_size = 0
+	l.modulate = Color.WHITE
+	vr_menu.add_child(l)
+	return l
+
+
+func _vr_menu_refresh() -> void:
+	var items := _vr_menu_items()
+	for i in vr_menu_lines.size():
+		var l: Label3D = vr_menu_lines[i]
+		var sel := i == vr_menu_idx
+		l.text = ("›  " + items[i][1] + "  ‹") if sel else items[i][1]
+		l.modulate = Color("#ff4c00") if sel else Color.WHITE
+
+
+func _vr_menu_input() -> void:
+	if vr_menu == null or not vr_menu.visible:
+		return
+	var y := 0.0
+	var a := false
+	var b := false
+	var x := false
+	var yb := false
+	if xr_right != null and xr_right.get_is_active():
+		y = xr_right.get_vector2("primary").y
+		a = xr_right.is_button_pressed("ax_button")
+		b = xr_right.is_button_pressed("by_button")
+	if xr_left != null and xr_left.get_is_active():
+		var ly := xr_left.get_vector2("primary").y
+		if absf(ly) > absf(y):
+			y = ly
+		x = xr_left.is_button_pressed("ax_button")
+		yb = xr_left.is_button_pressed("by_button")
+	var n := _vr_menu_items().size()
+	if _edge("mu", y > 0.6 or Input.is_physical_key_pressed(KEY_UP)):
+		vr_menu_idx = (vr_menu_idx - 1 + n) % n
+		_vr_menu_refresh()
+	if _edge("md", y < -0.6 or Input.is_physical_key_pressed(KEY_DOWN)):
+		vr_menu_idx = (vr_menu_idx + 1) % n
+		_vr_menu_refresh()
+	if _edge("ma", a or Input.is_physical_key_pressed(KEY_ENTER)):
+		_vr_menu_pick(_vr_menu_items()[vr_menu_idx][0])
+	if _edge("mb", b) or _edge("mx", x):
+		_vr_menu_pick("resume")
+	if _edge("my", yb):
+		_vr_menu_pick("restart")
+
+
+func _vr_menu_pick(key: String) -> void:
+	match key:
+		"resume":
+			if state == "ended":
+				start_flight()
+			else:
+				_pause(false)
+		"restart":
+			start_flight()
+		"aircraft":
+			_vr_set("aircraft", "fighter" if Settings.get_value("aircraft") == "bulldog" else "bulldog")
+			start_flight()
+		"start":
+			_vr_set("start", "air" if Settings.get_value("start") == "runway" else "runway")
+			start_flight()
+		"mode":
+			_vr_set("mode", "gates" if Settings.get_value("mode") == "free" else "free")
+			start_flight()
+		"tod":
+			_vr_set("tod", "golden" if Settings.get_value("tod") == "day" else "day")
+			_vr_menu_refresh()
+		"assist":
+			_vr_set("assist", not Settings.get_value("assist"))
+			fm.assist = bool(Settings.get_value("assist"))
+			ui.tag_assist.text = "EASY" if fm.assist else "PRO"
+			_vr_menu_refresh()
+		"recentre":
+			_recentre_vr()
+		"exit":
+			to_menu()
+
+
 func _vr_text(t: String) -> void:
 	if vr_label != null:
 		vr_label.text = t
@@ -559,6 +727,8 @@ func _process(delta: float) -> void:
 	frame_count += 1
 	var dt := minf(delta, 0.05)
 	run_time += dt
+	if vr_active and (paused or state == "ended"):
+		_vr_menu_input()
 	if state == "fly" or state == "ended":
 		if not paused:
 			if state == "fly":
@@ -677,8 +847,13 @@ func _update_hud() -> void:
 	elif i["on_ground"] and i["ias"] > fm.spec["vr"] * 1.08 and i["ias"] < fm.spec["vr"] * 1.5 and fm.engine > 0.8:
 		m = "ROTATE"
 	ui.set_message(m, warn)
-	if vr_active and m != "" and not paused:
-		_vr_text(m)
+	if vr_active and not paused:
+		if m != "":
+			_vr_text(m)
+			vr_warn = true
+		elif vr_warn:
+			_vr_text("")   # clear STALL / PULL UP once it's over
+			vr_warn = false
 
 
 func _update_instruments() -> void:

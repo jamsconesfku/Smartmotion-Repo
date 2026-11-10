@@ -28,7 +28,9 @@ VR ON A META QUEST 3
   You can fly with the keyboard while wearing the headset: click the game window on the laptop once
   BEFORE putting the headset on, and don't click anywhere else afterwards.
   Controls: right stick = pitch and roll, right trigger / grip = more / less power,
-  left stick = power and rudder, left trigger = brakes, A = flaps, B = recentre, X = pause, Y = restart.
+  left stick = power and rudder, left trigger = brakes, A = flaps, B = recentre, X = menu, Y = restart.
+  The menu appears in the headset: stick up/down to choose, A to select (change aircraft, start
+  position, gate race, time of day, Easy/Pro, recentre, leave VR), B or X to carry on.
   If the keyboard does nothing in VR, the game shows a message: click the game window on the laptop once.
 
 CONTROLS (keyboard)

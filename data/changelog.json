@@ -70,5 +70,12 @@
       "F-05",
       "F-06"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.6.1, ready for the VR test: a menu inside the headset (X opens it; stick and A to choose) to change aircraft, start, mode, time of day and Easy/Pro, recentre or leave VR, so no keyboard is needed. Fixed: the controllers didn't work while paused or after a crash (X paused but couldn't resume), and STALL/PULL UP warnings stayed in the headset. VR is also sharper when you turn your head.",
+    "ids": [
+      "F-02"
+    ]
   }
 ]
