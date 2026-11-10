@@ -16,6 +16,8 @@ echo "Checking the flight physics..."
 "$GODOT" --headless --path godot --script res://tests/test_race.gd >/dev/null   # racing car physics and race checks
 "$GODOT" --headless --path godot --script res://tests/test_coaster.gd | grep -E "FAIL|All checks passed|failed" || true
 "$GODOT" --headless --path godot --script res://tests/test_coaster.gd >/dev/null   # roller coaster checks
+"$GODOT" --headless --path godot --script res://tests/test_xplane.gd | grep -E "FAIL|FAILS" || true
+"$GODOT" --headless --path godot --script res://tests/test_xplane.gd >/dev/null   # FlyPT Mover (X-Plane) link checks
 "$GODOT" --headless --path godot -- --test_panel | grep -E "PASS|FAIL" || true
 ! "$GODOT" --headless --path godot -- --test_panel | grep -q FAIL   # VR menu panel checks
 echo "Exporting the Windows build..."

@@ -865,6 +865,8 @@ func _build_sheets() -> void:
 	port.focus_exited.connect(func(): setting_changed.emit("tel_port", int(port.text)))
 	ar.add_child(port)
 	v.add_child(ar)
+	_section(v, "FlyPT Mover: the game acts as X-Plane 11, so Mover's \"X-Plane 11 (UDP)\" source reads it")
+	_seg(v, "flypt", [[true, "On"], [false, "Off"]], Settings.get_value("flypt"))
 	set_status = _lbl("", 13, MUTED)
 	v.add_child(set_status)
 	var sd := _big_button("Done", true)

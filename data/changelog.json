@@ -143,5 +143,12 @@
     "ids": [
       "F-02"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.11.0: FlyPT Mover can now read our game. The game answers on the network the way X-Plane 11 does, so Mover's ready-made 'X-Plane 11 (UDP)' source picks it up (Flight, Racing, Space and Coaster) and Mover's 3D rig picture moves with the game. Settings > FlyPT Mover, on by default. Steps in the README inside the download.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

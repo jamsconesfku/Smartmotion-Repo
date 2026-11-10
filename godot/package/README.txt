@@ -96,6 +96,19 @@ MOVE THE SIMULATOR WITH THE GAME (SmartMotion Motion, replaces FlyPT Mover)
   Your settings are saved in %APPDATA%\Godot\app_userdata\SmartMotion Motion.
   Other software can still read the game's data: it is JSON over UDP, 60 a second (press T to see the numbers).
 
+USE FLYPT MOVER WITH THE GAME (its 3D picture, or to drive the rig)
+  The game talks to FlyPT Mover the way X-Plane 11 does, so Mover's ready-made "X-Plane 11 (UDP)" source
+  reads it. No plug-in or extra program needed. It works for Flight, Racing, Space and the Coaster.
+    1. Start SmartMotionFlight.exe (Settings > FlyPT Mover is On already).
+    2. In FlyPT Mover, use the "SOURCE :: XPLANE 11 (UDP)" source (leave its address as 127.0.0.1 and
+       port 49000, X-Plane's normal settings) and switch it on.
+    3. Fly. The 3D rig picture in Mover moves with the game. Press T in the game: the panel shows
+       "FlyPT Mover connected" once Mover is asking for data.
+  If a direction is the wrong way round in Mover, flip it in Mover's settings for that axis.
+  Mover listens to the game; use FlyPT Mover OR SmartMotion Motion to drive the rig, not both at once.
+  The game also sends X-Plane "DATA" rows to 127.0.0.1 port 49001, for Mover set-ups that expect those.
+  If X-Plane itself is running on the same PC it holds port 49000; close it first.
+
 MAP DATA AND TEXTURES (credits)
   Contains modified Copernicus Sentinel data 2023.
   Produced using Copernicus WorldDEM-30 (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH 2014-2018

@@ -11,6 +11,7 @@ var status := "off"
 var frame := {}
 var _next := 0.0
 var _sent := 0
+var xp := XPlaneLink.new()   # FlyPT Mover reads the game as if it were X-Plane 11
 
 
 func start(h: String, p: int) -> void:
@@ -74,3 +75,8 @@ func push_frame(f: Dictionary, t: float) -> void:
 		_next = t + 1.0 / 60.0 - 0.002
 		udp.put_packet(JSON.stringify(f).to_utf8_buffer())
 		_sent += 1
+
+
+## Called every frame (also in menus and pauses): answers FlyPT Mover.
+func service() -> void:
+	xp.service(frame, Time.get_ticks_msec() / 1000.0)

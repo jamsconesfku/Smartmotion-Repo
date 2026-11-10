@@ -182,5 +182,9 @@
   {
     "term": "Dry run",
     "meaning": "SmartMotion Motion working on screen only: the 3D picture moves, but nothing is sent to the rig."
+  },
+  {
+    "term": "Dataref",
+    "meaning": "X-Plane's name for one piece of live flight data, such as the aircraft's pitch angle. FlyPT Mover asks for datarefs by name, and our game now answers those requests."
   }
 ]

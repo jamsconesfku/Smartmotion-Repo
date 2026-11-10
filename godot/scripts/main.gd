@@ -2,7 +2,7 @@ extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 ## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.10.0"
+const APP_VERSION := "1.11.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -129,6 +129,7 @@ func _ready() -> void:
 	var gpu := RenderingServer.get_video_adapter_name()
 	ui.set_gpu_text("Graphics: %s  ·  %s  ·  F11 for full screen. If that isn't your NVIDIA/AMD card, set Windows Graphics Settings to High performance for this app." % [gpu, RenderingServer.get_current_rendering_method()])
 	Diag.snapshot()
+	_start_flypt()   # before the world loads, so Mover connects straight away
 	await world.build(ui.set_progress, quality, str(Settings.get_value("tod")))
 	if Settings.get_value("tel"):
 		tel.start(str(Settings.get_value("tel_host")), int(Settings.get_value("tel_port")))
@@ -172,6 +173,13 @@ func _ready() -> void:
 		Diag.write("screenshot in %.0f s" % shot_timer)
 
 
+func _start_flypt() -> void:
+	if Settings.get_value("flypt"):
+		tel.xp.start(int(Settings.get_value("flypt_port")), "127.0.0.1", int(Settings.get_value("flypt_out")))
+	else:
+		tel.xp.stop()
+
+
 func _apply_window() -> void:
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if Settings.get_value("fullscreen") else DisplayServer.WINDOW_MODE_WINDOWED)
 
@@ -205,6 +213,8 @@ func _on_setting(key: String, value) -> void:
 				(modes["race"] as RaceMode).set_time_of_day(str(value))
 		"fullscreen":
 			_apply_window()
+		"flypt", "flypt_port", "flypt_out":
+			_start_flypt()
 		"tel", "tel_host", "tel_port":
 			if Settings.get_value("tel"):
 				tel.start(str(Settings.get_value("tel_host")), int(Settings.get_value("tel_port")))
@@ -880,6 +890,7 @@ func _toast(t: String, secs := 2.2) -> void:
 
 
 func _process(delta: float) -> void:
+	tel.service()
 	if world == null or world.terrain == null:
 		return
 	if mode != null:
@@ -956,8 +967,8 @@ func _process(delta: float) -> void:
 	if state == "menu":
 		pass
 	synth.set_state(fm.engine, fm.ias, fm.stall_warn and not bool(fm.i["on_ground"]), state == "fly" and not paused and bool(Settings.get_value("sound")))
-	ui.tel_label.text = "Rig link: %s\npitch %.1f°  roll %.1f°  yaw rate %.1f°/s\nsurge %.2fg  sway %.2fg  heave %.2fg\nIAS %d kt  VS %d" % [tel.status, fm.i["pitch"], fm.i["roll"], -fm.w.y / FlightModel.D2R, -fm.spec_force.z / FlightModel.G, fm.spec_force.x / FlightModel.G, fm.spec_force.y / FlightModel.G, fm.i["ias"] * KT, fm.i["vs"] * FPM]
-	ui.set_status.text = "Status: " + tel.status
+	ui.tel_label.text = "Rig link: %s\nFlyPT Mover: %s\npitch %.1f°  roll %.1f°  yaw rate %.1f°/s\nsurge %.2fg  sway %.2fg  heave %.2fg\nIAS %d kt  VS %d" % [tel.status, tel.xp.status, fm.i["pitch"], fm.i["roll"], -fm.w.y / FlightModel.D2R, -fm.spec_force.z / FlightModel.G, fm.spec_force.x / FlightModel.G, fm.spec_force.y / FlightModel.G, fm.i["ias"] * KT, fm.i["vs"] * FPM]
+	ui.set_status.text = "Status: " + tel.status + "\nFlyPT Mover: " + tel.xp.status
 	if frame_count % 120 == 30 and (args.has("stats") or shot_timer >= 0.0):
 		Diag.write("frame stats: %d triangles, %d draw calls, %d objects, %.1f fps" % [
 			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),
@@ -1292,8 +1303,8 @@ func _process_mode(dt: float, delta: float) -> void:
 	synth.set_state(float(snd[0]), float(snd[2]), false, state == "fly" and not paused and bool(Settings.get_value("sound")))
 	var f: Dictionary = mode.tel_frame
 	if not f.is_empty():
-		ui.tel_label.text = "Rig link: %s\npitch %.1f°  roll %.1f°  yaw rate %.1f°/s\nsurge %.2fg  sway %.2fg  heave %.2fg" % [tel.status, f["att"]["pitch_deg"], f["att"]["roll_deg"], f["rate"]["yaw_dps"], f["g_felt"]["surge"], f["g_felt"]["sway"], f["g_felt"]["heave"]]
-	ui.set_status.text = "Status: " + tel.status
+		ui.tel_label.text = "Rig link: %s\nFlyPT Mover: %s\npitch %.1f°  roll %.1f°  yaw rate %.1f°/s\nsurge %.2fg  sway %.2fg  heave %.2fg" % [tel.status, tel.xp.status, f["att"]["pitch_deg"], f["att"]["roll_deg"], f["rate"]["yaw_dps"], f["g_felt"]["surge"], f["g_felt"]["sway"], f["g_felt"]["heave"]]
+	ui.set_status.text = "Status: " + tel.status + "\nFlyPT Mover: " + tel.xp.status
 
 
 ## Controls for Racing and Space, from the keyboard, a gamepad and the VR controllers.
