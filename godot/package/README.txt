@@ -8,7 +8,7 @@ HOW TO START
   2. Double-click  SmartMotionFlight.exe.
      Windows may say "Windows protected your PC" because the game isn't signed.
      Click "More info", then "Run anyway".
-  3. Pick an aircraft and press Fly.
+  3. Pick an aircraft (Skysmart's Bulldog G-SMAT, or the WW2 fighter) and press Fly.
 
 USE YOUR GAMING GRAPHICS CARD
   The menu shows which graphics card the game is using ("Graphics: ..."). On a laptop with two

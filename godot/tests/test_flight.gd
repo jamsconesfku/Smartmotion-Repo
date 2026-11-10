@@ -36,7 +36,7 @@ func _initialize() -> void:
 			var xz := terrain.from_runway(u, v)
 			flat = flat and absf(terrain.height(xz.x, xz.y) - Terrain.RW_ELEV) < 0.05
 	check("runway is flat", flat, "real heights loaded: %s" % str(terrain.real))
-	for key in ["trainer", "fighter"]:
+	for key in ["bulldog", "trainer", "fighter"]:
 		print("\n=== %s ===" % key)
 		var fm := start(key, {})
 		var sp: Dictionary = fm.spec

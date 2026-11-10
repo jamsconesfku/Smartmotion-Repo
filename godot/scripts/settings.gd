@@ -3,7 +3,7 @@ extends Node
 
 const PATH := "user://settings.cfg"
 var data := {
-	"aircraft": "trainer", "start": "runway", "mode": "free", "assist": true, "tod": "day", "wind": "calm",
+	"aircraft": "bulldog", "start": "runway", "mode": "free", "assist": true, "tod": "day", "wind": "calm",
 	"invert": false, "sound": true, "quality": "high", "tel": false, "tel_host": "127.0.0.1", "tel_port": 4123, "fullscreen": false,
 }
 
@@ -13,6 +13,8 @@ func _ready() -> void:
 		for k in data.keys():
 			if cf.has_section_key("s", k):
 				data[k] = cf.get_value("s", k)
+	if data["aircraft"] == "trainer":
+		data["aircraft"] = "bulldog"   # the Bulldog replaced the light trainer in v1.6.0
 
 func get_value(k: String):
 	return data.get(k)

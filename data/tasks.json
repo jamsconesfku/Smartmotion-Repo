@@ -764,9 +764,9 @@
     "due": null,
     "owner": "Sam",
     "depends_on": [],
-    "notes": "v1 browser game built 9 Nov 2026; native Windows version (Godot 4.6, GPU, OpenXR for Quest 3, UDP telemetry) built the same day. Needs: test on the MSI laptop and Quest 3, connect the UDP feed to FlyPT Mover, check the Duxford layout, and settle the licence/insurance position for paid use.",
+    "notes": "v1 browser game built 9 Nov 2026; native Windows version (Godot 4.6, GPU, OpenXR for Quest 3, UDP telemetry) built the same day. Needs: test on the MSI laptop and Quest 3, connect the UDP feed to FlyPT Mover, check the Duxford layout, and settle the licence/insurance position for paid use. v1.5.0 (9 Nov): real Duxford world from free open data and 3D clouds. v1.6.0 (10 Nov): you fly Skysmart's Bulldog G-SMAT with a detailed VR cockpit.",
     "links": [],
-    "updated": "2026-11-09"
+    "updated": "2026-11-10"
   },
   {
     "id": "F-03",
@@ -812,8 +812,28 @@
     "due": null,
     "owner": "Sam",
     "depends_on": [],
-    "notes": "",
-    "links": [],
-    "updated": "2026-11-07"
+    "notes": "Skysmart's Bulldog (G-SMAT, ex-RAF XX658) is now the main aircraft in our own SmartMotion Flight game (v1.6.0, 10 Nov 2026), so 'fly the Bulldog in VR' no longer needs a DCS module. Keep this parked as an extra route only.",
+    "links": [
+      "docs/games/smartmotion-flight-native.md"
+    ],
+    "updated": "2026-11-10"
+  },
+  {
+    "id": "F-06",
+    "title": "Send photos of G-SMAT (outside and cockpit) so the game's Bulldog can match it exactly",
+    "why": "The game's Bulldog uses the classic RAF trainer colours because we couldn't find a clear current photo. A few phone photos of the real aircraft and its panel let us copy the paint, markings and instrument layout exactly, which makes the 'fly our real Bulldog' story stronger.",
+    "area": "Marketing",
+    "phase": "Parked",
+    "status": "todo",
+    "priority": "low",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "Useful shots: both sides, top and underneath if possible, the tail, the nose/cowling, and straight-on photos of the instrument panel and centre console.",
+    "links": [
+      "F-02",
+      "docs/games/smartmotion-flight-native.md"
+    ],
+    "updated": "2026-11-10"
   }
 ]

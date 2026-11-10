@@ -18,6 +18,8 @@ var rudder := Node3D.new()
 var pilot_nodes: Array = []
 var instruments: Instruments
 var yoke := Node3D.new()
+var bulldog: Bulldog
+var ctl := {}   ## pilot inputs for moving cockpit parts (set by main.gd every frame)
 var eye := Vector3.ZERO
 var logo: Texture2D
 
@@ -101,6 +103,10 @@ func build(aircraft_key: String, logo_tex: Texture2D, with_cockpit := true) -> v
 	add_child(fus)
 	add_child(outer)
 	add_child(cockpit_node)
+	if key == "bulldog":
+		bulldog = Bulldog.new()
+		bulldog.build(self, with_cockpit)
+		return
 	var white := C("#f2f4fa")
 	var navy := C("#0a0b4a")
 	var orange := C("#ff4c00")
@@ -290,6 +296,10 @@ func _build_cockpit() -> void:
 
 
 func set_instruments(nd: Dictionary) -> void:
+	if bulldog != null:
+		if bulldog.panel_ui != null:
+			bulldog.panel_ui.set_data(nd)
+		return
 	if instruments != null:
 		instruments.set_data(nd)
 
@@ -307,9 +317,17 @@ func update_visuals(surf: Dictionary, engine: float, dt: float, ias: float) -> v
 		(b as Node3D).visible = blur < 0.8
 	for w in wheels:
 		(w as Node3D).rotation.x += ias * dt * 3.0
+	if bulldog != null:
+		bulldog.animate(ctl, dt)
 
 
 func set_cockpit_view(on: bool) -> void:
+	if bulldog != null:
+		# the Bulldog's fuselage, canopy and prop arc stay in view: you sit inside the real cockpit
+		for p in pilot_nodes:
+			(p as Node3D).visible = not on
+		cockpit_node.visible = on
+		return
 	fus.visible = not on
 	cockpit_node.visible = on
 	disc.visible = not on

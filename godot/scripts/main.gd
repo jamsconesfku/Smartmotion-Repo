@@ -1,7 +1,7 @@
 extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 
-const APP_VERSION := "1.5.0"
+const APP_VERSION := "1.6.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -102,6 +102,12 @@ func _ready() -> void:
 	if args.has("sheet"):
 		await get_tree().create_timer(0.5).timeout
 		ui.open_sheet({"settings": ui.settings_sheet, "help": ui.help_sheet, "pause": ui.pause_sheet}[str(args["sheet"])])
+	if args.has("orbit_dist"):
+		orbit_dist = float(args["orbit_dist"])
+	if args.has("orbit_yaw"):
+		orbit_yaw = deg_to_rad(float(args["orbit_yaw"]))
+	if args.has("orbit_pitch"):
+		orbit_pitch = deg_to_rad(float(args["orbit_pitch"]))
 	if args.has("cam"):
 		cam_mode = args["cam"]
 		_apply_view()
@@ -197,6 +203,7 @@ func _apply_view() -> void:
 
 
 func _place_plane(dt: float) -> void:
+	plane.ctl = {"pitch": inp["pitch"], "roll": inp["roll"], "yaw": inp["yaw"], "throttle": throttle, "flaps": flaps_idx / 2.0, "flaps_pos": fm.flaps, "trim": trim}
 	plane.position = fm.pos
 	plane.quaternion = fm.q
 	plane.update_visuals(fm.surf, fm.engine, dt, fm.ias)
@@ -579,7 +586,7 @@ func _process(delta: float) -> void:
 	if state == "fly":
 		_update_hud()
 		instr_t += dt
-		if instr_t > 0.05:
+		if instr_t > (0.015 if plane.bulldog != null else 0.05):   # the Bulldog's 3D panel updates every frame (smooth needles in VR)
 			instr_t = 0.0
 			_update_instruments()
 	if state == "menu":
@@ -679,8 +686,9 @@ func _update_instruments() -> void:
 	plane.set_instruments({
 		"ias": float(i["ias"]) * KT, "vmax": 400.0 if fm.spec["key"] == "fighter" else 200.0, "alt": float(i["alt_msl"]) * FT, "vs": float(i["vs"]) * FPM,
 		"heading": i["heading"], "pitch": i["pitch"], "roll": i["roll"], "throttle": throttle, "rpm": i["rpm"], "rpm_max": fm.spec["rpmMax"], "flaps": i["flaps"], "stall": i["stall"],
+		"g": i["g"], "slip": i["slip"], "turn": -fm.w.y / FlightModel.D2R,
 	})
-	if plane.yoke != null:
+	if plane.yoke != null and plane.bulldog == null:
 		plane.yoke.rotation.z = -float(inp["roll"]) * 0.5
 		plane.yoke.rotation.x = float(inp["pitch"]) * 0.18
 
@@ -707,7 +715,8 @@ func _update_camera(dt: float) -> void:
 		return
 	if cam_mode == "cockpit":
 		var e: Vector3 = Q * spec["eye"]
-		var look_b := Basis.from_euler(Vector3(look.y, look.x, 0))
+		var base_pitch := -0.2 if plane.bulldog != null else 0.0   # Bulldog: look slightly down so the panel shows on a monitor
+		var look_b := Basis.from_euler(Vector3(look.y + base_pitch, look.x, 0))
 		cam.global_transform = Transform3D(Basis(Q) * look_b, P + e)
 	elif cam_mode == "orbit":
 		var dd := orbit_dist * (1.2 if spec["key"] == "fighter" else 1.0)

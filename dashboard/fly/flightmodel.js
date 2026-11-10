@@ -44,6 +44,22 @@ const SPECS = {
     hit: [[0, -0.2, -2.5], [0, 0.6, 5.6], [-5.5, 0.9, -0.3], [5.5, 0.9, -0.3], [0, -0.7, 0.3], [0, 1.0, 0.5]],
     eye: [-0.32, 0.5, -0.15], cruise: 55, cruiseThrottle: 0.62, vr: 26, rpmIdle: 700, rpmMax: 2700,
   },
+  // Scottish Aviation Bulldog 120 (Skysmart's G-SMAT, ex-RAF XX658): 10.06 m span, 12.02 m2 wing, 200 hp
+  // Lycoming IO-360, about 1,000 kg with two crew. Clean stall about 55 kt, top speed about 130 kt, aerobatic.
+  bulldog: {
+    key: 'bulldog', name: 'Bulldog', blurb: 'Skysmart\'s ex-RAF Scottish Aviation Bulldog trainer. Crisp, aerobatic and honest.',
+    mass: 1000, S: 12.02, b: 10.06, c: 1.2, I: [1450, 2150, 1050],
+    clA: 4.8, cl0: 0.25, aStall: 16 * D2R, aStallN: -14 * D2R, clFlap: 0.45,
+    cd0: 0.04, cdFlap: 0.045, k: 0.06,
+    cm0: 0.035, cmA: -0.85, cmQ: -13, cmDe: 1.25, deMax: 0.44,
+    rollP: -0.45, rollB: 0.08, rollDa: 0.21, daMax: 0.38,
+    yawB: -0.07, yawR: -0.11, yawDr: 0.075, drMax: 0.38, yawDa: 0.02, cyB: -0.3,
+    power: 149e3, eta: 0.7, tStatic: 3300, propSlip: 240,
+    gear: [{ p: [-1.03, -1.05, 0.4], brake: true }, { p: [1.03, -1.05, 0.4], brake: true }, { p: [0, -1.05, -1.55], steer: true }],
+    gearK: 46000, gearC: 3200,
+    hit: [[0, -0.15, -2.4], [0, 0.3, 4.75], [-5.0, 0.08, 0.1], [5.0, 0.08, 0.1], [0, -0.62, 0.3], [0, 0.98, 0.25]],
+    eye: [-0.3, 0.68, 0.22], cruise: 55, cruiseThrottle: 0.65, vr: 27, rpmIdle: 700, rpmMax: 2700,
+  },
   fighter: {
     key: 'fighter', name: 'WW2 Fighter', blurb: 'Fast single-seat fighter. Powerful and lively: needs a firm hand.',
     mass: 3000, S: 22.5, b: 11.2, c: 2.1, I: [8000, 11000, 4500],

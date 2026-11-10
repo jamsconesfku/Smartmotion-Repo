@@ -649,7 +649,7 @@ func _hangar_front(du: float, wall_h: float) -> ImageTexture:
 func _airfield() -> void:
 	_runway_decal()
 	# parked aircraft on the apron
-	var rows := [["trainer", -330.0, -140.0, 40.0], ["fighter", -250.0, -125.0, -20.0], ["trainer", -170.0, -145.0, 70.0], ["fighter", -80.0, -130.0, 15.0], ["trainer", 20.0, -150.0, -50.0], ["fighter", 140.0, -140.0, 95.0]]
+	var rows := [["bulldog", -330.0, -140.0, 40.0], ["fighter", -250.0, -125.0, -20.0], ["bulldog", -170.0, -145.0, 70.0], ["fighter", -80.0, -130.0, 15.0], ["bulldog", 20.0, -150.0, -50.0], ["fighter", 140.0, -140.0, 95.0]]
 	for r in rows:
 		var a := AircraftModel.new()
 		a.build(r[0], logo if r[0] == "trainer" else logo_dark, false)
@@ -657,7 +657,7 @@ func _airfield() -> void:
 		var piv := Node3D.new()
 		piv.add_child(a)
 		a.rotation.x = 0.085 if r[0] == "fighter" else 0.0
-		_place(piv, r[1], r[2], 0.97 if r[0] == "trainer" else 1.38, deg_to_rad(r[3]))
+		_place(piv, r[1], r[2], 1.03 if r[0] == "bulldog" else 1.38, deg_to_rad(r[3]))
 
 
 func _runway_decal() -> void:

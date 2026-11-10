@@ -256,7 +256,7 @@ func _build_menu() -> void:
 	sub.custom_minimum_size = Vector2(480, 0)
 	v.add_child(sub)
 	_section(v, "Aircraft")
-	_seg(v, "aircraft", [["trainer", "Light Trainer (easy)"], ["fighter", "WW2 Fighter (fast)"]], Settings.get_value("aircraft"))
+	_seg(v, "aircraft", [["bulldog", "Bulldog G-SMAT (trainer)"], ["fighter", "WW2 Fighter (fast)"]], Settings.get_value("aircraft"))
 	_section(v, "Start")
 	_seg(v, "start", [["runway", "On the runway"], ["air", "In the air"]], Settings.get_value("start"))
 	_section(v, "Game")

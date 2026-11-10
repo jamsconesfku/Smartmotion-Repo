@@ -61,5 +61,14 @@
       "LIC-13",
       "LIC-14"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.6.0: you now fly Skysmart's own Scottish Aviation Bulldog (G-SMAT, ex-RAF XX658) in the native game, built from the real dimensions and performance figures, in RAF trainer colours, with a detailed 3D cockpit for VR: live round gauges behind glass, moving control sticks, pedals and levers, seats, canopy frames and an instructor in the right-hand seat. The paint is an assumption until we have photos of the aircraft as it is now.",
+    "ids": [
+      "F-02",
+      "F-05",
+      "F-06"
+    ]
   }
 ]
