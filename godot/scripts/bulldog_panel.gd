@@ -20,6 +20,12 @@ const LAYOUT := [
 
 var d := {"ias": 0.0, "alt": 0.0, "vs": 0.0, "heading": 0.0, "pitch": 0.0, "roll": 0.0, "throttle": 0.0, "rpm": 700.0,
 	"rpm_max": 2700.0, "flaps": 0.0, "stall": false, "g": 1.0, "slip": 0.0, "turn": 0.0, "time": 0.0}
+## "static" draws the parts that never move (faces, scales, numbers, radios, switches, placards) once;
+## "live" draws only the moving parts on top, every frame. Two layers keep the per-frame work small,
+## which matters in VR (the whole panel used to be redrawn every frame: 3 to 5 ms of a 11 ms frame).
+var layer := "all"
+var S := true       # draw the fixed parts
+var L := true       # draw the moving parts
 var font: Font
 var bold: Font
 var g_max := 1.0
@@ -32,6 +38,13 @@ const GREEN := Color("#2fb34a")
 const YELLOW := Color("#f2c21b")
 const RED := Color("#e0261b")
 const WHITE_ARC := Color("#f4f4f0")
+
+
+func set_layer(l: String) -> void:
+	layer = l
+	S = l != "live"
+	L = l != "static"
+	queue_redraw()
 
 
 func _init() -> void:
@@ -61,7 +74,8 @@ func set_data(nd: Dictionary) -> void:
 		d[k] = nd[k]
 	g_max = maxf(g_max, float(d["g"]))
 	g_min = minf(g_min, float(d["g"]))
-	queue_redraw()
+	if L:
+		queue_redraw()
 
 
 func px(m: float) -> float:
@@ -121,24 +135,35 @@ func _begin(name: String) -> float:
 		if l[0] == name:
 			draw_set_transform(Vector2(px(l[1]), px(l[2])), 0.0, Vector2.ONE)
 			var r := px(l[3])
-			_screws(r)
-			draw_circle(Vector2.ZERO, r * 1.06, Color("#111214"))
-			draw_circle(Vector2.ZERO, r, FACE)
+			if S:
+				_screws(r)
+				draw_circle(Vector2.ZERO, r * 1.06, Color("#111214"))
+				draw_circle(Vector2.ZERO, r, FACE)
 			return r
 	return 0.0
 
 
 # ---------------------------------------------------------------- the panel
+static var draw_us := 0     ## time spent drawing the panel (for the diagnostics log)
+static var draw_n := 0
 func _draw() -> void:
+	var t0 := Time.get_ticks_usec()
+	_draw_all()
+	draw_us += Time.get_ticks_usec() - t0
+	draw_n += 1
+
+
+func _draw_all() -> void:
 	var W := px(PW)
 	var H := px(PH)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	draw_rect(Rect2(0, 0, W, H), PANEL)
-	# subtle crackle-paint grain: one small tiled texture, made once (the panel redraws every frame)
-	draw_texture_rect(_grain_tex(), Rect2(0, 0, W, H), true)
-	# sub-panels
-	draw_rect(Rect2(px(0.012), px(0.012), px(0.39), px(0.29)), Color("#1f2124"), true)
-	draw_rect(Rect2(px(0.012), px(0.012), px(0.39), px(0.29)), Color("#3a3c40"), false, 3.0)
+	if S:
+		draw_rect(Rect2(0, 0, W, H), PANEL)
+		# subtle crackle-paint grain: one small tiled texture, made once
+		draw_texture_rect(_grain_tex(), Rect2(0, 0, W, H), true)
+		# sub-panels
+		draw_rect(Rect2(px(0.012), px(0.012), px(0.39), px(0.29)), Color("#1f2124"), true)
+		draw_rect(Rect2(px(0.012), px(0.012), px(0.39), px(0.29)), Color("#3a3c40"), false, 3.0)
 	_asi()
 	_ai()
 	_alt()
@@ -164,22 +189,27 @@ func _asi() -> void:
 	var r := _begin("asi")
 	# Bulldog speeds (knots): white flap arc 50-100, green 59-130, yellow 130-185, red line 185
 	var a := func(v: float) -> float: return _map(v, 40.0, 200.0, 125.0, 415.0)
-	_arc(r * 0.93, a.call(50.0), a.call(100.0), r * 0.06, WHITE_ARC)
-	_arc(r * 0.86, a.call(59.0), a.call(130.0), r * 0.07, GREEN)
-	_arc(r * 0.86, a.call(130.0), a.call(185.0), r * 0.07, YELLOW)
-	var rl := deg_to_rad(a.call(185.0))
-	draw_line(Vector2(cos(rl), sin(rl)) * r * 0.97, Vector2(cos(rl), sin(rl)) * r * 0.78, RED, r * 0.05, true)
-	_ticks(r * 0.97, 125.0, 415.0, 32, 2, r * 0.13, r * 0.03)
-	for v in [40, 60, 80, 100, 120, 140, 160, 180, 200]:
-		_num(r * 0.62, a.call(float(v)), str(v), r * 0.2)
-	_txt(Vector2(0, -r * 0.3), "AIRSPEED", r * 0.11, INK)
-	_txt(Vector2(0, r * 0.32), "KNOTS", r * 0.12, INK)
+	if S:
+		_arc(r * 0.93, a.call(50.0), a.call(100.0), r * 0.06, WHITE_ARC)
+		_arc(r * 0.86, a.call(59.0), a.call(130.0), r * 0.07, GREEN)
+		_arc(r * 0.86, a.call(130.0), a.call(185.0), r * 0.07, YELLOW)
+		var rl := deg_to_rad(a.call(185.0))
+		draw_line(Vector2(cos(rl), sin(rl)) * r * 0.97, Vector2(cos(rl), sin(rl)) * r * 0.78, RED, r * 0.05, true)
+		_ticks(r * 0.97, 125.0, 415.0, 32, 2, r * 0.13, r * 0.03)
+		for v in [40, 60, 80, 100, 120, 140, 160, 180, 200]:
+			_num(r * 0.62, a.call(float(v)), str(v), r * 0.2)
+		_txt(Vector2(0, -r * 0.3), "AIRSPEED", r * 0.11, INK)
+		_txt(Vector2(0, r * 0.32), "KNOTS", r * 0.12, INK)
+	if not L:
+		return
 	_needle(a.call(float(d["ias"])), r * 0.92, r * 0.07, Color.WHITE)
 	_hub(r * 0.1)
 
 
 func _ai() -> void:
 	var r := _begin("ai")
+	if not L:
+		return
 	var circle := PackedVector2Array()
 	for i in 64:
 		circle.append(Vector2(cos(TAU * i / 64.0), sin(TAU * i / 64.0)) * r * 0.98)
@@ -214,15 +244,18 @@ func _ai() -> void:
 
 func _alt() -> void:
 	var r := _begin("alt")
-	_ticks(r * 0.97, -90.0, 270.0, 50, 5, r * 0.13, r * 0.03)
-	for k in 10:
-		_num(r * 0.68, -90.0 + k * 36.0, str(k), r * 0.24)
+	if S:
+		_ticks(r * 0.97, -90.0, 270.0, 50, 5, r * 0.13, r * 0.03)
+		for k in 10:
+			_num(r * 0.68, -90.0 + k * 36.0, str(k), r * 0.24)
+		# Kollsman window
+		draw_rect(Rect2(r * 0.3, -r * 0.09, r * 0.42, r * 0.18), Color("#000"))
+		_txt(Vector2(r * 0.51, 0), "1013", r * 0.11, INK)
+		_txt(Vector2(0, -r * 0.32), "ALT", r * 0.12, INK)
+		_txt(Vector2(0, r * 0.35), "FEET", r * 0.1, INK)
+	if not L:
+		return
 	var ft := float(d["alt"])
-	# Kollsman window
-	draw_rect(Rect2(r * 0.3, -r * 0.09, r * 0.42, r * 0.18), Color("#000"))
-	_txt(Vector2(r * 0.51, 0), "1013", r * 0.11, INK)
-	_txt(Vector2(0, -r * 0.32), "ALT", r * 0.12, INK)
-	_txt(Vector2(0, r * 0.35), "FEET", r * 0.1, INK)
 	_needle(-90.0 + fposmod(ft, 10000.0) / 10000.0 * 360.0, r * 0.55, r * 0.11, Color.WHITE, 0.1)
 	_needle(-90.0 + fposmod(ft, 1000.0) / 1000.0 * 360.0, r * 0.9, r * 0.065, Color.WHITE)
 	_hub(r * 0.1)
@@ -230,20 +263,23 @@ func _alt() -> void:
 
 func _tc() -> void:
 	var r := _begin("tc")
-	_txt(Vector2(0, -r * 0.55), "TURN COORDINATOR", r * 0.1, INK)
-	for s in [-1.0, 1.0]:
-		var a := deg_to_rad(s * 20.0)
-		draw_line(Vector2(cos(a), sin(a)) * r * 0.9 * s, Vector2(cos(a), sin(a)) * r * 0.72 * s, INK, r * 0.04, true)
-	draw_line(Vector2(-r * 0.9, 0), Vector2(-r * 0.72, 0), INK, r * 0.04, true)
-	draw_line(Vector2(r * 0.9, 0), Vector2(r * 0.72, 0), INK, r * 0.04, true)
-	_txt(Vector2(-r * 0.68, r * 0.36), "L", r * 0.16, INK)
-	_txt(Vector2(r * 0.68, r * 0.36), "R", r * 0.16, INK)
-	_txt(Vector2(0, r * 0.82), "2 MIN", r * 0.09, INK)
-	# ball in the curved tube
-	var tube := Rect2(-r * 0.45, r * 0.42, r * 0.9, r * 0.2)
-	draw_rect(tube, Color("#d9d4c2"))
-	draw_line(Vector2(-r * 0.08, r * 0.42), Vector2(-r * 0.08, r * 0.62), Color.BLACK, 2.0)
-	draw_line(Vector2(r * 0.08, r * 0.42), Vector2(r * 0.08, r * 0.62), Color.BLACK, 2.0)
+	if S:
+		_txt(Vector2(0, -r * 0.55), "TURN COORDINATOR", r * 0.1, INK)
+		for s in [-1.0, 1.0]:
+			var a := deg_to_rad(s * 20.0)
+			draw_line(Vector2(cos(a), sin(a)) * r * 0.9 * s, Vector2(cos(a), sin(a)) * r * 0.72 * s, INK, r * 0.04, true)
+		draw_line(Vector2(-r * 0.9, 0), Vector2(-r * 0.72, 0), INK, r * 0.04, true)
+		draw_line(Vector2(r * 0.9, 0), Vector2(r * 0.72, 0), INK, r * 0.04, true)
+		_txt(Vector2(-r * 0.68, r * 0.36), "L", r * 0.16, INK)
+		_txt(Vector2(r * 0.68, r * 0.36), "R", r * 0.16, INK)
+		_txt(Vector2(0, r * 0.82), "2 MIN", r * 0.09, INK)
+		# curved tube for the ball
+		var tube := Rect2(-r * 0.45, r * 0.42, r * 0.9, r * 0.2)
+		draw_rect(tube, Color("#d9d4c2"))
+		draw_line(Vector2(-r * 0.08, r * 0.42), Vector2(-r * 0.08, r * 0.62), Color.BLACK, 2.0)
+		draw_line(Vector2(r * 0.08, r * 0.42), Vector2(r * 0.08, r * 0.62), Color.BLACK, 2.0)
+	if not L:
+		return
 	var bx := clampf(-float(d["slip"]) * 0.03, -0.36, 0.36) * r
 	draw_circle(Vector2(bx, r * 0.52), r * 0.085, Color.BLACK)
 	# little aircraft banks with the rate of turn (standard rate 3 deg/s = 20 degrees)
@@ -256,6 +292,8 @@ func _tc() -> void:
 
 func _di() -> void:
 	var r := _begin("di")
+	if not L:
+		return
 	var hd := float(d["heading"])
 	draw_set_transform(Vector2(px(0.225), px(0.225)), -deg_to_rad(hd), Vector2.ONE)
 	for k in 72:
@@ -280,12 +318,15 @@ func _di() -> void:
 func _vsi() -> void:
 	var r := _begin("vsi")
 	# 0 at 9 o'clock, +/-2000 ft/min at +/-170 degrees
-	_ticks(r * 0.97, 10.0, 350.0, 40, 5, r * 0.13, r * 0.03)
-	for v in [-20, -15, -10, -5, 0, 5, 10, 15, 20]:
-		_num(r * 0.68, 180.0 + v * 8.5, str(absi(v)), r * 0.19)
-	_txt(Vector2(-r * 0.2, -r * 0.3), "UP", r * 0.12, INK)
-	_txt(Vector2(-r * 0.2, r * 0.3), "DOWN", r * 0.12, INK)
-	_txt(Vector2(r * 0.35, 0), "100 FT/MIN", r * 0.08, INK)
+	if S:
+		_ticks(r * 0.97, 10.0, 350.0, 40, 5, r * 0.13, r * 0.03)
+		for v in [-20, -15, -10, -5, 0, 5, 10, 15, 20]:
+			_num(r * 0.68, 180.0 + v * 8.5, str(absi(v)), r * 0.19)
+		_txt(Vector2(-r * 0.2, -r * 0.3), "UP", r * 0.12, INK)
+		_txt(Vector2(-r * 0.2, r * 0.3), "DOWN", r * 0.12, INK)
+		_txt(Vector2(r * 0.35, 0), "100 FT/MIN", r * 0.08, INK)
+	if not L:
+		return
 	_needle(180.0 + clampf(float(d["vs"]), -2000.0, 2000.0) / 100.0 * 8.5, r * 0.92, r * 0.07, Color.WHITE)
 	_hub(r * 0.1)
 
@@ -294,12 +335,15 @@ func _gmeter() -> void:
 	var r := _begin("g")
 	# accelerometer: -3 to +7 g, red beyond the Bulldog's +6 / -3 limits
 	var a := func(v: float) -> float: return _map(v, -3.0, 7.0, 135.0, 405.0)
-	_arc(r * 0.88, a.call(-3.0), a.call(6.0), r * 0.06, GREEN)
-	_arc(r * 0.88, a.call(6.0), a.call(7.0), r * 0.08, RED)
-	_ticks(r * 0.97, 135.0, 405.0, 10, 1, r * 0.15, r * 0.035)
-	for v in [-2, 0, 2, 4, 6]:
-		_num(r * 0.62, a.call(float(v)), str(v), r * 0.22)
-	_txt(Vector2(0, r * 0.4), "G", r * 0.2, INK)
+	if S:
+		_arc(r * 0.88, a.call(-3.0), a.call(6.0), r * 0.06, GREEN)
+		_arc(r * 0.88, a.call(6.0), a.call(7.0), r * 0.08, RED)
+		_ticks(r * 0.97, 135.0, 405.0, 10, 1, r * 0.15, r * 0.035)
+		for v in [-2, 0, 2, 4, 6]:
+			_num(r * 0.62, a.call(float(v)), str(v), r * 0.22)
+		_txt(Vector2(0, r * 0.4), "G", r * 0.2, INK)
+	if not L:
+		return
 	_needle(a.call(g_max), r * 0.8, r * 0.05, Color("#c0c0c0"))
 	_needle(a.call(g_min), r * 0.8, r * 0.05, Color("#c0c0c0"))
 	_needle(a.call(float(d["g"])), r * 0.92, r * 0.08, Color.WHITE)
@@ -309,14 +353,17 @@ func _gmeter() -> void:
 func _rpm() -> void:
 	var r := _begin("rpm")
 	var a := func(v: float) -> float: return _map(v, 0.0, 3500.0, 135.0, 405.0)
-	_arc(r * 0.88, a.call(2000.0), a.call(2650.0), r * 0.07, GREEN)
-	var rl := deg_to_rad(a.call(2700.0))
-	draw_line(Vector2(cos(rl), sin(rl)) * r * 0.97, Vector2(cos(rl), sin(rl)) * r * 0.75, RED, r * 0.05, true)
-	_ticks(r * 0.97, 135.0, 405.0, 35, 5, r * 0.14, r * 0.03)
-	for v in [0, 5, 10, 15, 20, 25, 30, 35]:
-		_num(r * 0.64, a.call(v * 100.0), str(v), r * 0.19)
-	_txt(Vector2(0, -r * 0.3), "RPM", r * 0.13, INK)
-	_txt(Vector2(0, r * 0.3), "x100", r * 0.11, INK)
+	if S:
+		_arc(r * 0.88, a.call(2000.0), a.call(2650.0), r * 0.07, GREEN)
+		var rl := deg_to_rad(a.call(2700.0))
+		draw_line(Vector2(cos(rl), sin(rl)) * r * 0.97, Vector2(cos(rl), sin(rl)) * r * 0.75, RED, r * 0.05, true)
+		_ticks(r * 0.97, 135.0, 405.0, 35, 5, r * 0.14, r * 0.03)
+		for v in [0, 5, 10, 15, 20, 25, 30, 35]:
+			_num(r * 0.64, a.call(v * 100.0), str(v), r * 0.19)
+		_txt(Vector2(0, -r * 0.3), "RPM", r * 0.13, INK)
+		_txt(Vector2(0, r * 0.3), "x100", r * 0.11, INK)
+	if not L:
+		return
 	_needle(a.call(float(d["rpm"])), r * 0.92, r * 0.07, Color.WHITE)
 	_hub(r * 0.1)
 
@@ -324,11 +371,14 @@ func _rpm() -> void:
 func _mapg() -> void:
 	var r := _begin("map")
 	var a := func(v: float) -> float: return _map(v, 10.0, 35.0, 135.0, 405.0)
-	_arc(r * 0.88, a.call(15.0), a.call(29.0), r * 0.07, GREEN)
-	_ticks(r * 0.97, 135.0, 405.0, 25, 5, r * 0.15, r * 0.035)
-	for v in [10, 15, 20, 25, 30, 35]:
-		_num(r * 0.63, a.call(float(v)), str(v), r * 0.2)
-	_txt(Vector2(0, r * 0.38), "MAN PRESS", r * 0.1, INK)
+	if S:
+		_arc(r * 0.88, a.call(15.0), a.call(29.0), r * 0.07, GREEN)
+		_ticks(r * 0.97, 135.0, 405.0, 25, 5, r * 0.15, r * 0.035)
+		for v in [10, 15, 20, 25, 30, 35]:
+			_num(r * 0.63, a.call(float(v)), str(v), r * 0.2)
+		_txt(Vector2(0, r * 0.38), "MAN PRESS", r * 0.1, INK)
+	if not L:
+		return
 	var mp := 12.0 + 17.0 * float(d["throttle"]) - float(d["alt"]) / 1000.0
 	_needle(a.call(mp), r * 0.9, r * 0.08, Color.WHITE)
 	_hub(r * 0.12)
@@ -336,7 +386,10 @@ func _mapg() -> void:
 
 func _clock() -> void:
 	var r := _begin("clock")
-	_ticks(r * 0.95, -90.0, 270.0, 12, 3, r * 0.2, r * 0.06)
+	if S:
+		_ticks(r * 0.95, -90.0, 270.0, 12, 3, r * 0.2, r * 0.06)
+	if not L:
+		return
 	var t := Time.get_time_dict_from_system()
 	var hh := float(t["hour"] % 12) + float(t["minute"]) / 60.0
 	_needle(-90.0 + hh * 30.0, r * 0.55, r * 0.1, Color.WHITE, 0.1)
@@ -349,21 +402,28 @@ func _small_dual(name: String, label: String, l1: String, l2: String, v1: float,
 	for s in [-1.0, 1.0]:
 		var a0 := 200.0 if s < 0.0 else -20.0
 		var a1 := 160.0 if s < 0.0 else 20.0
-		_arc(r * 0.82, minf(a0, a1), maxf(a0, a1), r * 0.08, GREEN)
-		var v := v1 if s < 0.0 else v2
-		_needle(lerpf(a0, a1, v), r * 0.85, r * 0.08, Color.WHITE, 0.0)
-	_txt(Vector2(-r * 0.45, r * 0.55), l1, r * 0.2, INK)
-	_txt(Vector2(r * 0.45, r * 0.55), l2, r * 0.2, INK)
-	_txt(Vector2(0, -r * 0.45), label, r * 0.2, INK)
-	_hub(r * 0.12)
+		if S:
+			_arc(r * 0.82, minf(a0, a1), maxf(a0, a1), r * 0.08, GREEN)
+		if L:
+			var v := v1 if s < 0.0 else v2
+			_needle(lerpf(a0, a1, v), r * 0.85, r * 0.08, Color.WHITE, 0.0)
+	if S:
+		_txt(Vector2(-r * 0.45, r * 0.55), l1, r * 0.2, INK)
+		_txt(Vector2(r * 0.45, r * 0.55), l2, r * 0.2, INK)
+		_txt(Vector2(0, -r * 0.45), label, r * 0.2, INK)
+	if L:
+		_hub(r * 0.12)
 
 
 func _small_single(name: String, label: String, v: float) -> void:
 	var r := _begin(name)
-	_arc(r * 0.82, 160.0, 380.0, r * 0.06, Color("#555"))
-	_arc(r * 0.82, 220.0, 330.0, r * 0.08, GREEN)
-	_ticks(r * 0.95, 160.0, 380.0, 8, 2, r * 0.2, r * 0.05)
-	_txt(Vector2(0, r * 0.5), label, r * 0.22, INK)
+	if S:
+		_arc(r * 0.82, 160.0, 380.0, r * 0.06, Color("#555"))
+		_arc(r * 0.82, 220.0, 330.0, r * 0.08, GREEN)
+		_ticks(r * 0.95, 160.0, 380.0, 8, 2, r * 0.2, r * 0.05)
+		_txt(Vector2(0, r * 0.5), label, r * 0.22, INK)
+	if not L:
+		return
 	_needle(lerpf(160.0, 380.0, v), r * 0.85, r * 0.09, Color.WHITE)
 	_hub(r * 0.12)
 
@@ -372,6 +432,13 @@ func _radios() -> void:
 	var x0 := px(0.62)
 	var y0 := px(0.03)
 	var w := px(0.3)
+	var fx := px(0.96)
+	if L:
+		# flap position pointer (moves)
+		var fy := px(0.07) + float(d["flaps"]) * 2.0 * px(0.028)
+		draw_colored_polygon(PackedVector2Array([Vector2(fx + px(0.07), fy), Vector2(fx + px(0.1), fy - px(0.008)), Vector2(fx + px(0.1), fy + px(0.008))]), Color("#ff9d00"))
+	if not S:
+		return
 	var rows := [["COM 1", "118.505", "122.475"], ["NAV 1", "112.30", "110.50"], ["XPDR", "7000", "ALT"]]
 	for i in rows.size():
 		var y := y0 + i * px(0.075)
@@ -385,18 +452,17 @@ func _radios() -> void:
 		_txt(Vector2(x0 + px(0.195), y + px(0.031)), r[2], px(0.016), col.darkened(0.35), bold)
 		for k in 2:
 			draw_circle(Vector2(x0 + px(0.268) + k * px(0.0), y + px(0.031)), px(0.012 - k * 0.005), Color("#2e3034") if k == 0 else Color("#55585e"))
-	# fuel tank selector placard and flap indicator
-	var fx := px(0.96)
+	# flap indicator placard
 	draw_rect(Rect2(fx, px(0.03), px(0.14), px(0.13)), Color("#1b1c1f"))
 	_txt(Vector2(fx + px(0.07), px(0.045)), "FLAPS", px(0.012), INK)
 	for k in 3:
 		var yy := px(0.07) + k * px(0.028)
 		_txt(Vector2(fx + px(0.035), yy), ["UP", "TO", "LAND"][k], px(0.011), INK)
-	var fy := px(0.07) + float(d["flaps"]) * 2.0 * px(0.028)
-	draw_colored_polygon(PackedVector2Array([Vector2(fx + px(0.07), fy), Vector2(fx + px(0.1), fy - px(0.008)), Vector2(fx + px(0.1), fy + px(0.008))]), Color("#ff9d00"))
 
 
 func _switches() -> void:
+	if not S:
+		return
 	var names := ["MASTER", "ALT", "FUEL PUMP", "BEACON", "NAV", "STROBE", "LAND", "PITOT HT", "AVIONICS"]
 	var x0 := px(0.62)
 	var y := px(0.29)
@@ -426,7 +492,9 @@ func _annunciators() -> void:
 	var x0 := px(0.15)
 	var y := px(0.33)
 	for i in names.size():
-		var lit := i == 3 and bool(d["stall"])
+		var lit := L and i == 3 and bool(d["stall"])
+		if not lit and not S:
+			continue
 		var r := Rect2(x0 + i * px(0.06), y, px(0.052), px(0.026))
 		draw_rect(r, Color("#ff3020") if lit else Color("#3a1210"))
 		draw_rect(r, Color("#0c0c0c"), false, 3.0)
@@ -434,6 +502,8 @@ func _annunciators() -> void:
 
 
 func _placards() -> void:
+	if not S:
+		return
 	_txt(Vector2(px(0.21), px(0.395)), "THIS AEROPLANE IS CLASSIFIED AS A VERY LIGHT AEROBATIC TRAINER", px(0.0075), Color("#c9c7bf"))
 	_txt(Vector2(px(0.86), px(0.395)), "G-SMAT  ·  BULLDOG T.1  ·  XX658", px(0.011), Color("#c9c7bf"), bold)
 	_txt(Vector2(px(0.86), px(0.412)), "MAX +6G  -3G   VNE 185 KT", px(0.0085), Color("#c9c7bf"))

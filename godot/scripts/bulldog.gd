@@ -864,7 +864,12 @@ func _cockpit() -> void:
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	vp.disable_3d = true
 	vp.msaa_2d = Viewport.MSAA_2X   # smooth needle edges; 2x is plenty at this resolution
-	panel_ui = BulldogPanel.new()
+	var panel_fixed := BulldogPanel.new()     # faces, scales and labels: drawn once
+	panel_fixed.set_layer("static")
+	panel_fixed.size = Vector2(vp.size)
+	vp.add_child(panel_fixed)
+	panel_ui = BulldogPanel.new()             # needles and other moving parts: redrawn every frame
+	panel_ui.set_layer("live")
 	panel_ui.size = Vector2(vp.size)
 	vp.add_child(panel_ui)
 	ck.add_child(vp)

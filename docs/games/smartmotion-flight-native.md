@@ -38,6 +38,17 @@ A 32.8 km square centred on the middle of Duxford's hard runway (real heading 05
 ## Performance (RTX 4060 target)
 High: about 1 M triangles of nearby trees, about 2 M of far trees, 16,000 buildings within 7 km, 72 cloud steps a pixel. If it drops below 60 fps, use Medium (fewer trees, shorter range, 44 cloud steps). In VR the 3D clouds, SSAO and SSIL are switched off. Load with `--stats` (after `--`) to log triangles, draw calls and fps every two seconds in the diagnostics log.
 
+## Smooth VR (v1.6.3)
+Sam's first Bulldog test in the Quest 3 (10 Nov 2026): graphics look great, but looking around stuttered and glitched. That is the game missing the headset's frame deadline (11 ms a frame at 90 Hz, 13.9 ms at 72 Hz): Quest Link then repeats or warps frames, which you feel most when you turn your head. Changes:
+- **Instrument panel in two layers**: the fixed parts (faces, scales, numbers, radios, switches, placards) are drawn once; only needles, the attitude ball, compass card, turn ball, flap pointer and stall light are redrawn each frame. Drawing time went from about 4 ms to about 0.8 ms a frame (measured on the build machine). It looks the same.
+- **VR shadows**: 2 cascades to 1.2 km (the first 70 m, so the cockpit stays crisp), no soft-edged (PCSS) shadows, lower filter quality. Restored when you leave VR (`world.gd` `_apply_vr_shadows`).
+- **Foveated rendering** (`Viewport.VRS_XR`): less detail at the edges of the lenses, on graphics cards that support variable rate shading (RTX 20 series and newer).
+- **2x MSAA in VR** (was 4x).
+- **72 Hz by default**: the game asks the headset for 72 Hz (more time per frame, so steadier). The VR menu has a "Headset" line to change it (72/80/90/120, whatever Link offers) and shows the frame rate, with "smooth" or "too slow". If the Link app doesn't let the game choose, set the refresh rate in the Quest Link app (Settings > Graphics preferences).
+- **Depth sent to the headset** (`xr/openxr/submit_depth_buffer`): when a frame is late, Link fills it in using depth, so the cockpit frame doesn't wobble.
+- **Scenery loading spread out**: a square's buildings and its trees go in on separate frames, and far squares are dropped one per frame.
+- **Frame timing in the diagnostics log**: in VR, every 5 s: fps, slowest frame, how many frames were late, and the time for flight, world and panel. Use "Copy diagnostics" after a VR session to check. `--stats` logs it every 2 s outside VR too.
+
 ## Smoothness and polish (v1.6.2)
 - Scenery squares (buildings and trees) are now made on worker threads (`WorkerThreadPool`) and added to the scene one per frame; trees go in as one MultiMesh buffer copy. Worst streaming frame went from about 38 ms (a visible hitch) to under 6 ms. Freeing a square only touches its own crash-box cells.
 - Building crash checks are skipped when more than 160 m above the ground.

@@ -38,3 +38,5 @@ openxr/view_configuration=1
 openxr/reference_space=1
 openxr/environment_blend_mode=0
 shaders/enabled=true
+; the headset gets the depth of each frame too, so Quest Link can fill in a late frame without the cockpit warping
+openxr/submit_depth_buffer=true

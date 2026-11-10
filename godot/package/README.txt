@@ -32,6 +32,9 @@ VR ON A META QUEST 3
   The menu appears in the headset: stick up/down to choose, A to select (change aircraft, start
   position, gate race, time of day, Easy/Pro, recentre, leave VR), B or X to carry on.
   If the keyboard does nothing in VR, the game shows a message: click the game window on the laptop once.
+  Smooth VR: the menu's "Headset" line shows the frame rate. It should say "smooth". If it says "too slow",
+  pick 72 Hz there (or in the Quest Link app: Settings > Graphics preferences > Refresh rate 72 Hz), and
+  set Graphics quality to Medium in Settings. Plug the laptop in to mains power: on battery the graphics card slows down.
 
 CONTROLS (keyboard)
   W/S nose down/up, A/D bank to turn (arrow keys also work), Shift/Ctrl power (or keys 1-0), Q/E rudder, Space brakes,

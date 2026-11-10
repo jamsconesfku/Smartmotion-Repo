@@ -248,6 +248,29 @@ func set_vr_mode(on: bool) -> void:
 	if scenery != null:
 		scenery.set_vr(on)
 	_apply_cloud_mode()
+	_apply_vr_shadows()
+
+
+## VR draws every frame twice (one per eye) and must keep up with the headset (72-90 times a second),
+## or the view judders when you turn your head. Shadows are the biggest single cost, so in VR they cover
+## 1.2 km in two steps (still sharp in the cockpit) with plain filtering instead of soft-edged shadows.
+func _apply_vr_shadows() -> void:
+	if sun == null:
+		return
+	if vr_mode:
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		sun.directional_shadow_max_distance = 1200.0
+		sun.directional_shadow_split_1 = 0.06    # ~70 m: cockpit, aircraft and the airfield close by
+		sun.directional_shadow_blend_splits = false
+		sun.light_angular_distance = 0.0
+		RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_LOW)
+	else:
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+		sun.directional_shadow_max_distance = 3500.0
+		sun.directional_shadow_split_1 = 0.012
+		sun.directional_shadow_blend_splits = true
+		sun.light_angular_distance = 0.5 if quality == "high" else 0.0
+		RenderingServer.directional_soft_shadow_filter_set_quality(int(ProjectSettings.get_setting("rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality", 3)) as RenderingServer.ShadowQuality)
 
 
 func _apply_cloud_mode() -> void:

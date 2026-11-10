@@ -28,6 +28,7 @@ var tree_density := 1.0
 var _last_focus := Vector2(1e9, 1e9)
 var _pending: Array = []
 var _jobs: Array = []
+var _to_free: Array = []             ## far squares waiting to be dropped (one per frame)
 var chunk_cells := {}                ## Vector2i square -> the crash-box cells it filled (so freeing it is quick)                ## squares being made on worker threads
 var total_buildings := 0
 
@@ -151,8 +152,8 @@ func update(p: Vector2, budget := 1) -> void:
 				if _chunk_centre(c).distance_to(p) < r + CHUNK * 0.71:
 					want[c] = true
 		for c in chunks.keys():
-			if not want.has(c) and _chunk_centre(c).distance_to(p) > r + CHUNK * 2.0:
-				_free_chunk(c)
+			if not want.has(c) and _chunk_centre(c).distance_to(p) > r + CHUNK * 2.0 and not _to_free.has(c):
+				_to_free.append(c)
 		_pending = []
 		for c in want.keys():
 			if not chunks.has(c):
@@ -163,6 +164,12 @@ func update(p: Vector2, budget := 1) -> void:
 		while _pending.size() > 0:
 			_build_chunk(_pending.pop_front())
 		return
+	# drop far squares one per frame (spreads the work out)
+	while _to_free.size() > 0:
+		var fc: Vector2i = _to_free.pop_front()
+		if chunks.has(fc) and _chunk_centre(fc).distance_to(_last_focus) > maxf(radius_bld, radius_tree) + CHUNK * 2.0:
+			_free_chunk(fc)
+			break
 	_poll_jobs()
 	while _jobs.size() < 3 and _pending.size() > 0:
 		_start_job(_pending.pop_front())
@@ -207,6 +214,12 @@ func _chunk_data(c: Vector2i, want_trees: bool) -> Dictionary:
 
 
 func _chunk_finish(c: Vector2i, node: Node3D, d: Dictionary) -> void:
+	_chunk_buildings(c, node, d)
+	_add_trees(d["trees"], node)
+
+
+## Adds a square's buildings and crash boxes (its trees go in separately, see _poll_jobs).
+func _chunk_buildings(c: Vector2i, node: Node3D, d: Dictionary) -> void:
 	var bd = d["bld"]
 	if bd != null:
 		if bd["arrays"] != null:
@@ -227,7 +240,6 @@ func _chunk_finish(c: Vector2i, node: Node3D, d: Dictionary) -> void:
 			if not coll_grid.has(ck):
 				coll_grid[ck] = []
 			coll_grid[ck].append(e[1])
-	_add_trees(d["trees"], node)
 
 
 ## Builds a square straight away on the main thread (loading screen).
@@ -251,22 +263,31 @@ func _start_job(c: Vector2i) -> void:
 
 func _exit_tree() -> void:
 	for job in _jobs:
-		WorkerThreadPool.wait_for_task_completion(job["id"])
+		if job.get("stage", 0) == 0:
+			WorkerThreadPool.wait_for_task_completion(job["id"])
 	_jobs = []
 
 
 func _poll_jobs() -> void:
 	var still: Array = []
 	var finished := 0
+	# one piece per frame (a square's buildings one frame, its trees the next), so no single frame is slow:
+	# in VR a frame that misses the headset's deadline is felt as a judder when you turn your head
 	for job in _jobs:
-		if finished < 1 and WorkerThreadPool.is_task_completed(job["id"]):
-			WorkerThreadPool.wait_for_task_completion(job["id"])
+		if finished < 1 and (job.get("stage", 0) == 1 or WorkerThreadPool.is_task_completed(job["id"])):
 			var c: Vector2i = job["c"]
 			var node: Node3D = job["node"]
-			# the square may have been dropped while it was being made
-			if chunks.get(c) == node and is_instance_valid(node):
-				_chunk_finish(c, node, job["result"])
 			finished += 1
+			# the square may have been dropped while it was being made
+			var alive: bool = chunks.get(c) == node and is_instance_valid(node)
+			if job.get("stage", 0) == 0:
+				WorkerThreadPool.wait_for_task_completion(job["id"])
+				if alive:
+					_chunk_buildings(c, node, job["result"])
+					job["stage"] = 1
+					still.append(job)
+			elif alive:
+				_add_trees(job["result"]["trees"], node)
 		else:
 			still.append(job)
 	_jobs = still

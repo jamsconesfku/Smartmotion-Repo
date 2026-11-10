@@ -84,5 +84,12 @@
     "ids": [
       "F-02"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.6.3: smoother VR. Looking around in the headset stuttered because the game couldn't keep up with the headset. Now the instrument panel's fixed parts are drawn once instead of every frame, shadows in VR are simpler and shorter-range, the picture edges are drawn in less detail (foveated rendering), anti-aliasing is 2x instead of 4x in VR, the headset is asked for a steady 72 Hz (changeable in the in-headset menu, which also shows the frame rate), Quest Link gets depth information so late frames don't warp the cockpit, and scenery loading is spread over more frames. The diagnostics log now records frame timing in VR.",
+    "ids": [
+      "F-02"
+    ]
   }
 ]

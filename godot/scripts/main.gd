@@ -1,7 +1,7 @@
 extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 
-const APP_VERSION := "1.6.2"
+const APP_VERSION := "1.6.3"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -51,6 +51,9 @@ var vr_menu_lines: Array = []
 var vr_menu_title: Label3D
 var vr_menu_idx := 0
 var vr_warn := false
+
+# frame timing (diagnostics log): how smooth the game is running
+var perf := {"n": 0, "sum": 0.0, "worst": 0.0, "late": 0, "last": 0, "t": 0.0, "fm": 0.0, "world": 0.0, "instr": 0.0, "fps": 0.0, "late_pc": 0.0}
 
 
 func _ready() -> void:
@@ -455,8 +458,16 @@ func _start_vr() -> bool:
 		Diag.write("OpenXR started on the second try")
 	get_viewport().use_xr = true
 	get_viewport().use_taa = false            # TAA smears when you turn your head; MSAA keeps VR sharp
-	get_viewport().msaa_3d = Viewport.MSAA_4X
-	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	# 2x MSAA: 4x on two eyes at headset resolution cost too much time per frame (judder when looking around)
+	get_viewport().msaa_3d = Viewport.MSAA_2X
+	# foveated rendering: full detail where you look through the middle of the lenses, less at the blurry edges
+	# (graphics cards without variable rate shading ignore it)
+	get_viewport().vrs_mode = Viewport.VRS_XR
+	if "vrs_strength" in xr:
+		xr.set("vrs_strength", 1.0)
+		xr.set("vrs_min_radius", 25.0)
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)   # the headset sets the pace, not the laptop screen
+	_apply_vr_hz()
 	vr_active = true
 	vr_frames = 0
 	world.env.ssao_enabled = false
@@ -507,6 +518,8 @@ func _stop_vr() -> void:
 	vr_active = false
 	get_viewport().use_xr = false
 	get_viewport().use_taa = true
+	get_viewport().vrs_mode = Viewport.VRS_DISABLED
+	get_viewport().msaa_3d = {"low": Viewport.MSAA_DISABLED, "medium": Viewport.MSAA_2X, "high": Viewport.MSAA_4X}.get(quality, Viewport.MSAA_2X)
 	var xr := XRServer.find_interface("OpenXR")
 	if xr != null and xr.is_initialized():
 		xr.uninitialize()
@@ -565,9 +578,20 @@ func _vr_menu_items() -> Array:
 		["mode", "Mode:  " + ("Free flight" if Settings.get_value("mode") == "free" else "Gate run")],
 		["tod", "Time:  " + ("Day" if Settings.get_value("tod") == "day" else "Golden hour")],
 		["assist", "Flying:  " + ("Easy (levels itself)" if Settings.get_value("assist") else "Pro (real controls)")],
+		["hz", _vr_hz_label()],
 		["recentre", "Recentre my view"],
 		["exit", "Leave VR"],
 	]
+
+
+func _vr_hz_label() -> String:
+	var t := "Headset:  %d Hz" % roundi(_vr_hz())
+	if _vr_rates().size() < 2:
+		t = "Headset:  %d Hz (set in the Quest Link app)" % roundi(_vr_hz())
+	if perf["fps"] > 1.0:
+		var ok: bool = perf["fps"] > _vr_hz() * 0.95 and perf["late_pc"] < 2.0
+		t += "  ·  %d fps %s" % [roundi(perf["fps"]), "smooth" if ok else "(too slow: try 72 Hz)"]
+	return t
 
 
 func _vr_menu_show(on: bool, title: String) -> void:
@@ -600,8 +624,9 @@ func _vr_menu_show(on: bool, title: String) -> void:
 		var f: Font = load("res://assets/fonts/Barlow-SemiBold.ttf")
 		vr_menu_title = _vr_line(f, 46, Vector3(0, 0.17, 0.002))
 		vr_menu_title.font = load("res://assets/fonts/BarlowSemiCondensed-ExtraBoldItalic.ttf")
-		for i in 9:
-			vr_menu_lines.append(_vr_line(f, 30, Vector3(0, 0.115 - i * 0.034, 0.002)))
+		var n_items := _vr_menu_items().size()
+		for i in n_items:
+			vr_menu_lines.append(_vr_line(f, 30, Vector3(0, 0.115 - i * (0.3 / n_items), 0.002)))
 		var hint := _vr_line(f, 20, Vector3(0, -0.19, 0.002))
 		hint.modulate = Color("#a9acd0")
 		hint.text = "Stick up/down to choose · A to select · B or X to resume"
@@ -703,6 +728,18 @@ func _vr_menu_pick(key: String) -> void:
 			fm.assist = bool(Settings.get_value("assist"))
 			ui.tag_assist.text = "EASY" if fm.assist else "PRO"
 			_vr_menu_refresh()
+		"hz":
+			var rates := _vr_rates()
+			if rates.size() > 1:
+				var cur := _vr_hz()
+				var nxt: float = rates[0]
+				for r in rates:
+					if float(r) > cur + 1.0:
+						nxt = float(r)
+						break
+				_on_setting("vr_hz", nxt)
+				_apply_vr_hz()
+			_vr_menu_refresh()
 		"recentre":
 			_recentre_vr()
 		"exit":
@@ -726,6 +763,7 @@ func _process(delta: float) -> void:
 	if world == null or world.terrain == null or fm == null or plane == null:
 		return
 	frame_count += 1
+	_perf_frame()
 	var dt := minf(delta, 0.05)
 	run_time += dt
 	if vr_active and (paused or state == "ended"):
@@ -738,7 +776,9 @@ func _process(delta: float) -> void:
 				inp["throttle"] = 0.0
 				inp["brake"] = 1.0
 			var prev := fm.pos
+			var t0 := Time.get_ticks_usec()
 			fm.step(dt, inp)
+			perf["fm"] += Time.get_ticks_usec() - t0
 			for ev in fm.consume_events():
 				_handle_event(ev)
 			if gate["active"] and not gate["done"] and state == "fly":
@@ -749,7 +789,9 @@ func _process(delta: float) -> void:
 	world.focus = Vector2(fm.pos.x, fm.pos.z)
 	world.focus_agl = float(fm.i["alt_agl"])
 	_update_camera(dt)
+	var t1 := Time.get_ticks_usec()
 	world.update_world(dt, cam.global_position if not vr_active else xr_cam.global_position)
+	perf["world"] += Time.get_ticks_usec() - t1
 	if vr_active and state == "fly":
 		focus_hint_t -= dt
 		if focus_hint_t <= 0.0 and not DisplayServer.window_is_focused():
@@ -760,7 +802,9 @@ func _process(delta: float) -> void:
 		instr_t += dt
 		if instr_t > (0.015 if plane.bulldog != null else 0.05):   # the Bulldog's 3D panel updates every frame (smooth needles in VR)
 			instr_t = 0.0
+			var t2 := Time.get_ticks_usec()
 			_update_instruments()
+			perf["instr"] += Time.get_ticks_usec() - t2
 	if state == "menu":
 		pass
 	synth.set_state(fm.engine, fm.ias, fm.stall_warn and not bool(fm.i["on_ground"]), state == "fly" and not paused and bool(Settings.get_value("sound")))
@@ -778,6 +822,73 @@ func _process(delta: float) -> void:
 			img.save_png(str(args["shot"]))
 			print("saved screenshot ", args["shot"])
 			get_tree().quit()
+
+
+## Frame timing for the diagnostics log: every 5 s (2 s with --stats) while flying, the average and slowest
+## frame and how many frames missed the deadline (in VR the headset's refresh, e.g. 11.1 ms at 90 Hz).
+func _perf_frame() -> void:
+	var now := Time.get_ticks_usec()
+	if perf["last"] > 0:
+		var ms: float = (now - int(perf["last"])) / 1000.0
+		perf["n"] += 1
+		perf["sum"] += ms
+		perf["worst"] = maxf(perf["worst"], ms)
+		if ms > _frame_budget_ms() * 1.5:
+			perf["late"] += 1
+		perf["t"] += ms / 1000.0
+	perf["last"] = now
+	if perf["t"] >= (2.0 if args.has("stats") else 5.0):
+		var n: float = maxf(perf["n"], 1.0)
+		perf["fps"] = 1000.0 / (perf["sum"] / n)
+		perf["late_pc"] = 100.0 * perf["late"] / n
+		if state == "fly" and (vr_active or args.has("stats")):
+			Diag.write("timing%s: %.0f fps, avg %.1f ms, slowest %.1f ms, %d of %d frames late (over %.1f ms) | flight %.2f ms, world %.2f ms, panel %.2f ms, panel draw %.2f ms x%d" % [
+				" (VR %d Hz)" % roundi(_vr_hz()) if vr_active else "", 1000.0 / (perf["sum"] / n), perf["sum"] / n, perf["worst"],
+				perf["late"], perf["n"], _frame_budget_ms() * 1.5, perf["fm"] / n / 1000.0, perf["world"] / n / 1000.0, perf["instr"] / n / 1000.0, BulldogPanel.draw_us / n / 1000.0, BulldogPanel.draw_n])
+			BulldogPanel.draw_us = 0
+			BulldogPanel.draw_n = 0
+		if vr_menu != null and vr_menu.visible:
+			_vr_menu_refresh()   # keep the smoothness readout up to date
+		for k in ["n", "sum", "worst", "late", "t", "fm", "world", "instr"]:
+			perf[k] = 0 if k in ["n", "late"] else 0.0
+
+
+func _vr_rates() -> Array:
+	var xr := XRServer.find_interface("OpenXR")
+	if xr == null or not xr.is_initialized() or not xr.has_method("get_available_display_refresh_rates"):
+		return []
+	var out: Array = []
+	for r in xr.get_available_display_refresh_rates():
+		out.append(float(r))
+	out.sort()
+	return out
+
+
+## Asks the headset for the refresh rate chosen in the VR menu (72 Hz by default: the steadiest, as every
+## frame has the most time). The game must finish each frame within 1/rate of a second, or you feel a judder.
+func _apply_vr_hz() -> void:
+	var rates := _vr_rates()
+	var want := float(Settings.get_value("vr_hz"))
+	var xr := XRServer.find_interface("OpenXR")
+	Diag.write("VR refresh rates offered: %s; current %.0f Hz; wanted %.0f Hz" % [str(rates), _vr_hz(), want])
+	for r in rates:
+		if absf(float(r) - want) < 1.0:
+			xr.set("display_refresh_rate", float(r))
+			Diag.write("VR refresh rate set to %.0f Hz" % float(r))
+			return
+
+
+func _vr_hz() -> float:
+	var xr := XRServer.find_interface("OpenXR")
+	if xr != null and xr.is_initialized() and xr.has_method("get_display_refresh_rate"):
+		var hz: float = xr.get_display_refresh_rate()
+		if hz > 1.0:
+			return hz
+	return 90.0
+
+
+func _frame_budget_ms() -> float:
+	return 1000.0 / (_vr_hz() if vr_active else 60.0)
 
 
 func _handle_event(ev: Dictionary) -> void:
