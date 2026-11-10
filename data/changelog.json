@@ -112,5 +112,12 @@
     "ids": [
       "F-02"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Parked idea added: a VR model viewer that turns a 2D component drawing into a 3D model you can inspect at real size in your room.",
+    "ids": [
+      "F-07"
+    ]
   }
 ]

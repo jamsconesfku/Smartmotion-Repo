@@ -835,5 +835,23 @@
       "docs/games/smartmotion-flight-native.md"
     ],
     "updated": "2026-11-10"
+  },
+  {
+    "id": "F-07",
+    "title": "VR model viewer: turn a 2D component drawing into a 3D model and inspect it at real size in your room",
+    "why": "Seeing a part at its real size on your own desk before making it catches mistakes early and makes it easy to show people. Claude would build the 3D model from the drawing, and a small VR program would show it over the Quest's passthrough view.",
+    "area": "3D Printing",
+    "phase": "Parked",
+    "status": "parked",
+    "priority": "low",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "Parked by Sam on 10 Nov 2026. Plan discussed: Claude reads the drawing and builds the model with the existing Printing & Design pipeline (STL + STEP, true size in mm); a separate Windows VR viewer (same download and launch as SmartMotion Flight) shows any library model over passthrough, with the gloved hands to pick it up, place it on a desk and measure. Passthrough over Quest Link is a Meta beta/developer setting and needs a Godot add-on, so it must be tested in the headset first; fallback is a plain room at true size. To restart: upload a real drawing (dimensioned engineering drawing or sketch) as the first test.",
+    "links": [
+      "docs/3d-printing/README.md",
+      "docs/games/smartmotion-flight-native.md"
+    ],
+    "updated": "2026-11-10"
   }
 ]
