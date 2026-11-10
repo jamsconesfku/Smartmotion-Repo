@@ -526,6 +526,10 @@ func _build_sheets() -> void:
 	txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	txt.custom_minimum_size = Vector2(480, 0)
 	v.add_child(txt)
+	var cred := _lbl("MAP DATA: Contains modified Copernicus Sentinel data 2023. Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. ESA WorldCover 2021 © ESA (CC BY 4.0). Buildings © OpenStreetMap contributors, Overture Maps Foundation (ODbL). Textures: ambientCG (CC0).", 11, MUTED)
+	cred.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	cred.custom_minimum_size = Vector2(480, 0)
+	v.add_child(cred)
 	var cl := _big_button("Got it", true)
 	cl.pressed.connect(func(): close_sheet(help_sheet))
 	v.add_child(cl)

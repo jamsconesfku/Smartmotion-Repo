@@ -106,5 +106,65 @@
     "task": "",
     "notes": "",
     "updated": "2026-11-07"
+  },
+  {
+    "id": "LIC-10",
+    "software": "Copernicus Sentinel-2 satellite imagery (ground photo in SmartMotion Flight)",
+    "use": "SmartMotion Flight native game graphics",
+    "commercial_route": "Free and open under EU law (Copernicus data policy), including commercial use. Credit required: \"Contains modified Copernicus Sentinel data 2023\".",
+    "cost": "Free",
+    "status": "available",
+    "allowed_for_paid_use": "yes, with the credit shown",
+    "task": "",
+    "notes": "Credits are shown in the game's Help screen and in the download's README.txt. Source: scripts/build_world_data.py (data) and godot/assets/textures (textures).",
+    "updated": "2026-11-09"
+  },
+  {
+    "id": "LIC-11",
+    "software": "Copernicus DEM GLO-30 (real ground heights in SmartMotion Flight)",
+    "use": "SmartMotion Flight native game graphics",
+    "commercial_route": "Free worldwide licence including commercial use. Credit required: \"Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved\".",
+    "cost": "Free",
+    "status": "available",
+    "allowed_for_paid_use": "yes, with the credit shown",
+    "task": "",
+    "notes": "Credits are shown in the game's Help screen and in the download's README.txt. Source: scripts/build_world_data.py (data) and godot/assets/textures (textures).",
+    "updated": "2026-11-09"
+  },
+  {
+    "id": "LIC-12",
+    "software": "ESA WorldCover 2021 (where the woods, towns and water are)",
+    "use": "SmartMotion Flight native game graphics",
+    "commercial_route": "CC BY 4.0: commercial use allowed with credit \"ESA WorldCover 2021 © ESA\".",
+    "cost": "Free",
+    "status": "available",
+    "allowed_for_paid_use": "yes, with the credit shown",
+    "task": "",
+    "notes": "Credits are shown in the game's Help screen and in the download's README.txt. Source: scripts/build_world_data.py (data) and godot/assets/textures (textures).",
+    "updated": "2026-11-09"
+  },
+  {
+    "id": "LIC-13",
+    "software": "Overture Maps buildings and runway (from OpenStreetMap and others)",
+    "use": "SmartMotion Flight native game graphics",
+    "commercial_route": "ODbL: commercial use allowed with credit \"© OpenStreetMap contributors, Overture Maps Foundation\". The game's buildings file is a derived database, so it must stay available under the ODbL to anyone who asks (it is inside the game download).",
+    "cost": "Free",
+    "status": "available",
+    "allowed_for_paid_use": "yes, with the credit shown",
+    "task": "",
+    "notes": "Credits are shown in the game's Help screen and in the download's README.txt. Source: scripts/build_world_data.py (data) and godot/assets/textures (textures).",
+    "updated": "2026-11-09"
+  },
+  {
+    "id": "LIC-14",
+    "software": "ambientCG textures (grass, soil, tarmac, concrete, brick, render, roof tiles, metal)",
+    "use": "SmartMotion Flight native game graphics",
+    "commercial_route": "CC0 public domain: free for any use including commercial, no credit needed (we credit them anyway).",
+    "cost": "Free",
+    "status": "available",
+    "allowed_for_paid_use": "yes, with the credit shown",
+    "task": "",
+    "notes": "Credits are shown in the game's Help screen and in the download's README.txt. Source: scripts/build_world_data.py (data) and godot/assets/textures (textures).",
+    "updated": "2026-11-09"
   }
 ]

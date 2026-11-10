@@ -1,7 +1,7 @@
 extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 
-const APP_VERSION := "1.4.0"
+const APP_VERSION := "1.5.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -160,7 +160,7 @@ func showcase() -> void:
 	world.wind = Vector3.ZERO
 	fm = FlightModel.new(str(Settings.get_value("aircraft")), world.terrain)
 	var xz := world.terrain.from_runway(-Terrain.RW_LEN / 2.0 + 70.0, 0.0)
-	fm.reset({"x": xz.x, "z": xz.y, "heading": 62.0})
+	fm.reset({"x": xz.x, "z": xz.y, "heading": Terrain.RW_HEADING_DEG})
 	_mount_plane()
 	cam_mode = "chase"
 	_apply_view()
@@ -212,9 +212,9 @@ func _start_pose() -> Dictionary:
 		return {"x": xz.x, "z": xz.y, "heading": hd, "airborne": true, "agl": 140.0, "speed": spec["cruise"], "throttle": spec["cruiseThrottle"]}
 	if Settings.get_value("start") == "air":
 		var xz2 := world.terrain.from_runway(-1300.0, 0.0)
-		return {"x": xz2.x, "z": xz2.y, "heading": 62.0, "airborne": true, "agl": 380.0, "speed": spec["cruise"], "throttle": spec["cruiseThrottle"]}
+		return {"x": xz2.x, "z": xz2.y, "heading": Terrain.RW_HEADING_DEG, "airborne": true, "agl": 380.0, "speed": spec["cruise"], "throttle": spec["cruiseThrottle"]}
 	var xz3 := world.terrain.from_runway(-Terrain.RW_LEN / 2.0 + 70.0, 0.0)
-	return {"x": xz3.x, "z": xz3.y, "heading": 62.0}
+	return {"x": xz3.x, "z": xz3.y, "heading": Terrain.RW_HEADING_DEG}
 
 
 func start_flight() -> void:
@@ -443,6 +443,7 @@ func _start_vr() -> bool:
 	vr_frames = 0
 	world.env.ssao_enabled = false
 	world.env.ssil_enabled = false
+	world.set_vr_mode(true)
 	xr_origin = XROrigin3D.new()
 	xr_cam = XRCamera3D.new()
 	xr_cam.near = 0.05
@@ -496,6 +497,7 @@ func _stop_vr() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
 	world.env.ssao_enabled = quality != "low"
 	world.env.ssil_enabled = quality == "high"
+	world.set_vr_mode(false)
 	cam.current = true
 
 
@@ -566,6 +568,7 @@ func _process(delta: float) -> void:
 				_check_gate(prev)
 			tel.push(fm, inp, run_time, false)
 	_place_plane(0.0 if paused else dt)
+	world.focus = Vector2(fm.pos.x, fm.pos.z)
 	_update_camera(dt)
 	world.update_world(dt, cam.global_position if not vr_active else xr_cam.global_position)
 	if vr_active and state == "fly":
@@ -584,6 +587,11 @@ func _process(delta: float) -> void:
 	synth.set_state(fm.engine, fm.ias, fm.stall_warn and not bool(fm.i["on_ground"]), state == "fly" and not paused and bool(Settings.get_value("sound")))
 	ui.tel_label.text = "Rig link: %s\npitch %.1f°  roll %.1f°  yaw rate %.1f°/s\nsurge %.2fg  sway %.2fg  heave %.2fg\nIAS %d kt  VS %d" % [tel.status, fm.i["pitch"], fm.i["roll"], -fm.w.y / FlightModel.D2R, -fm.spec_force.z / FlightModel.G, fm.spec_force.x / FlightModel.G, fm.spec_force.y / FlightModel.G, fm.i["ias"] * KT, fm.i["vs"] * FPM]
 	ui.set_status.text = "Status: " + tel.status
+	if frame_count % 120 == 30 and (args.has("stats") or shot_timer >= 0.0):
+		Diag.write("frame stats: %d triangles, %d draw calls, %d objects, %.1f fps" % [
+			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),
+			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME), Engine.get_frames_per_second()])
 	if shot_timer >= 0.0:
 		shot_timer -= delta
 		if shot_timer < 0.0:

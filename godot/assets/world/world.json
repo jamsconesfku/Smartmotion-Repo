@@ -1,0 +1,36 @@
+{
+ "origin_lat": 52.09052725,
+ "origin_lon": 0.13148795,
+ "half": 16384.0,
+ "height_size": 1024,
+ "height_cell": 32.0,
+ "height_encoding": "uint16 little-endian, metres = value / 100 - 100, row 0 = north edge",
+ "runway_heading": 58.037,
+ "runway_len": 1448.4,
+ "runway_elev": 33.52,
+ "grass_runway": [
+  [
+   -499.1,
+   137.1
+  ],
+  [
+   245.2,
+   -330.3
+  ]
+ ],
+ "sentinel2_day": "2023-07-07",
+ "sentinel2_items": [
+  "S2A_30UXC_20230707_0_L2A",
+  "S2A_30UYC_20230707_0_L2A",
+  "S2A_31UCT_20230707_0_L2A",
+  "S2A_30UXD_20230707_0_L2A",
+  "S2A_30UYD_20230707_0_L2A",
+  "S2A_31UCU_20230707_0_L2A"
+ ],
+ "credits": [
+  "Contains modified Copernicus Sentinel data 2023",
+  "Produced using Copernicus WorldDEM-30 (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
+  "ESA WorldCover 2021 (c) ESA, CC BY 4.0",
+  "Buildings and runway: Overture Maps Foundation, including (c) OpenStreetMap contributors (ODbL)"
+ ]
+}

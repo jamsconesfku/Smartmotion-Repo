@@ -26,6 +26,16 @@ var windsock: Node3D
 var wind := Vector3.ZERO
 var sign_cache := {}
 var _vp_counter := 0
+var scenery: RealScenery
+var ortho_tex: Texture2D
+var focus := Vector2.ZERO
+var _coll_t := 0.0
+var vol_mat: ShaderMaterial
+var vol_mi: MeshInstance3D
+var cloud_cards: MultiMeshInstance3D
+var cloud_off := Vector2.ZERO
+var vr_mode := false
+const CLOUD_WIND := Vector2(7.0, 2.5)   # m/s the clouds drift
 
 
 func _yaw_of(d: Vector2) -> float:
@@ -38,24 +48,39 @@ func _lin(c: Color) -> Color:
 
 func build(progress: Callable, quality_: String, tod: String) -> void:
 	quality = quality_
+	var t0 := Time.get_ticks_msec()
+	var lap := func(what: String) -> void: Diag.write("load: %s at %.1f s" % [what, (Time.get_ticks_msec() - t0) / 1000.0])
 	terrain = Terrain.new()
 	logo = load("res://assets/logo.png")
 	logo_dark = load("res://assets/logo-dark.png")
 	progress.call(0.08, "Lighting the sky")
 	_environment()
-	progress.call(0.15, "Painting the countryside")
+	progress.call(0.15, "Laying out the real countryside")
+	lap.call('Laying out the real countryside')
 	await _ground()
-	progress.call(0.55, "Building Duxford")
+	progress.call(0.45, "Building Duxford")
+	lap.call('Building Duxford')
 	await _airfield()
-	progress.call(0.8, "Planting woods and villages")
-	_scenery()
+	progress.call(0.55, "Loading 129,000 real buildings")
+	lap.call('Loading 129,000 real buildings')
+	await get_tree().process_frame
+	scenery = RealScenery.new()
+	add_child(scenery)
+	scenery.setup(terrain, quality, ortho_tex)
+	progress.call(0.75, "Planting the woods")
+	lap.call('Planting the woods')
+	await get_tree().process_frame
+	scenery.preload_around(Vector2.ZERO)
 	progress.call(0.92, "Hanging the signs")
+	lap.call('Hanging the signs')
 	await _signs()
 	await _clouds()
+	await _volumetric_clouds()
 	_blimp()
 	_gates()
 	set_time_of_day(tod)
 	progress.call(1.0, "Ready")
+	lap.call('Ready')
 
 
 # ---------------------------------------------------------------- sky and light
@@ -126,6 +151,107 @@ func set_time_of_day(name: String) -> void:
 		cloud_mat.set_shader_parameter("shade", Vector3(sh.r, sh.g, sh.b))
 		cloud_mat.set_shader_parameter("sun_col", Vector3(t["sun"].r, t["sun"].g, t["sun"].b))
 		cloud_mat.set_shader_parameter("sun_dir", sd)
+	for m in ground_mats:
+		(m as ShaderMaterial).set_shader_parameter("shadow_shift", Vector2(sd.x, sd.z) / maxf(sd.y, 0.1) * 1500.0)
+	if vol_mat != null:
+		vol_mat.set_shader_parameter("sun_dir", sd)
+		vol_mat.set_shader_parameter("sun_col", Vector3(t["sun"].r, t["sun"].g, t["sun"].b))
+		vol_mat.set_shader_parameter("sun_energy", float(t["sun_e"]) * 1.15)
+		var top: Color = t["top"]
+		var hor: Color = t["hor"]
+		var shd: Color = t["shade"]
+		vol_mat.set_shader_parameter("amb_top", Vector3(top.r, top.g, top.b).lerp(Vector3(hor.r, hor.g, hor.b), 0.5) * 0.9)
+		vol_mat.set_shader_parameter("amb_bottom", Vector3(shd.r, shd.g, shd.b) * 0.62)
+		vol_mat.set_shader_parameter("haze_col", Vector3(hor.r, hor.g, hor.b))
+		vol_mat.set_shader_parameter("haze", float(t["fog"]))
+
+
+## 3D clouds (Forward+ renderer, not in VR): a full-screen raymarch. The flat cloud cards are the fallback.
+func _volumetric_clouds() -> void:
+	if quality == "low" or RenderingServer.get_current_rendering_method() != "forward_plus":
+		return
+	var wn := FastNoiseLite.new()
+	wn.noise_type = FastNoiseLite.TYPE_PERLIN
+	wn.seed = 4
+	wn.frequency = 0.011
+	wn.fractal_octaves = 4
+	var weather := NoiseTexture2D.new()
+	weather.width = 512
+	weather.height = 512
+	weather.seamless = true
+	weather.normalize = true
+	weather.generate_mipmaps = true
+	weather.noise = wn
+	var sn := FastNoiseLite.new()
+	sn.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	sn.seed = 8
+	sn.frequency = 0.07
+	sn.fractal_octaves = 3
+	var shape := NoiseTexture3D.new()
+	shape.width = 64
+	shape.height = 64
+	shape.depth = 64
+	shape.seamless = true
+	shape.normalize = true
+	shape.noise = sn
+	var dn := FastNoiseLite.new()
+	dn.noise_type = FastNoiseLite.TYPE_CELLULAR
+	dn.seed = 15
+	dn.frequency = 0.16
+	dn.fractal_type = FastNoiseLite.FRACTAL_FBM
+	dn.fractal_octaves = 2
+	var detail := NoiseTexture3D.new()
+	detail.width = 32
+	detail.height = 32
+	detail.depth = 32
+	detail.seamless = true
+	detail.normalize = true
+	detail.invert = true
+	detail.noise = dn
+	# the noise is made on another thread: wait until each texture has its pixels (at most about 10 s)
+	for k in 600:
+		if weather.get_image() != null and shape.get_data().size() > 0 and detail.get_data().size() > 0:
+			break
+		await get_tree().process_frame
+	vol_mat = ShaderMaterial.new()
+	vol_mat.shader = load("res://shaders/clouds_volumetric.gdshader")
+	vol_mat.set_shader_parameter("weather", weather)
+	vol_mat.set_shader_parameter("shape_noise", shape)
+	vol_mat.set_shader_parameter("detail_noise", detail)
+	vol_mat.set_shader_parameter("steps", 72 if quality == "high" else 44)
+	vol_mat.set_shader_parameter("light_steps", 5 if quality == "high" else 4)
+	vol_mat.set_shader_parameter("coverage", 0.48)
+	vol_mi = MeshInstance3D.new()
+	var qm := QuadMesh.new()
+	qm.size = Vector2(1, 1)
+	vol_mi.mesh = qm
+	vol_mi.material_override = vol_mat
+	vol_mi.extra_cull_margin = 16384.0
+	vol_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(vol_mi)
+	for m in ground_mats:
+		(m as ShaderMaterial).set_shader_parameter("cloud_map", weather)
+		(m as ShaderMaterial).set_shader_parameter("cloud_cover", 0.48)
+		(m as ShaderMaterial).set_shader_parameter("cloud_shadow", 0.38)
+	_apply_cloud_mode()
+
+
+## VR draws two views, so it uses the light cloud cards instead of the 3D clouds.
+func set_vr_mode(on: bool) -> void:
+	vr_mode = on
+	if scenery != null:
+		scenery.set_vr(on)
+	_apply_cloud_mode()
+
+
+func _apply_cloud_mode() -> void:
+	var vol := vol_mi != null and not vr_mode
+	if vol_mi != null:
+		vol_mi.visible = vol
+	if cloud_cards != null:
+		cloud_cards.visible = not vol
+	for m in ground_mats:
+		(m as ShaderMaterial).set_shader_parameter("cloud_shadow", 0.38 if vol else 0.0)
 
 
 # ---------------------------------------------------------------- ground
@@ -252,42 +378,45 @@ func _detail_texture() -> ImageTexture:
 
 
 func _ground() -> void:
-	var near_px: int = {"low": 1024, "medium": 2048, "high": 4096}.get(quality, 2048)
 	var far_px: int = {"low": 1024, "medium": 2048, "high": 2048}.get(quality, 2048)
-	var near_size := near_px * 5.0
 	var far_size := far_px * 80.0
 	var hm_img := Image.create_from_data(Terrain.SIZE, Terrain.SIZE, false, Image.FORMAT_RF, terrain.data.to_byte_array())
 	var hm_tex := ImageTexture.create_from_image(hm_img)
-	var near_tex := await _paint(near_px, near_size, 1.0, 1.0)
 	var far_tex := await _paint(far_px, far_size, 3.0, 0.0)
-	var detail := _detail_texture()
+	ortho_tex = load("res://assets/world/ortho.jpg")
+	var lc_tex: Texture2D = load("res://assets/world/landcover.png")
 	var shader: Shader = load("res://shaders/ground.gdshader")
-	var cells := [16.0, 64.0, 256.0, 1024.0]
-	var biases := [0.0, -1.2, -2.5, -5.0]
-	var n := 120
+	var cells := [8.0, 32.0, 128.0, 512.0, 2048.0]
+	var biases := [0.0, -0.6, -2.0, -4.0, -8.0]
+	var n := 128
 	for k in cells.size():
 		var cell: float = cells[k]
 		var hole := 0
 		if k > 0:
-			hole = int(n / 2.0 * float(cells[k - 1]) / cell) - 1
+			hole = int(n / 2.0 * float(cells[k - 1]) / cell) - 2   # 2 cells of overlap so rings never part
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
 		mat.set_shader_parameter("heightmap", hm_tex)
-		mat.set_shader_parameter("near_map", near_tex)
+		mat.set_shader_parameter("ortho", ortho_tex)
+		mat.set_shader_parameter("landcover", lc_tex)
 		mat.set_shader_parameter("far_map", far_tex)
-		mat.set_shader_parameter("detail_tex", detail)
+		for t in ["grass", "soil", "asphalt", "concrete"]:
+			mat.set_shader_parameter(t + "_col", load("res://assets/textures/%s_col.jpg" % t))
+			mat.set_shader_parameter(t + "_nrm", load("res://assets/textures/%s_nrm.jpg" % t))
 		mat.set_shader_parameter("cell", Terrain.CELL)
 		mat.set_shader_parameter("size_cells", float(Terrain.SIZE))
-		mat.set_shader_parameter("near_size", near_size)
+		mat.set_shader_parameter("half_size", Terrain.LEN / 2.0)
 		mat.set_shader_parameter("far_size", far_size)
 		mat.set_shader_parameter("y_bias", biases[k])
+		mat.set_shader_parameter("rw", Vector4(terrain.dir.x, terrain.dir.y, Terrain.RW_LEN, Terrain.RW_WIDTH))
+		ground_mats.append(mat)
 		var mi := MeshInstance3D.new()
 		mi.mesh = _ring_mesh(cell, n, hole)
 		mi.material_override = mat
 		mi.extra_cull_margin = 4000.0
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if k > 0 else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if k > 1 else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		add_child(mi)
-		rings.append({"node": mi, "snap": cell * 4.0})
+		rings.append({"node": mi, "snap": cell * 2.0})
 
 
 func follow(cam_pos: Vector3) -> void:
@@ -518,79 +647,6 @@ func _hangar_front(du: float, wall_h: float) -> ImageTexture:
 
 
 func _airfield() -> void:
-	var wall := _mat(Color("#9a8a7a"))
-	var roof_m := _mat(Color("#6d717c"), 0.6)
-	var roof_tex := await sign_texture(60.0, 30.0, false, true, "SMARTMOTION · DUXFORD")
-	for b in Terrain.BUILDINGS:
-		var g := Node3D.new()
-		var du: float = b["du"]
-		var dv: float = b["dv"]
-		if b["kind"] == "tower":
-			var base := MeshInstance3D.new()
-			var bm := BoxMesh.new()
-			bm.size = Vector3(du, 9, dv)
-			base.mesh = bm
-			base.material_override = _mat(Color("#e9e6df"))
-			base.position.y = 4.5
-			g.add_child(base)
-			var cab := MeshInstance3D.new()
-			var cm := BoxMesh.new()
-			cm.size = Vector3(du + 3, 3.4, dv + 3)
-			cab.mesh = cm
-			var gl := _mat(Color("#7fa8cc"), 0.1)
-			gl.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-			gl.albedo_color.a = 0.8
-			cab.material_override = gl
-			cab.position.y = 10.7
-			g.add_child(cab)
-			var rf := MeshInstance3D.new()
-			var rm := BoxMesh.new()
-			rm.size = Vector3(du + 4, 0.5, dv + 4)
-			rf.mesh = rm
-			rf.material_override = _mat(Color("#2a2d38"))
-			rf.position.y = 12.6
-			g.add_child(rf)
-			_place(g, b["u"], b["v"])
-			continue
-		var wall_h: float = 13.0 if b["kind"] == "bighangar" else 10.5
-		var ridge: float = float(b["h"]) - wall_h
-		var body := MeshInstance3D.new()
-		var bx := BoxMesh.new()
-		bx.size = Vector3(du, wall_h, dv)
-		body.mesh = bx
-		body.material_override = wall
-		body.position.y = wall_h / 2.0
-		g.add_child(body)
-		var roof := MeshInstance3D.new()
-		var pr := PrismMesh.new()
-		pr.size = Vector3(dv, ridge, du)
-		roof.mesh = pr
-		roof.material_override = roof_m
-		roof.position.y = wall_h + ridge / 2.0
-		roof.rotation.y = PI / 2.0
-		g.add_child(roof)
-		var s := atan2(ridge, dv / 2.0)
-		var sl := sqrt(dv * dv / 4.0 + ridge * ridge)
-		var lw := du * 0.92
-		var lh := minf(sl * 0.86, lw / 2.0)
-		var decal := MeshInstance3D.new()
-		var dq := QuadMesh.new()
-		dq.size = Vector2(lw, lh)
-		decal.mesh = dq
-		decal.material_override = _unshaded_tex(roof_tex)
-		decal.position = Vector3(0, wall_h + ridge / 2.0 + 0.12, dv / 4.0)
-		decal.rotation.x = s - PI / 2.0
-		decal.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		g.add_child(decal)
-		var front := MeshInstance3D.new()
-		var fq := QuadMesh.new()
-		fq.size = Vector2(du, wall_h)
-		front.mesh = fq
-		front.material_override = _unshaded_tex(_hangar_front(du, wall_h))
-		front.position = Vector3(0, wall_h / 2.0, dv / 2.0 + 0.06)
-		front.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		g.add_child(front)
-		_place(g, b["u"], b["v"])
 	_runway_decal()
 	# parked aircraft on the apron
 	var rows := [["trainer", -330.0, -140.0, 40.0], ["fighter", -250.0, -125.0, -20.0], ["trainer", -170.0, -145.0, 70.0], ["fighter", -80.0, -130.0, 15.0], ["trainer", 20.0, -150.0, -50.0], ["fighter", 140.0, -140.0, 95.0]]
@@ -664,6 +720,7 @@ func _runway_decal() -> void:
 		lb.double_sided = false
 		lb.rotation_degrees = Vector3(-90, 0, 0)
 		lb.shaded = false
+		lb.outline_size = 0
 		var gg := Node3D.new()
 		gg.add_child(lb)
 		_place(gg, float(e[0]) * (L / 2.0 - 60.0), 0.0, 0.14)
@@ -674,213 +731,6 @@ func _runway_decal() -> void:
 
 # ---------------------------------------------------------------- scenery
 var cloud_mat: ShaderMaterial
-
-
-func _in_road(p: Vector2, pad: float) -> bool:
-	for r in Terrain.ROADS:
-		var pts: Array = r["pts"]
-		for i in range(pts.size() - 1):
-			if Terrain.dist_to_segment(p, Vector2(pts[i][0], pts[i][1]), Vector2(pts[i + 1][0], pts[i + 1][1])) < float(r["w"]) / 2.0 + pad:
-				return true
-	var rp: Array = Terrain.RIVER["pts"]
-	for i in range(rp.size() - 1):
-		if Terrain.dist_to_segment(p, Vector2(rp[i][0], rp[i][1]), Vector2(rp[i + 1][0], rp[i + 1][1])) < float(Terrain.RIVER["w"]) / 2.0 + 6.0:
-			return true
-	return false
-
-
-func _house_mesh() -> ArrayMesh:
-	var k := MeshKit.new()
-	var wcol := Color(0.92, 0.88, 0.8).srgb_to_linear()
-	var rcol := Color(0.55, 0.22, 0.16).srgb_to_linear()
-	var p := [Vector3(-0.5, 0, 0.5), Vector3(0.5, 0, 0.5), Vector3(0.5, 1, 0.5), Vector3(-0.5, 1, 0.5), Vector3(-0.5, 0, -0.5), Vector3(0.5, 0, -0.5), Vector3(0.5, 1, -0.5), Vector3(-0.5, 1, -0.5)]
-	k.add_quad(p[0], p[1], p[2], p[3], Vector3(0, 0, 1), wcol)
-	k.add_quad(p[5], p[4], p[7], p[6], Vector3(0, 0, -1), wcol)
-	k.add_quad(p[1], p[5], p[6], p[2], Vector3(1, 0, 0), wcol)
-	k.add_quad(p[4], p[0], p[3], p[7], Vector3(-1, 0, 0), wcol)
-	var ra := Vector3(-0.5, 1.6, 0)
-	var rb := Vector3(0.5, 1.6, 0)
-	k.add_quad(p[3], p[2], rb, ra, Vector3(0, 0.6, 0.8).normalized(), rcol)
-	k.add_quad(p[6], p[7], ra, rb, Vector3(0, 0.6, -0.8).normalized(), rcol)
-	k.add_tri(p[2], p[6], rb, Vector3.RIGHT, wcol)
-	k.add_tri(p[7], p[3], ra, Vector3.LEFT, wcol)
-	return k.build()
-
-
-func _scenery() -> void:
-	var q: float = {"low": 0.4, "medium": 0.8, "high": 1.0}.get(quality, 0.8)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 77
-	var houses: Array = []
-	var trees: Array = []
-	for vi in range(8):
-		var v: Dictionary = Terrain.VILLAGES[vi]
-		var n := int(PI * float(v["r"]) * float(v["r"]) / 2300.0 * q)
-		for k in n:
-			var a := rng.randf() * TAU
-			var rr := sqrt(rng.randf()) * float(v["r"]) * 0.85
-			var p := Vector2(v["x"] + cos(a) * rr, v["z"] + sin(a) * rr)
-			if _in_road(p, 5.0):
-				continue
-			houses.append([p.x, p.y, 7.0 + rng.randf() * 7.0, 4.0 + rng.randf() * 2.5, 6.0 + rng.randf() * 5.0, rng.randf() * PI])
-	for w in Terrain.WOODS:
-		var wx: float = w[0]
-		var wz: float = w[1]
-		var wr: float = w[2]
-		var sp := 26.0 / sqrt(q)
-		var gx := -wr
-		while gx <= wr:
-			var gz := -wr
-			while gz <= wr:
-				var p2 := Vector2(wx + gx + (rng.randf() - 0.5) * sp * 0.8, wz + gz + (rng.randf() - 0.5) * sp * 0.8)
-				var d := p2.distance_to(Vector2(wx, wz))
-				if d <= wr * 0.82 and not _in_road(p2, 8.0):
-					trees.append([p2.x, p2.y, 3.0 + rng.randf() * 2.5, 8.0 + rng.randf() * 9.0])
-				gz += sp
-			gx += sp
-	var hm := MultiMesh.new()
-	hm.transform_format = MultiMesh.TRANSFORM_3D
-	hm.use_colors = true
-	hm.mesh = _house_mesh()
-	hm.instance_count = houses.size()
-	for i in houses.size():
-		var h: Array = houses[i]
-		var b := Basis.from_euler(Vector3(0, h[5], 0)).scaled(Vector3(h[2], h[3], h[4]))
-		hm.set_instance_transform(i, Transform3D(b, Vector3(h[0], terrain.height(h[0], h[1]), h[1])))
-		var s := 0.85 + rng.randf() * 0.3
-		hm.set_instance_color(i, Color(s, s, s))
-	var hmi := MultiMeshInstance3D.new()
-	hmi.multimesh = hm
-	var hmat := StandardMaterial3D.new()
-	hmat.vertex_color_use_as_albedo = true
-	hmat.roughness = 0.9
-	hmi.material_override = hmat
-	hmi.visibility_range_end = 9000.0
-	add_child(hmi)
-	# trees in hedgerows and small copses across the farmland (kept off the airfield, roads and villages)
-	var n_field := int(3200 * q)
-	var tries := 0
-	while n_field > 0 and tries < 40000:
-		tries += 1
-		var c := Vector2((rng.randf() - 0.5) * 14000.0, (rng.randf() - 0.5) * 14000.0)
-		var ru := terrain.to_runway(c.x, c.y)
-		if absf(ru.x) < Terrain.RW_LEN / 2.0 + 350.0 and ru.y > -480.0 and ru.y < 330.0:
-			continue
-		var in_v := false
-		for v2 in Terrain.VILLAGES:
-			if c.distance_to(Vector2(v2["x"], v2["z"])) < float(v2["r"]) * 0.9:
-				in_v = true
-		if in_v or _in_road(c, 10.0):
-			continue
-		var cnt := 1 if rng.randf() < 0.55 else 2 + rng.randi() % 9
-		var line := rng.randf() < 0.5   # a hedgerow line or a round copse
-		var dirv := Vector2.from_angle(rng.randf() * TAU)
-		for k2 in cnt:
-			var off := dirv * (float(k2) * (9.0 + rng.randf() * 6.0)) if line else Vector2((rng.randf() - 0.5), (rng.randf() - 0.5)) * 12.0 * sqrt(float(cnt))
-			trees.append([c.x + off.x, c.y + off.y, 4.0 + rng.randf() * 3.0, 9.0 + rng.randf() * 8.0])
-			n_field -= 1
-	var leafy: Array = []
-	var pines: Array = []
-	for t in trees:
-		(pines if rng.randf() < 0.22 else leafy).append(t)
-	_tree_set(_leafy_mesh(), leafy, rng, 0.55, Color(0.16, 0.32, 0.11), Color(0.30, 0.46, 0.16))
-	_tree_set(_pine_mesh(), pines, rng, 0.42, Color(0.09, 0.22, 0.10), Color(0.16, 0.32, 0.14))
-
-
-func _tree_set(mesh: Mesh, items: Array, rng: RandomNumberGenerator, width: float, c0: Color, c1: Color) -> void:
-	var tm := MultiMesh.new()
-	tm.transform_format = MultiMesh.TRANSFORM_3D
-	tm.use_colors = true
-	tm.mesh = mesh
-	tm.instance_count = items.size()
-	for i in items.size():
-		var t: Array = items[i]
-		var h: float = t[3]
-		var wd: float = maxf(float(t[2]), h * width) * (0.85 + rng.randf() * 0.3)
-		var b2 := Basis.from_euler(Vector3((rng.randf() - 0.5) * 0.06, rng.randf() * TAU, (rng.randf() - 0.5) * 0.06)).scaled(Vector3(wd, h, wd))
-		tm.set_instance_transform(i, Transform3D(b2, Vector3(t[0], terrain.height(t[0], t[1]) - 0.3, t[1])))
-		tm.set_instance_color(i, c0.lerp(c1, rng.randf()).srgb_to_linear() * (0.85 + rng.randf() * 0.3))
-	var tmi := MultiMeshInstance3D.new()
-	tmi.multimesh = tm
-	var tmat := StandardMaterial3D.new()
-	tmat.vertex_color_use_as_albedo = true
-	tmat.roughness = 1.0
-	tmat.diffuse_mode = BaseMaterial3D.DIFFUSE_LAMBERT_WRAP   # softer, leafier light
-	tmat.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
-	tmi.material_override = tmat
-	tmi.visibility_range_end = 9000.0
-	tmi.visibility_range_end_margin = 1500.0
-	tmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-	add_child(tmi)
-
-
-func _blob(k: MeshKit, c: Vector3, r: Vector3, seg: int, rings: int, rng: RandomNumberGenerator, top_col: Color, bot_col: Color) -> void:
-	# a lumpy, smooth-shaded ball; vertex colours darken towards the underside (fake self-shadow)
-	var pts: Array = []
-	for j in rings + 1:
-		var row: Array = []
-		var th := PI * float(j) / float(rings)
-		for i in seg:
-			var ph := TAU * float(i) / float(seg)
-			var n := Vector3(sin(th) * cos(ph), cos(th), sin(th) * sin(ph))
-			var bump := 1.0 + (rng.randf() - 0.5) * 0.22 if j > 0 and j < rings else 1.0
-			row.append([c + n * r * bump, n])
-		pts.append(row)
-	for j in rings:
-		for i in seg:
-			var i2 := (i + 1) % seg
-			var q4 := [pts[j][i], pts[j][i2], pts[j + 1][i2], pts[j + 1][i]]
-			var cols: Array = []
-			for v in q4:
-				cols.append(bot_col.lerp(top_col, clampf(v[1].y * 0.5 + 0.55, 0.0, 1.0)))
-			k.add_smooth_tri(q4[0][0], q4[1][0], q4[2][0], q4[0][1], q4[1][1], q4[2][1], cols[0], cols[1], cols[2])
-			k.add_smooth_tri(q4[0][0], q4[2][0], q4[3][0], q4[0][1], q4[2][1], q4[3][1], cols[0], cols[2], cols[3])
-
-
-func _trunk(k: MeshKit, h: float, r: float) -> void:
-	var col := Color(0.55, 0.42, 0.3)
-	for i in 5:
-		var a0 := TAU * i / 5.0
-		var a1 := TAU * (i + 1) / 5.0
-		var p0 := Vector3(cos(a0), 0, sin(a0)) * r
-		var p1 := Vector3(cos(a1), 0, sin(a1)) * r
-		var n := Vector3(cos((a0 + a1) / 2.0), 0, sin((a0 + a1) / 2.0))
-		k.add_quad(p0, p1, p1 * 0.6 + Vector3(0, h, 0), p0 * 0.6 + Vector3(0, h, 0), n, col)
-
-
-func _leafy_mesh() -> ArrayMesh:
-	# a broadleaf tree (oak/ash style): short trunk and a crown of three overlapping lumps, 1 unit tall
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 3
-	var k := MeshKit.new()
-	_trunk(k, 0.4, 0.06)
-	var top := Color(1, 1, 1)
-	var bot := Color(0.45, 0.5, 0.45)
-	_blob(k, Vector3(0, 0.62, 0), Vector3(0.5, 0.36, 0.5), 9, 6, rng, top, bot)
-	_blob(k, Vector3(0.18, 0.74, 0.1), Vector3(0.32, 0.26, 0.32), 8, 5, rng, top, bot)
-	_blob(k, Vector3(-0.16, 0.7, -0.14), Vector3(0.3, 0.26, 0.3), 8, 5, rng, top, bot)
-	return k.build()
-
-
-func _pine_mesh() -> ArrayMesh:
-	# a conifer: three stacked cones, 1 unit tall
-	var k := MeshKit.new()
-	_trunk(k, 0.25, 0.05)
-	var tiers := [[0.15, 0.55, 0.5], [0.42, 0.8, 0.38], [0.66, 1.0, 0.25]]
-	for t in tiers:
-		var y0: float = t[0]
-		var y1: float = t[1]
-		var r: float = t[2]
-		for i in 8:
-			var a0 := TAU * i / 8.0
-			var a1 := TAU * (i + 1) / 8.0
-			var p0 := Vector3(cos(a0) * r, y0, sin(a0) * r)
-			var p1 := Vector3(cos(a1) * r, y0, sin(a1) * r)
-			var tip := Vector3(0, y1, 0)
-			var am := (a0 + a1) / 2.0
-			var n := Vector3(cos(am), r / (y1 - y0), sin(am)).normalized()
-			k.add_smooth_tri(p0, p1, tip, Vector3(cos(a0), n.y, sin(a0)).normalized(), Vector3(cos(a1), n.y, sin(a1)).normalized(), Vector3(0, 1, 0), Color(0.55, 0.6, 0.55), Color(0.55, 0.6, 0.55), Color(1, 1, 1))
-	return k.build()
 
 
 func _cloud_atlas() -> Texture2D:
@@ -943,6 +793,7 @@ func _clouds() -> void:
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mmi.extra_cull_margin = 40000.0
 	add_child(mmi)
+	cloud_cards = mmi
 
 
 func _blimp() -> void:
@@ -1058,6 +909,18 @@ func set_gates(active: bool, next: int) -> void:
 # ---------------------------------------------------------------- per frame
 func update_world(dt: float, cam_pos: Vector3) -> void:
 	follow(cam_pos)
+	cloud_off += CLOUD_WIND * dt
+	if vol_mi != null:
+		vol_mi.global_position = cam_pos
+		vol_mat.set_shader_parameter("offset", cloud_off)
+		for m in ground_mats:
+			(m as ShaderMaterial).set_shader_parameter("cloud_offset", cloud_off)
+	if scenery != null:
+		scenery.update(Vector2(cam_pos.x, cam_pos.z), 1)
+		_coll_t -= dt
+		if _coll_t <= 0.0:
+			_coll_t = 0.2
+			terrain.colliders = scenery.colliders_near(focus)
 	if blimp != null:
 		blimp_t += dt
 		var a := blimp_t * 0.0125

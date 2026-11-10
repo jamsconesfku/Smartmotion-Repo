@@ -1,30 +1,29 @@
 class_name Terrain
 extends RefCounted
 ## SmartMotion Flight: terrain heights and the Duxford layout (port of dashboard/fly/terrain.js).
-## An impression of the area, not a survey. World axes: x east, y up, z south (north is -z), metres, origin at the airfield centre.
+## The ground is the real area: heights from the Copernicus DEM (assets/world/height.bin, made by
+## scripts/build_world_data.py), centred on the middle of Duxford's hard runway. The runway numbers below come
+## from world.json. Villages, roads and woods below are only used for the painted countryside beyond the real square.
+## World axes: x east, y up, z south (north is -z), metres, origin at the runway centre.
 
-const SIZE := 512
-const CELL := 64.0
-const LEN := SIZE * CELL  # 32,768 m; the map repeats beyond this
-const RW_HEADING := 62.0 * PI / 180.0
-const RW_LEN := 1503.0
+const SIZE := 1024
+const CELL := 32.0
+const LEN := SIZE * CELL  # 32,768 m of real ground; the map repeats beyond this
+const RW_HEADING_DEG := 58.04
+const RW_HEADING := RW_HEADING_DEG * PI / 180.0
+const RW_LEN := 1448.0
 const RW_WIDTH := 46.0
-const RW_ELEV := 38.0
+const RW_ELEV := 33.5
+const HEIGHT_FILE := "res://assets/world/height.bin"
 
 var dir := Vector2(sin(RW_HEADING), -cos(RW_HEADING))
 var perp := Vector2(cos(RW_HEADING), sin(RW_HEADING))   # to the right of the runway direction (south-east)
 var data := PackedFloat32Array()
-var colliders: Array = []
+var colliders: Array = []   ## buildings near the aircraft (refreshed by the world as it moves)
+var real := false           ## true when the real height data loaded
 
 ## runway frame: u along 062, v to the right. kind: hangar | bighangar | tower
-const BUILDINGS := [
-	{"kind": "hangar", "u": -345.0, "v": -240.0, "du": 84.0, "dv": 56.0, "h": 17.0},
-	{"kind": "hangar", "u": -245.0, "v": -240.0, "du": 84.0, "dv": 56.0, "h": 17.0},
-	{"kind": "hangar", "u": -145.0, "v": -240.0, "du": 84.0, "dv": 56.0, "h": 17.0},
-	{"kind": "hangar", "u": -45.0, "v": -240.0, "du": 84.0, "dv": 56.0, "h": 17.0},
-	{"kind": "bighangar", "u": 130.0, "v": -250.0, "du": 130.0, "dv": 76.0, "h": 22.0},
-	{"kind": "tower", "u": 40.0, "v": -168.0, "du": 9.0, "dv": 9.0, "h": 15.0},
-]
+const BUILDINGS := []   ## the real hangars and buildings now come from assets/world/buildings.bin
 const ROADS := [
 	{"name": "M11", "w": 30.0, "pts": [[1000, -9000], [2000, -4800], [3100, 0], [4000, 4600], [5200, 9000]]},
 	{"name": "A505", "w": 13.0, "pts": [[-8000, -900], [-3000, -1150], [1000, -1450], [3100, -1700], [6500, -2400]]},
@@ -64,10 +63,8 @@ const SIGNS := [
 
 
 func _init() -> void:
-	for b in BUILDINGS:
-		var xz := from_runway(b["u"], b["v"])
-		colliders.append({"cx": xz.x, "cz": xz.y, "c": dir.x, "s": dir.y, "hu": b["du"] / 2.0 + 2.0, "hv": b["dv"] / 2.0 + 2.0, "top": RW_ELEV + b["h"]})
-	_build_heightmap()
+	if not _load_heightmap():
+		_build_heightmap()
 
 
 func to_runway(x: float, z: float) -> Vector2:
@@ -81,6 +78,18 @@ func from_runway(u: float, v: float) -> Vector2:
 static func _sstep(a: float, b: float, x: float) -> float:
 	var t := clampf((x - a) / (b - a), 0.0, 1.0)
 	return t * t * (3.0 - 2.0 * t)
+
+
+func _load_heightmap() -> bool:
+	var f := FileAccess.open(HEIGHT_FILE, FileAccess.READ)
+	if f == null or f.get_length() != SIZE * SIZE * 2:
+		return false
+	var raw := f.get_buffer(SIZE * SIZE * 2)
+	data.resize(SIZE * SIZE)
+	for k in SIZE * SIZE:
+		data[k] = raw.decode_u16(k * 2) / 100.0 - 100.0
+	real = true
+	return true
 
 
 func _build_heightmap() -> void:

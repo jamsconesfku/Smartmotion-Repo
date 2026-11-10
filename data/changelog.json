@@ -49,5 +49,17 @@
     "ids": [
       "F-02"
     ]
+  },
+  {
+    "date": "2026-11-09",
+    "summary": "Version 1.5.0: the native SmartMotion Flight game now flies over the real Duxford area, built from free open data: real ground heights (Copernicus DEM), a real satellite photo of the ground (Copernicus Sentinel-2), 129,000 real buildings including the Duxford hangars (Overture Maps / OpenStreetMap), real woods (ESA WorldCover) with trees streamed in as you fly, close-up ground and building textures (ambientCG, free for any use), and 3D clouds you can fly through with shadows on the ground. The runway now has its real heading (058) and length. Credits and licences are recorded (LIC-10 to LIC-14).",
+    "ids": [
+      "F-02",
+      "LIC-10",
+      "LIC-11",
+      "LIC-12",
+      "LIC-13",
+      "LIC-14"
+    ]
   }
 ]

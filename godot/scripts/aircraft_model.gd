@@ -30,6 +30,9 @@ func _paint_mat(rough := 0.35, metal := 0.15) -> StandardMaterial3D:
 	m.roughness = rough
 	m.metallic = metal
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.clearcoat_enabled = true   # glossy lacquer: sharp sun glints like real aircraft paint
+	m.clearcoat = 0.6
+	m.clearcoat_roughness = 0.08
 	return m
 
 func _solid(col: Color, rough := 0.6, metal := 0.0) -> StandardMaterial3D:

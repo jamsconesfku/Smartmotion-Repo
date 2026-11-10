@@ -42,4 +42,13 @@ SEND MOTION DATA TO THE SIMULATOR RIG
   address and port shown (default 127.0.0.1 port 4123). Point your rig software or adapter at that port.
   Press T in flight to see the numbers.
 
+MAP DATA AND TEXTURES (credits)
+  Contains modified Copernicus Sentinel data 2023.
+  Produced using Copernicus WorldDEM-30 (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH 2014-2018
+  provided under COPERNICUS by the European Union and ESA; all rights reserved.
+  ESA WorldCover 2021 (c) ESA, CC BY 4.0.
+  Buildings and runway (c) OpenStreetMap contributors, Overture Maps Foundation, ODbL
+  (the game's buildings file is available under the ODbL on request).
+  Ground and building textures: ambientCG (CC0).
+
 Your settings and best times are saved in your Windows user folder (%APPDATA%\Godot\app_userdata\SmartMotion Flight).
