@@ -1,3 +1,5 @@
 dist/
 build/
 godot/.godot/
+motion/.godot/
+motion/assets/version.txt

@@ -45,7 +45,7 @@
   },
   {
     "term": "FlyPT Mover",
-    "meaning": "The program that reads what's happening in the game and tells the rig how to move."
+    "meaning": "Free motion program (non-commercial use only) that reads the game and tells the rig how to move. Our own SmartMotion Motion replaces it for SmartMotion Flight."
   },
   {
     "term": "UK IPO",
@@ -146,5 +146,41 @@
   {
     "term": "Quest Link",
     "meaning": "Meta's app that connects the Quest 3 headset to the laptop (by cable or Wi-Fi, called Air Link), so the laptop runs the game and the headset shows it."
+  },
+  {
+    "term": "SmartMotion Motion",
+    "meaning": "Our own program that moves the simulator with SmartMotion Flight. It replaces FlyPT Mover: it reads the game, works out the seat movement and sends it to the Motion4Sim controller."
+  },
+  {
+    "term": "Motion cueing",
+    "meaning": "Turning what the aircraft does into small seat movements the rig can actually make, so the rider feels the right pushes without the rig running out of travel."
+  },
+  {
+    "term": "Wash-out",
+    "meaning": "After a quick movement the seat drifts slowly back to the middle, too gently to notice, so it has room for the next one."
+  },
+  {
+    "term": "Tilt coordination",
+    "meaning": "Leaning the seat slowly so gravity pushes the rider the way a lasting force would, for example back into the seat on take-off."
+  },
+  {
+    "term": "Position mode",
+    "meaning": "A Motion4Sim controller setting: our program says where the seat should be (tilt and movement), and the controller works out how long each actuator must be."
+  },
+  {
+    "term": "Motion4Sim",
+    "meaning": "The company that makes the rig's motion controller (the box that drives the actuator motors), and its set-up program, the Motion4Sim Dashboard."
+  },
+  {
+    "term": "COM port",
+    "meaning": "How Windows names a USB connection to a device such as the motion controller, e.g. COM3."
+  },
+  {
+    "term": "Motion compensation",
+    "meaning": "In VR the headset moves with the seat. The game cancels that movement out, so the cockpit stays still around you while the rig moves."
+  },
+  {
+    "term": "Dry run",
+    "meaning": "SmartMotion Motion working on screen only: the 3D picture moves, but nothing is sent to the rig."
   }
 ]

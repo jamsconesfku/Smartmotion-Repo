@@ -737,6 +737,27 @@
     "updated": "2026-11-07"
   },
   {
+    "id": "P-10",
+    "title": "First test of SmartMotion Motion on the real rig (nobody on board)",
+    "why": "The new motion program has only been checked on screen. Before anyone rides, we need to see the real rig move the right way, stay inside its travel and stop safely.",
+    "area": "Engineering",
+    "phase": "Before first rider",
+    "status": "todo",
+    "priority": "high",
+    "due": "2027-02-28",
+    "owner": "Sam",
+    "depends_on": [
+      "F-08"
+    ],
+    "notes": "Due date assumed: before the March 2027 public opening. Steps: (1) copy the MotionXP-PRIME_FLY rig measurements from FlyPT Mover into the Motion4Sim Dashboard Rig tab and check them on its Test tab in Position mode; (2) set SmartMotion Motion's safety limits to the rig's real travel; (3) Strength 20 %, Test movement > wave each axis, flip any axis that goes the wrong way; (4) check Park, the on-screen stop and the hardware stop; (5) fly with the game, then tune (W2-06). Also to confirm: the controller's firmware version (5.4x expected), whether it has the Pro licence (network cable), and the seat belt and wind channels.",
+    "links": [
+      "docs/games/smartmotion-motion.md",
+      "F-08",
+      "W2-06"
+    ],
+    "updated": "2026-11-10"
+  },
+  {
     "id": "F-01",
     "title": "Simulator sales line: pricing, kit packages, design certification for buyers",
     "why": "Selling rigs to customers. On hold until the experiences business is running.",
@@ -764,7 +785,7 @@
     "due": null,
     "owner": "Sam",
     "depends_on": [],
-    "notes": "v1 browser game built 9 Nov 2026; native Windows version (Godot 4.6, GPU, OpenXR for Quest 3, UDP telemetry) built the same day. Needs: test on the MSI laptop and Quest 3, connect the UDP feed to FlyPT Mover, check the Duxford layout, and settle the licence/insurance position for paid use. v1.5.0 (9 Nov): real Duxford world from free open data and 3D clouds. v1.6.0 (10 Nov): you fly Skysmart's Bulldog G-SMAT with a detailed VR cockpit.",
+    "notes": "v1 browser game built 9 Nov 2026; native Windows version (Godot 4.6, GPU, OpenXR for Quest 3, UDP telemetry) built the same day. Needs: test on the MSI laptop and Quest 3, connect the game to the rig (now through our own SmartMotion Motion, F-08), check the Duxford layout, and settle the licence/insurance position for paid use. v1.5.0 (9 Nov): real Duxford world from free open data and 3D clouds. v1.6.0 (10 Nov): you fly Skysmart's Bulldog G-SMAT with a detailed VR cockpit. v1.9.0 (10 Nov): VR cancels out the rig's movement using the seat position sent back by SmartMotion Motion.",
     "links": [],
     "updated": "2026-11-10"
   },
@@ -851,6 +872,25 @@
     "links": [
       "docs/3d-printing/README.md",
       "docs/games/smartmotion-flight-native.md"
+    ],
+    "updated": "2026-11-10"
+  },
+  {
+    "id": "F-08",
+    "title": "Our own motion software (SmartMotion Motion) to replace FlyPT Mover",
+    "why": "FlyPT Mover is free only for non-commercial use, and paid rides need motion software we're allowed to use. Owning it also means one download, and settings we control.",
+    "area": "Software",
+    "phase": "Parked",
+    "status": "in_progress",
+    "priority": "low",
+    "due": null,
+    "owner": "Sam",
+    "depends_on": [],
+    "notes": "v1 built 10 Nov 2026 (in the SmartMotion Flight download as SmartMotionMotion.exe). Reads the game's flight data, works out the seat movement (same method as FlyPT Mover and the Motion4Sim Motionsystem: quick movement that drifts back, slow tilt for lasting forces, seat belt), and sends seat positions to the Motion4Sim controller about 500 times a second in its Position mode over USB (or the network cable with a Pro licence). The controller works out the actuator lengths itself from the rig measurements stored on it. Screen for the operator: Dry run, Start rig, Online, Park, Motion on/off, Strength, emergency stop, 3D picture, Test movement, Settings. Not yet tested on the real rig or controller: see P-10. Works with all three of our games (Flight, Racing, Space); other games (DCS, MSFS, X-Plane) would each need their data read in.",
+    "links": [
+      "docs/games/smartmotion-motion.md",
+      "LIC-06",
+      "P-10"
     ],
     "updated": "2026-11-10"
   }

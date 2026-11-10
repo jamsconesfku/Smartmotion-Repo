@@ -11,7 +11,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - `data/` — `tasks`, `contacts`, `licences`, `documents`, `decisions`, `milestones`, `changelog`, `glossary` (.json)
 - `dashboard/index.html` — single file, no build step, fetches `../data/*.json`
 - `dashboard/games/` — games that open full-screen over the dashboard (see `docs/games/`)
-- `godot/` — the native Windows game (Godot project); `dashboard/fly/` — the old browser version (kept in the repo, not published)
+- `godot/` — the native Windows game (Godot project); `motion/` — SmartMotion Motion, our motion software for the rig; `dashboard/fly/` — the old browser version (kept in the repo, not published)
 - `scripts/build-site.mjs` — builds the website into `dist/` (Cloudflare Pages: build command `node scripts/build-site.mjs`, output `dist`); `site/` holds root files (`_headers`, `robots.txt`); `docs/deploy-cloudflare.md` has the setup steps
 
 ## Data conventions
@@ -58,6 +58,12 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - GDScript gotchas hit so far: lambdas capture variables by value (mutate a Dictionary instead), values read from Dictionaries are untyped (declare `var x: float = ...`), Godot front faces are clockwise.
 - Bump `VERSION` for dashboard-visible changes; native releases are built from `main` automatically.
 - **Download link** (always the newest build): `https://github.com/jamsconesfku/Smartmotion-Repo/releases/download/native-latest/SmartMotionFlight-Windows.zip`. When Sam asks for the latest download, check the latest `build-native.yml` run has finished successfully and that the `native-latest` release body names the newest commit on `main` that touched `godot/`, then give the link and the steps (they're on the dashboard Games tile and in `godot/package/README.txt`).
+
+## SmartMotion Motion (`motion/`, replaces FlyPT Mover)
+- Godot 4.6 project, exported as `SmartMotionMotion.exe` into the same Windows ZIP as the game (by `scripts/build-native.sh`, which also runs its checks). Notes and controller protocol: `docs/games/smartmotion-motion.md`.
+- Game data in on UDP 4123; seat position out to the Motion4Sim controller in Position mode (36-byte packets, ~500/s) over USB (PowerShell helper `motion/assets/serial_bridge.ps1`, 250,000 baud) or network (UDP 53241, Pro licence); seat position back to the game on UDP 4124 for VR motion compensation (`godot/scripts/motion_comp.gd`).
+- After changing `motion/scripts/cueing.gd` or `rig_link.gd` run `godot --headless --path motion --script res://tests/test_cueing.gd`. Motion4Sim's manual writes command numbers in cable order (low byte first): "0600" is command 0x0006.
+- Safety: nothing moves the rig unless the operator connects, the controller is online and Motion is ON; pause, crash or lost data fade to the middle. Never raise the default limits without Sam checking the rig's real travel.
 
 ## Games
 - Each game is one JS file in `dashboard/games/` that exposes `window.<Name>.open({onClose})`, `close()` and `stats()`, injects its own scoped CSS, and draws with canvas/SVG (no libraries).

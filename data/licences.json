@@ -68,8 +68,8 @@
     "status": "to_confirm",
     "allowed_for_paid_use": "unknown",
     "task": "W1-07",
-    "notes": "",
-    "updated": "2026-11-07"
+    "notes": "FlyPT Mover's own window says it is free for non-commercial use. For SmartMotion Flight it is replaced by our own SmartMotion Motion (F-08), so it would only be needed for other games (DCS, MSFS, X-Plane, Assetto Corsa).",
+    "updated": "2026-11-10"
   },
   {
     "id": "LIC-07",

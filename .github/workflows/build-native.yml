@@ -1,6 +1,6 @@
 name: Build SmartMotion Flight (Windows)
 
-# Builds the native Windows game whenever the game changes and publishes it as the "native-latest" release:
+# Builds the native Windows game (and SmartMotion Motion, the rig software) whenever either changes and publishes it as the "native-latest" release:
 # https://github.com/jamsconesfku/Smartmotion-Repo/releases/tag/native-latest
 
 on:
@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - "godot/**"
+      - "motion/**"
       - "scripts/build-native.sh"
       - "VERSION"
       - ".github/workflows/build-native.yml"
@@ -62,4 +63,4 @@ jobs:
           gh release delete native-latest --yes --cleanup-tag || true
           gh release create native-latest build/native/SmartMotionFlight-Windows.zip \
             --title "SmartMotion Flight for Windows (latest)" \
-            --notes "Native Windows build of SmartMotion Flight, built from commit ${GITHUB_SHA::7}. Unzip it and run SmartMotionFlight.exe. See README.txt inside."
+            --notes "Native Windows build of SmartMotion Flight, built from commit ${GITHUB_SHA::7}. Unzip it and run SmartMotionFlight.exe (the game) and SmartMotionMotion.exe (moves the simulator rig). See README.txt inside."

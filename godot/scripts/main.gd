@@ -14,6 +14,9 @@ var plane: AircraftModel
 var fm: FlightModel
 var synth: Synth
 var tel := Telemetry.new()
+var mcomp := MotionComp.new()   # VR: cancels out the rig's movement (seat position from SmartMotion Motion)
+var vr_base := Vector3.ZERO      # VR origin position set by recentring
+var vr_pivot := Vector3(0, 0.6, 0)  # rig's centre of rotation in the headset's room space
 var state := "loading"
 var paused := false
 var cam_mode := "chase"
@@ -117,6 +120,7 @@ func _ready() -> void:
 	await world.build(ui.set_progress, quality, str(Settings.get_value("tod")))
 	if Settings.get_value("tel"):
 		tel.start(str(Settings.get_value("tel_host")), int(Settings.get_value("tel_port")))
+	mcomp.start()
 	ui.vr_btn.visible = XRServer.find_interface("OpenXR") != null
 	to_menu()
 	if args.has("auto") or args.has("vr"):
@@ -642,6 +646,7 @@ func _start_vr() -> bool:
 	world.env.ssil_enabled = false
 	world.set_vr_mode(true)
 	xr_origin = XROrigin3D.new()
+	vr_base = Vector3.ZERO
 	xr_cam = XRCamera3D.new()
 	xr_cam.near = 0.05
 	xr_cam.far = 40000.0
@@ -749,7 +754,11 @@ func _read_vr() -> Dictionary:
 func _recentre_vr() -> void:
 	if xr_origin == null or (plane == null and mode == null):
 		return
-	xr_origin.position = _eye() - xr_cam.position
+	# work in the seat's middle position, so recentring while the rig is tilted still lines up
+	var head := mcomp.correction(vr_pivot) * xr_cam.position
+	vr_pivot = head + Vector3(0, -MotionComp.PIVOT_BELOW_EYE, 0)
+	vr_base = _eye() - head
+	xr_origin.transform = Transform3D(Basis(), vr_base) * mcomp.correction(vr_pivot)
 	_toast("View recentred")
 
 
@@ -859,6 +868,8 @@ func _process(delta: float) -> void:
 		# The headset places your head from XRServer.world_origin. Godot copies it from the XROrigin3D *before*
 		# this script moves the aircraft, so it was always one frame behind: at 55 m/s that is ~0.75 m, and the
 		# cockpit wobbled around your head whenever speed or attitude changed. Set it now, after the move.
+		mcomp.poll()
+		xr_origin.transform = Transform3D(Basis(), vr_base) * mcomp.correction(vr_pivot)
 		XRServer.world_origin = xr_origin.global_transform
 		_update_hands(dt)
 		_vr_auto_resolution(delta)
@@ -1209,6 +1220,8 @@ func _process_mode(dt: float, delta: float) -> void:
 		vr_frames += 1
 		if vr_frames == 12:
 			_recentre_vr()
+		mcomp.poll()
+		xr_origin.transform = Transform3D(Basis(), vr_base) * mcomp.correction(vr_pivot)
 		XRServer.world_origin = xr_origin.global_transform   # same frame as the vehicle moved (no lag)
 		_update_hands(dt)
 		_vr_auto_resolution(delta)

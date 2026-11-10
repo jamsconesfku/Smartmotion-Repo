@@ -20,6 +20,14 @@ echo "Exporting the Windows build..."
 "$GODOT" --headless --path godot --export-release "Windows Desktop" "$PWD/$OUT/SmartMotionFlight/SmartMotionFlight.exe" >/dev/null 2>&1
 test -s "$OUT/SmartMotionFlight/SmartMotionFlight.exe" || { echo "Export failed"; exit 1; }
 VERSION="$(tr -d '[:space:]' < VERSION)"
+# SmartMotion Motion (motion/): the program that moves the rig. Same folder, same zip.
+echo "Checking and exporting SmartMotion Motion..."
+echo "$VERSION" > motion/assets/version.txt
+"$GODOT" --headless --path motion --import >/dev/null 2>&1 || true
+"$GODOT" --headless --path motion --script res://tests/test_cueing.gd | grep -E "FAIL|All checks passed|failed" || true
+"$GODOT" --headless --path motion --script res://tests/test_cueing.gd >/dev/null   # a failing check stops the build
+"$GODOT" --headless --path motion --export-release "Windows Desktop" "$PWD/$OUT/SmartMotionFlight/SmartMotionMotion.exe" >/dev/null 2>&1
+test -s "$OUT/SmartMotionFlight/SmartMotionMotion.exe" || { echo "Motion export failed"; exit 1; }
 for f in godot/package/*; do sed "s/@VERSION@/$VERSION/g" "$f" > "$OUT/SmartMotionFlight/$(basename "$f")"; done
 python3 - "$OUT" <<'PY'
 import os, sys, zipfile

@@ -66,10 +66,28 @@ CONTROLS (keyboard)
   Shoot down the waves of red drones. Your shield recharges a few seconds after a hit; the hull doesn't.
   Watch out for asteroids and the station. Easy mode helps you aim and rolls you upright when you let go.
 
-SEND MOTION DATA TO THE SIMULATOR RIG
-  Settings > Motion rig > On. The game sends the motion data (in all three games) 60 times a second as JSON over UDP to the
-  address and port shown (default 127.0.0.1 port 4123). Point your rig software or adapter at that port.
-  Press T in flight to see the numbers.
+MOVE THE SIMULATOR WITH THE GAME (SmartMotion Motion, replaces FlyPT Mover)
+  SmartMotionMotion.exe is in this folder. It reads the game's motion data (Flight, Racing and Space) and drives the
+  Motion4Sim controller over its USB cable (or the network cable, if the controller has the Pro licence).
+  One-off set-up:
+    1. In the Motion4Sim Dashboard, enter the rig's measurements on the Rig tab (copy them from the
+       MotionXP-PRIME_FLY rig in FlyPT Mover: same layout). Check them on the Dashboard's Test tab in
+       Position mode, then close the Dashboard and FlyPT Mover (only one program can use the USB port).
+    2. In SmartMotion Motion: Settings > Safety limits, set the limits to fit the rig's real travel.
+    3. Nobody on the rig, Strength 20 %: Test movement > "Wave each axis in turn". Check each axis goes
+       the way the screen says; tick "Flip" in Settings > Directions for any that don't.
+  Every session:
+    1. Start SmartMotionFlight.exe. Settings > Motion rig > On (127.0.0.1, port 4123).
+    2. Start SmartMotionMotion.exe. Pick "USB cable", press Find, then Connect.
+    3. Start rig (homing), then Online (the rig rises to the middle).
+    4. Rider belted in, operator at the red stop button: Motion ON. The motion fades in.
+       Pause or a crash in the game fades it out and the seat returns to the middle by itself.
+    5. After the ride: Park. Rider off only when the rig has stopped.
+  Space = emergency stop on screen. The hardware stop button on the controller always works.
+  In VR the game cancels the rig's movement out of the headset view (it reads the seat position
+  SmartMotion Motion sends back on port 4124), so the cockpit stays still around you.
+  Your settings are saved in %APPDATA%\Godot\app_userdata\SmartMotion Motion.
+  Other software can still read the game's data: it is JSON over UDP, 60 a second (press T to see the numbers).
 
 MAP DATA AND TEXTURES (credits)
   Contains modified Copernicus Sentinel data 2023.

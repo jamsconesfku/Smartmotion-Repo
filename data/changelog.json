@@ -126,5 +126,15 @@
     "ids": [
       "F-02"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.9.0: SmartMotion Motion, our own motion program that replaces FlyPT Mover. It is in the same Windows download as the game and works with all three games (Flight, Racing, Space). It reads the game, works out the seat movement and drives the Motion4Sim controller over USB (or the network cable). It has a dry run with a 3D picture of the rig, test movement, safety limits and an emergency stop. In VR the game now cancels the rig's movement out of the headset view. Not yet tried on the real rig (P-10).",
+    "ids": [
+      "F-08",
+      "P-10",
+      "F-02",
+      "LIC-06"
+    ]
   }
 ]
