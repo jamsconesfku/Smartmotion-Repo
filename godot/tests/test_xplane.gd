@@ -107,7 +107,7 @@ func _initialize() -> void:
 			while o + 36 <= p.size():
 				out_rows[p.decode_s32(o)] = p.decode_float(o + 4)
 				o += 36
-	check("Mover connected", xp.status.begins_with("FlyPT Mover connected"), xp.status)
+	check("Mover connected", xp.status.begins_with("CONNECTED"), xp.status)
 	check("RREF pitch answered", got.has(0) and absf(got[0] - 10.0) < 1e-3, str(got.get(0)))
 	check("RREF roll answered", got.has(1) and absf(got[1] + 20.0) < 1e-3, str(got.get(1)))
 	check("RREF acceleration answered", got.has(2), str(got.get(2)))

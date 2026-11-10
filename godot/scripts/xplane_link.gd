@@ -33,6 +33,7 @@ var _prev_rates := Vector3.ZERO
 var _rate_dot := Vector3.ZERO
 var _dist := 0.0
 var _vals := {}
+var event := ""            # a message for the screen (main.gd shows it and clears it)
 
 
 func start(lport: int, ohost: String, oport: int) -> void:
@@ -44,6 +45,8 @@ func start(lport: int, ohost: String, oport: int) -> void:
 	if out_port > 0:
 		out.connect_to_host(out_host, out_port)
 	_try_listen()
+	if out_port > 0:
+		status += "; DATA rows to port %d" % out_port
 
 
 func stop() -> void:
@@ -60,7 +63,7 @@ func _try_listen() -> void:
 	var err := listen.bind(listen_port, "127.0.0.1")
 	listening = err == OK
 	if listening:
-		status = "waiting for FlyPT Mover on port %d" % listen_port
+		status = "waiting: Mover hasn't asked for data yet (port %d)" % listen_port
 	else:
 		status = "port %d is busy (is X-Plane running?), sending DATA rows only" % listen_port
 
@@ -118,7 +121,7 @@ func _on_request(pkt: PackedByteArray, ip: String, port: int, now: float) -> voi
 			c["rpos_hz"] = pkt.slice(5).get_string_from_ascii().to_int()
 		_:
 			Diag.write("FlyPT Mover sent a %s request (ignored)" % head)
-	status = "FlyPT Mover connected (%d values, %d rows)" % [_count_refs(), _count_rows()]
+	status = "CONNECTED, Mover is reading %d values" % (_count_refs() + _count_rows())
 
 
 func _client(ip: String, port: int) -> Dictionary:
@@ -126,6 +129,7 @@ func _client(ip: String, port: int) -> Dictionary:
 	if not clients.has(key):
 		if clients.size() >= MAX_CLIENTS:
 			clients.erase(clients.keys()[0])
+		event = "FlyPT Mover connected: it is reading the game"
 		clients[key] = {"ip": ip, "port": port, "refs": {}, "next": {}, "rows": [], "rpos_hz": 0, "rpos_next": 0.0, "data_next": 0.0}
 		Diag.write("FlyPT Mover connected from %s" % key)
 	return clients[key]

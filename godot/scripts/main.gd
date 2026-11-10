@@ -2,7 +2,7 @@ extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 ## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.11.0"
+const APP_VERSION := "1.11.1"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -535,6 +535,10 @@ func _unhandled_input(e: InputEvent) -> void:
 					start_game()
 			KEY_T:
 				ui.tel_panel.visible = not ui.tel_panel.visible
+				if ui.tel_panel.visible:
+					_toast("Data panel ON (top right)\nFlyPT Mover: " + tel.xp.status, 4.0)
+				else:
+					_toast("Data panel OFF (press T to show it)", 2.0)
 			KEY_M:
 				Settings.set_value("sound", not Settings.get_value("sound"))
 				ui.set_seg("sound", Settings.get_value("sound"))
@@ -891,6 +895,9 @@ func _toast(t: String, secs := 2.2) -> void:
 
 func _process(delta: float) -> void:
 	tel.service()
+	if tel.xp.event != "":
+		_toast(tel.xp.event, 5.0)
+		tel.xp.event = ""
 	if world == null or world.terrain == null:
 		return
 	if mode != null:

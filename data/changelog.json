@@ -150,5 +150,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.11.1: pressing T now shows a clear message (data panel on or off, and whether FlyPT Mover is reading the game). The game also says 'FlyPT Mover connected' on screen and in VR as soon as Mover starts reading it. Settings has boxes to change the FlyPT ports.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]
