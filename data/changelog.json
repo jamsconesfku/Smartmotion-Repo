@@ -178,5 +178,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.11.5: better FlyPT Mover data for the racing car: engine speed and a rumble on kerbs, gravel and grass. Mover switches to its GROUND pose by itself in the car game (Flight, Space and Coaster use AIR); the README in the download says how to set up the GROUND pose for the car.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

@@ -62,6 +62,20 @@ func _initialize() -> void:
 	var v2 := xp.values(frame(1.0, 0.0, 0.0, 90.0), 2.0)   # same frame a second later: game paused or in the menu
 	check("held still when the game stops sending", v2["sim/flightmodel/position/P"] == 0.0 and v2["sim/time/paused"] == 1.0 and absf(v2["sim/flightmodel/position/local_ax"]) < 1e-4)
 
+	# racing: a shake in the vertical force on the kerbs, none on the track
+	var lo := 9.0
+	var hi := -9.0
+	for k in 40:
+		var fk := frame(3.0 + k * 0.02, 0.0, 0.0, 90.0)
+		fk["surface"] = "kerb"
+		fk["on_ground"] = true
+		var vk := xp.values(fk, 3.0 + k * 0.02)
+		lo = minf(lo, vk["sim/flightmodel/forces/g_nrml"])
+		hi = maxf(hi, vk["sim/flightmodel/forces/g_nrml"])
+	check("kerb rumble for Mover", hi - lo > 0.1 and hi - lo < 0.3, "%.2f g" % (hi - lo))
+	var ft := frame(5.0, 0.0, 0.0, 90.0)
+	ft["surface"] = "track"
+	check("smooth on the track", absf(xp.values(ft, 5.0)["sim/flightmodel/forces/g_nrml"] - 1.0) < 1e-4)
 	# 3. over the network, like Mover: RREF, DSEL and the fixed DATA output
 	var port := 49170
 	var out_port := 49171

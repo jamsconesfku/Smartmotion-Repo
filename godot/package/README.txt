@@ -115,6 +115,14 @@ USE FLYPT MOVER WITH THE GAME (its 3D picture, or to drive the rig)
     source window (small square, top right of its tile), note the port it shows, and type that number in
     the game: Settings > FlyPT Mover > "DATA rows to port". If that port is 49000, first change
     "Answer on port" to 49010 so the game doesn't take 49000 itself. Then stop and start the source in Mover.
+  WHICH MOVER POSE EACH GAME USES: Mover splits the X-Plane source into AIR and GROUND by whether the
+    vehicle is on the ground. Flying, Space and the Coaster ride are "air" (the AIR pose). Racing, and an
+    aircraft on the runway, are "ground" (the GROUND pose), so Mover switches to it by itself as soon as
+    the car game starts. To make the car move the rig: open the GROUND pose (top-right square of its tile),
+    tick "SOURCE :: XPLANE 11 (UDP) GROUND" on the right, and set it like AIR: Sway = Lateral acceleration,
+    Surge = Longitudinal acceleration, Heave = Vertical acceleration (kerb and gravel rumble come through
+    here), Yaw = Yaw speed; tick "Mix sway in roll" and "Mix surge in pitch" so cornering and braking
+    tilt the seat. Start with small Out gains and raise them bit by bit. The engine speed is sent as RPM.
   If a direction is the wrong way round in Mover, flip it in Mover's settings for that axis.
   Mover listens to the game; use FlyPT Mover OR SmartMotion Motion to drive the rig, not both at once.
   The game also sends X-Plane "DATA" rows to 127.0.0.1 port 49001, for Mover set-ups that expect those.

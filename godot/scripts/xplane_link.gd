@@ -91,6 +91,12 @@ func _load() -> void:
 
 func _save() -> void:
 	_dirty = false
+	var names := []
+	for k in clients:
+		for idx in clients[k]["refs"]:
+			names.append(str(clients[k]["refs"][idx][0]))
+	if not names.is_empty():
+		Diag.write("FlyPT Mover is reading: " + ", ".join(names))
 	if save_path == "":
 		return
 	var out_list := []
@@ -339,6 +345,10 @@ func values(frame: Dictionary, now: float) -> Dictionary:
 		Q = 0.0
 		R = 0.0
 		rd = Vector3.ZERO
+	# road feel for FlyPT Mover (racing): a shake in the vertical force on kerbs, gravel and grass, stronger with speed
+	var amp: float = {"kerb": 0.12, "gravel": 0.08, "grass": 0.05}.get(str(f.get("surface", "")), 0.0)
+	if live and amp > 0.0:
+		gb.y += amp * clampf(vw.length() / 15.0, 0.0, 1.0) * randf_range(-1.0, 1.0)
 	var aw := b * (gb * G) + Vector3(0, -G, 0)
 	var px := _f(pos, "x")
 	var py := _f(pos, "y")

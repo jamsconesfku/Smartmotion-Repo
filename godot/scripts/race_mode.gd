@@ -519,7 +519,7 @@ func _tel() -> void:
 	var f := Vector3(sin(yaw), 0, -cos(yaw))
 	var rt := Vector3(cos(yaw), 0, sin(yaw))
 	make_tel(Time.get_ticks_msec() / 1000.0, false, false, b, pos, f * vx + rt * vy, Vector3(0, -r, 0), Vector3(a_lat, 9.81, -a_long), absf(vx) * 1.94384,
-		{"speed_kmh": snappedf(absf(vx) * 3.6, 0.1), "gear": gear, "rpm_frac": snappedf(rpm, 0.01), "surface": surf, "on_ground": true,
+		{"speed_kmh": snappedf(absf(vx) * 3.6, 0.1), "gear": gear, "rpm_frac": snappedf(rpm, 0.01), "rpm": round(rpm * 12000.0), "throttle": snappedf(thr, 0.001), "surface": surf, "on_ground": true,
 		"controls": {"steer": snappedf(steer, 0.001), "throttle": snappedf(thr, 0.001), "brake": snappedf(brk, 0.001)}})
 
 
