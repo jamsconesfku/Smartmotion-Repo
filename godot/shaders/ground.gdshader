@@ -133,7 +133,8 @@ void fragment() {
 
 	// what kind of surface: green plants, bare/ripe fields, built-up, tarmac
 	float green = clamp((col.g - max(col.r, col.b)) * 9.0 + 0.3, 0.0, 1.0);
-	float built = clamp(lc.g, 0.0, 1.0) * (1.0 - runway) * (1.0 - 0.6 * rm);
+	// built-up land that looks green in the photo is grass (the airfield, parks, playing fields)
+	float built = clamp(lc.g, 0.0, 1.0) * (1.0 - runway) * (1.0 - 0.6 * rm) * (1.0 - 0.85 * green);
 	float wgrass = (1.0 - built) * (1.0 - runway) * max(green, lc.a);
 	float wsoil = (1.0 - built) * (1.0 - runway) * (1.0 - max(green, lc.a));
 
