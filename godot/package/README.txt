@@ -104,6 +104,13 @@ USE FLYPT MOVER WITH THE GAME (its 3D picture, or to drive the rig)
        port 49000, X-Plane's normal settings) and switch it on.
     3. Fly. The 3D rig picture in Mover moves with the game. Press T in the game: the panel shows
        "FlyPT Mover connected" once Mover is asking for data.
+  COCKPIT LIGHT: the Bulldog's warning-light row has a MOVER light (the fighter shows it on the engine dial):
+    dark "OFF" = the link is off in Settings; amber "WAITING" = the game is ready but Mover hasn't asked
+    for data; green "LINKED" = Mover is reading the game.
+  If it stays amber: Mover may be listening for X-Plane's "DATA" rows instead of asking. Open the X-Plane
+    source window (small square, top right of its tile), note the port it shows, and type that number in
+    the game: Settings > FlyPT Mover > "DATA rows to port". If that port is 49000, first change
+    "Answer on port" to 49010 so the game doesn't take 49000 itself. Then stop and start the source in Mover.
   If a direction is the wrong way round in Mover, flip it in Mover's settings for that axis.
   Mover listens to the game; use FlyPT Mover OR SmartMotion Motion to drive the rig, not both at once.
   The game also sends X-Plane "DATA" rows to 127.0.0.1 port 49001, for Mover set-ups that expect those.

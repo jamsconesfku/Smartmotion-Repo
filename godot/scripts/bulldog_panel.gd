@@ -19,7 +19,7 @@ const LAYOUT := [
 ]
 
 var d := {"ias": 0.0, "alt": 0.0, "vs": 0.0, "heading": 0.0, "pitch": 0.0, "roll": 0.0, "throttle": 0.0, "rpm": 700.0,
-	"rpm_max": 2700.0, "flaps": 0.0, "stall": false, "g": 1.0, "slip": 0.0, "turn": 0.0, "time": 0.0}
+	"rpm_max": 2700.0, "flaps": 0.0, "stall": false, "g": 1.0, "slip": 0.0, "turn": 0.0, "time": 0.0, "mover": 0}
 ## "static" draws the parts that never move (faces, scales, numbers, radios, switches, placards) once;
 ## "live" draws only the moving parts on top, every frame. Two layers keep the per-frame work small,
 ## which matters in VR (the whole panel used to be redrawn every frame: 3 to 5 ms of a 11 ms frame).
@@ -499,6 +499,15 @@ func _annunciators() -> void:
 		draw_rect(r, Color("#ff3020") if lit else Color("#3a1210"))
 		draw_rect(r, Color("#0c0c0c"), false, 3.0)
 		_txt(r.get_center(), names[i], px(0.0075), Color("#ffffff") if lit else Color("#8a6a66"))
+	# FlyPT Mover light: green = Mover is reading the game, amber = waiting for Mover, dark = off
+	if L:
+		var m := int(d.get("mover", 0))
+		var r := Rect2(x0 + names.size() * px(0.06), y, px(0.052), px(0.026))
+		draw_rect(r, [Color("#1c1c1c"), Color("#c98500"), Color("#16a334")][clampi(m, 0, 2)])
+		draw_rect(r, Color("#0c0c0c"), false, 3.0)
+		var tc := Color("#d0d0d0") if m == 0 else Color("#000000")
+		_txt(r.get_center() - Vector2(0, px(0.0055)), "MOVER", px(0.0095), tc, bold)
+		_txt(r.get_center() + Vector2(0, px(0.0062)), ["OFF", "WAITING", "LINKED"][clampi(m, 0, 2)], px(0.0088), tc, bold)
 
 
 func _placards() -> void:

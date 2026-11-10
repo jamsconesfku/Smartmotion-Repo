@@ -102,6 +102,9 @@ func _draw() -> void:
 	_needle(_ang(d["rpm"], 135.0, 405.0, 0.0, d["rpm_max"]), r - 14.0, 6.0, Color.WHITE)
 	_txt(Vector2(-80, r * 0.35), "THR %d%%" % int(round(float(d["throttle"]) * 100.0)), 24, Color("#e9ebf5"), 160.0)
 	_txt(Vector2(-80, r * 0.62), "FLAPS %d%%" % int(round(float(d["flaps"]) * 100.0)), 24, Color("#e9ebf5"), 160.0)
+	var mv := int(d.get("mover", 0))
+	var mvc: Color = [Color("#8a8d9e"), Color("#ffb000"), Color("#30e050")][clampi(mv, 0, 2)]
+	_txt(Vector2(-80, -r * 0.62), ["MOVER OFF", "MOVER WAIT", "MOVER LINKED"][clampi(mv, 0, 2)], 22, mvc, 160.0)
 	if d["stall"]:
 		_txt(Vector2(-80, -r * 0.3), "STALL", 34, Color("#ff3b30"), 160.0)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

@@ -157,5 +157,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.11.2: a MOVER light in the cockpit shows the FlyPT Mover link at a glance: dark when off, amber while waiting for Mover, green once Mover is reading the game (Bulldog warning-light row; on the fighter's engine dial).",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

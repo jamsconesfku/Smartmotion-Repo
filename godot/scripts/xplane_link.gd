@@ -49,6 +49,20 @@ func start(lport: int, ohost: String, oport: int) -> void:
 		status += "; DATA rows to port %d" % out_port
 
 
+## For the cockpit light: 0 off, 1 waiting for Mover, 2 Mover is reading the game.
+func light() -> int:
+	if not enabled:
+		return 0
+	return 2 if _count_refs() + _count_rows() > 0 or _rpos_on() else 1
+
+
+func _rpos_on() -> bool:
+	for k in clients:
+		if int(clients[k]["rpos_hz"]) > 0:
+			return true
+	return false
+
+
 func stop() -> void:
 	listen.close()
 	out.close()

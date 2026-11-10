@@ -2,7 +2,7 @@ extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 ## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.11.1"
+const APP_VERSION := "1.11.2"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -1213,7 +1213,7 @@ func _update_instruments() -> void:
 	plane.set_instruments({
 		"ias": float(i["ias"]) * KT, "vmax": 400.0 if fm.spec["key"] == "fighter" else 200.0, "alt": float(i["alt_msl"]) * FT, "vs": float(i["vs"]) * FPM,
 		"heading": i["heading"], "pitch": i["pitch"], "roll": i["roll"], "throttle": throttle, "rpm": i["rpm"], "rpm_max": fm.spec["rpmMax"], "flaps": i["flaps"], "stall": i["stall"],
-		"g": i["g"], "slip": i["slip"], "turn": -fm.w.y / FlightModel.D2R,
+		"g": i["g"], "slip": i["slip"], "turn": -fm.w.y / FlightModel.D2R, "mover": tel.xp.light(),
 	})
 	if plane.yoke != null and plane.bulldog == null:
 		plane.yoke.rotation.z = -float(inp["roll"]) * 0.5
