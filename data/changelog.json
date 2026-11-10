@@ -185,5 +185,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.11.6: fixes a false sideways jolt in the racing car's motion data when moving at walking pace while steering (it read 1.6 g, now near 0). Mover tip in the README: the car's forces are much bigger than the aircraft's, so give the GROUND pose a bigger Range.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

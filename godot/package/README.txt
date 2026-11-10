@@ -123,6 +123,8 @@ USE FLYPT MOVER WITH THE GAME (its 3D picture, or to drive the rig)
     Surge = Longitudinal acceleration, Heave = Vertical acceleration (kerb and gravel rumble come through
     here), Yaw = Yaw speed; tick "Mix sway in roll" and "Mix surge in pitch" so cornering and braking
     tilt the seat. Start with small Out gains and raise them bit by bit. The engine speed is sent as RPM.
+    The racing car pulls about 1 g accelerating and over 2 g braking and cornering (10-25 m/s2), so set
+    the Range for Sway and Surge to about 20-25 (the flying profile's 5 fills up straight away).
   If a direction is the wrong way round in Mover, flip it in Mover's settings for that axis.
   Mover listens to the game; use FlyPT Mover OR SmartMotion Motion to drive the rig, not both at once.
   The game also sends X-Plane "DATA" rows to 127.0.0.1 port 49001, for Mover set-ups that expect those.
