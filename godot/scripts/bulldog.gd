@@ -1021,6 +1021,23 @@ func _cockpit() -> void:
 			pedals.append([pd, p, pd.position.z])
 
 
+## Where a VR hand holds the pilot's (left seat) control stick: a grip frame as VRHand expects
+## (tube along Z pointing down the stick, back of the right hand facing out to the right).
+func stick_grip() -> Transform3D:
+	if am.yoke == null:
+		return Transform3D()
+	var g := Transform3D(Basis(Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(0, -1, 0)), Vector3(0, 0.49, 0.012))
+	return am.yoke.global_transform * g.rotated_local(Vector3(0, 0, 1), -0.45).rotated_local(Vector3(1, 0, 0), 0.3)
+
+
+## Where a VR hand holds the throttle lever's knob.
+func throttle_grip() -> Transform3D:
+	if throttle_lever == null:
+		return Transform3D()
+	var g := Transform3D(Basis(Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(0, -1, 0)), Vector3(0, 0.15, 0.0))
+	return throttle_lever.global_transform * g.rotated_local(Vector3(1, 0, 0), 0.9)   # forearm back and down
+
+
 # ---------------------------------------------------------------- per frame
 func animate(ctl: Dictionary, dt: float) -> void:
 	var pitch: float = ctl.get("pitch", 0.0)

@@ -1,7 +1,7 @@
 extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 
-const APP_VERSION := "1.6.4"
+const APP_VERSION := "1.7.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -51,9 +51,14 @@ var vr_menu_lines: Array = []
 var vr_menu_title: Label3D
 var vr_menu_idx := 0
 var vr_warn := false
+var hand_l: VRHand
+var hand_r: VRHand
+var hand_on := {"l": 0.0, "r": 0.0}     # 0 = following the controller, 1 = holding the throttle / stick
+var vr_scale := 1.0                      # VR picture resolution (lowered automatically if the graphics card falls behind)
+var gpu_acc := {"sum": 0.0, "n": 0, "t": 0.0, "calm": 0}
 
 # frame timing (diagnostics log): how smooth the game is running
-var perf := {"n": 0, "sum": 0.0, "worst": 0.0, "late": 0, "last": 0, "t": 0.0, "fm": 0.0, "world": 0.0, "instr": 0.0, "fps": 0.0, "late_pc": 0.0}
+var perf := {"n": 0, "sum": 0.0, "worst": 0.0, "late": 0, "last": 0, "t": 0.0, "fm": 0.0, "world": 0.0, "instr": 0.0, "fps": 0.0, "late_pc": 0.0, "gpu": 0.0}
 
 
 func _ready() -> void:
@@ -119,6 +124,9 @@ func _ready() -> void:
 	if args.has("cam"):
 		cam_mode = args["cam"]
 		_apply_view()
+	if args.has("look"):   # test option: --look=yaw,pitch in degrees for the cockpit camera
+		var lp: PackedStringArray = str(args["look"]).split(",")
+		look = Vector2(deg_to_rad(float(lp[0])), deg_to_rad(float(lp[1])))
 	if args.has("shot"):
 		shot_timer = float(args.get("shot_after", "6"))
 
@@ -479,15 +487,17 @@ func _start_vr() -> bool:
 	xr_right = XRController3D.new()
 	xr_right.tracker = "right_hand"
 	for c in [xr_left, xr_right]:
-		var mi := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = Vector3(0.04, 0.04, 0.12)
-		mi.mesh = bm
-		var m := StandardMaterial3D.new()
-		m.albedo_color = Color("#ff4c00")
-		mi.material_override = m
-		c.add_child(mi)
 		xr_origin.add_child(c)
+	# gloved hands instead of the controllers (placed every frame in _update_hands)
+	hand_l = VRHand.new(true)
+	hand_r = VRHand.new(false)
+	xr_origin.add_child(hand_l)
+	xr_origin.add_child(hand_r)
+	hand_on = {"l": 0.0, "r": 0.0}
+	vr_scale = 1.0
+	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	get_viewport().scaling_3d_scale = 1.0
+	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 	vr_label = Label3D.new()
 	vr_label.font = load("res://assets/fonts/Barlow-SemiBold.ttf")
 	vr_label.font_size = 40
@@ -521,6 +531,9 @@ func _stop_vr() -> void:
 	if xr_origin != null:
 		xr_origin.queue_free()
 		xr_origin = null
+	hand_l = null
+	hand_r = null
+	get_viewport().scaling_3d_scale = 1.0
 	vr_menu = null
 	vr_menu_lines = []
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
@@ -784,6 +797,24 @@ func _process(delta: float) -> void:
 	world.focus = Vector2(fm.pos.x, fm.pos.z)
 	world.focus_agl = float(fm.i["alt_agl"])
 	_update_camera(dt)
+	if vr_active and xr_origin != null:
+		# The headset places your head from XRServer.world_origin. Godot copies it from the XROrigin3D *before*
+		# this script moves the aircraft, so it was always one frame behind: at 55 m/s that is ~0.75 m, and the
+		# cockpit wobbled around your head whenever speed or attitude changed. Set it now, after the move.
+		XRServer.world_origin = xr_origin.global_transform
+		_update_hands(dt)
+		_vr_auto_resolution(delta)
+	elif args.has("hands") and plane.bulldog != null:
+		# test option: show the VR hands on the stick and throttle in the screen view (for screenshots)
+		if hand_r == null or not is_instance_valid(hand_r):
+			hand_r = VRHand.new(false)
+			hand_l = VRHand.new(true)
+			plane.add_child(hand_r)
+			plane.add_child(hand_l)
+		hand_r.place(plane.bulldog.stick_grip())
+		hand_l.place(plane.bulldog.throttle_grip())
+		hand_r.set_curl(1.0)
+		hand_l.set_curl(1.0)
 	var t1 := Time.get_ticks_usec()
 	world.update_world(dt, cam.global_position if not vr_active else xr_cam.global_position)
 	perf["world"] += Time.get_ticks_usec() - t1
@@ -837,15 +868,80 @@ func _perf_frame() -> void:
 		perf["fps"] = 1000.0 / (perf["sum"] / n)
 		perf["late_pc"] = 100.0 * perf["late"] / n
 		if state == "fly" and (vr_active or args.has("stats")):
-			Diag.write("timing%s: %.0f fps, avg %.1f ms, slowest %.1f ms, %d of %d frames late (over %.1f ms) | flight %.2f ms, world %.2f ms, panel %.2f ms, panel draw %.2f ms x%d" % [
+			Diag.write("timing%s: %.0f fps, avg %.1f ms, slowest %.1f ms, %d of %d frames late (over %.1f ms) | graphics card %.1f ms, resolution %d%% | flight %.2f ms, world %.2f ms, panel %.2f ms, panel draw %.2f ms x%d" % [
 				" (VR %d Hz)" % roundi(_vr_hz()) if vr_active else "", 1000.0 / (perf["sum"] / n), perf["sum"] / n, perf["worst"],
-				perf["late"], perf["n"], _frame_budget_ms() * 1.5, perf["fm"] / n / 1000.0, perf["world"] / n / 1000.0, perf["instr"] / n / 1000.0, BulldogPanel.draw_us / n / 1000.0, BulldogPanel.draw_n])
+				perf["late"], perf["n"], _frame_budget_ms() * 1.5, perf["gpu"], roundi(vr_scale * 100.0), perf["fm"] / n / 1000.0, perf["world"] / n / 1000.0, perf["instr"] / n / 1000.0, BulldogPanel.draw_us / n / 1000.0, BulldogPanel.draw_n])
 			BulldogPanel.draw_us = 0
 			BulldogPanel.draw_n = 0
 		if vr_menu != null and vr_menu.visible:
 			_vr_menu_refresh()   # keep the smoothness readout up to date
 		for k in ["n", "sum", "worst", "late", "t", "fm", "world", "instr"]:
 			perf[k] = 0 if k in ["n", "late"] else 0.0
+
+
+## Gloved hands: follow the controllers; near the stick (right) or throttle (left) they close around it and
+## move with it, so you see your hand flying the aircraft.
+func _update_hands(dt: float) -> void:
+	var bd: Bulldog = plane.bulldog if plane != null else null
+	for side in ["l", "r"]:
+		var h: VRHand = hand_l if side == "l" else hand_r
+		var c: XRController3D = xr_left if side == "l" else xr_right
+		if h == null:
+			continue
+		var tracked := c != null and c.get_is_active() and c.get_has_tracking_data()
+		h.visible = tracked
+		if not tracked:
+			continue
+		var free := c.global_transform
+		var grip := Transform3D()
+		var reach := 0.0
+		if bd != null:
+			grip = bd.stick_grip() if side == "r" else bd.throttle_grip()
+			reach = 0.2 if side == "r" else 0.13
+		var near := reach > 0.0 and free.origin.distance_to(grip.origin) < reach
+		hand_on[side] = move_toward(float(hand_on[side]), 1.0 if near else 0.0, dt * 6.0)
+		var k: float = hand_on[side]
+		var t := free
+		if k > 0.0:
+			t = free.interpolate_with(grip, k * k * (3.0 - 2.0 * k))
+		h.place(t)
+		var press := maxf(c.get_float("grip"), c.get_float("trigger"))
+		h.set_curl(lerpf(0.3 + 0.7 * press, 1.0, k))
+
+
+## Keeps VR smooth on any graphics card: if a frame takes the graphics card more than 85% of the time the
+## headset allows, the 3D picture is drawn at a slightly lower resolution (down to 70%); when there is
+## plenty of time again it goes back up. Checked twice a second.
+func _vr_auto_resolution(delta: float) -> void:
+	var rid := get_viewport().get_viewport_rid()
+	var gpu := RenderingServer.viewport_get_measured_render_time_gpu(rid)
+	if gpu <= 0.0:
+		return
+	gpu_acc["sum"] += gpu
+	gpu_acc["n"] += 1
+	gpu_acc["t"] += delta
+	if gpu_acc["t"] < 0.5:
+		return
+	var avg: float = gpu_acc["sum"] / maxf(gpu_acc["n"], 1.0)
+	perf["gpu"] = avg
+	var budget := 1000.0 / _vr_hz()
+	var was := vr_scale
+	if avg > budget * 0.85 and vr_scale > 0.7:
+		vr_scale = maxf(0.7, vr_scale - 0.05)
+		gpu_acc["calm"] = 0
+	elif avg < budget * 0.65 and vr_scale < 1.0:
+		gpu_acc["calm"] += 1
+		if gpu_acc["calm"] >= 4:
+			vr_scale = minf(1.0, vr_scale + 0.05)
+			gpu_acc["calm"] = 0
+	else:
+		gpu_acc["calm"] = 0
+	if vr_scale != was:
+		get_viewport().scaling_3d_scale = vr_scale
+		Diag.write("VR resolution %d%% (graphics card %.1f ms of %.1f ms)" % [roundi(vr_scale * 100.0), avg, budget])
+	gpu_acc["sum"] = 0.0
+	gpu_acc["n"] = 0
+	gpu_acc["t"] = 0.0
 
 
 func _vr_rates() -> Array:

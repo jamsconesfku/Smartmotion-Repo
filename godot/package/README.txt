@@ -27,6 +27,8 @@ VR ON A META QUEST 3
   5. Sit upright and press B on the right controller (or V on the keyboard) to recentre.
   You can fly with the keyboard while wearing the headset: click the game window on the laptop once
   BEFORE putting the headset on, and don't click anywhere else afterwards.
+  Your hands: move your right controller to the control stick between your knees and the glove takes hold
+  of it (it moves as you fly); the left glove takes the throttle in the same way.
   Controls: right stick = pitch and roll, right trigger / grip = more / less power,
   left stick = power and rudder, left trigger = brakes, A = flaps, B = recentre, X = menu, Y = restart.
   The menu appears in the headset: stick up/down to choose, A to select (change aircraft, start

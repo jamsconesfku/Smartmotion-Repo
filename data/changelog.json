@@ -98,5 +98,12 @@
     "ids": [
       "F-02"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.7.0: in VR you now sit firmly in the seat (the headset was placed one frame behind the aircraft, so the cockpit wobbled around your head in flight), you have gloved hands instead of orange blocks (the right hand closes around the control stick and moves with it, the left takes the throttle), and the game lowers the picture resolution a little by itself whenever the graphics card can't keep up, so it stays smooth.",
+    "ids": [
+      "F-02"
+    ]
   }
 ]
