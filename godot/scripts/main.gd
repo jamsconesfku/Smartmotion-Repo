@@ -1,7 +1,8 @@
 extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
+## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.7.0"
+const APP_VERSION := "1.8.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -57,6 +58,15 @@ var hand_on := {"l": 0.0, "r": 0.0}     # 0 = following the controller, 1 = hold
 var vr_scale := 1.0                      # VR picture resolution (lowered automatically if the graphics card falls behind)
 var gpu_acc := {"sum": 0.0, "n": 0, "t": 0.0, "calm": 0}
 
+# games other than Flight (built the first time they're chosen)
+var game := "flight"
+var modes := {}
+var mode: GameMode = null
+var activating := false
+var vr_panel: VRPanel
+var space_thr := 0.5
+var mkb := {"steer": 0.0}
+
 # frame timing (diagnostics log): how smooth the game is running
 var perf := {"n": 0, "sum": 0.0, "worst": 0.0, "late": 0, "last": 0, "t": 0.0, "fm": 0.0, "world": 0.0, "instr": 0.0, "fps": 0.0, "late_pc": 0.0, "gpu": 0.0}
 
@@ -67,7 +77,7 @@ func _ready() -> void:
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	Diag.start(not args.has("xr"))
 	Diag.write("SmartMotion Flight native v%s started" % APP_VERSION)
-	for k in ["aircraft", "start", "mode", "tod", "wind"]:
+	for k in ["aircraft", "start", "mode", "tod", "wind", "game", "race"]:
 		if args.has(k):
 			Settings.data[k] = args[k]
 	if args.has("assist"):
@@ -91,9 +101,13 @@ func _ready() -> void:
 	ui = GameUI.new()
 	add_child(ui)
 	await get_tree().process_frame
+	if args.has("test_panel"):
+		await _test_panel()
+		return
 	ui.fly_pressed.connect(_on_fly)
 	ui.resume_pressed.connect(func(): _pause(false))
-	ui.restart_pressed.connect(start_flight)
+	ui.restart_pressed.connect(start_game)
+	ui.vr_action.connect(_on_vr_action)
 	ui.menu_pressed.connect(to_menu)
 	ui.setting_changed.connect(_on_setting)
 	ui.diag_pressed.connect(_copy_diag)
@@ -140,10 +154,18 @@ func _on_setting(key: String, value) -> void:
 	Settings.set_value(key, value)
 	match key:
 		"aircraft":
-			if state == "menu":
+			if state == "menu" and game == "flight":
 				showcase()
+		"game":
+			ui.set_game(str(value))
+			if state == "menu":
+				await showcase()
+				if vr_active:
+					_panel_show(true)
 		"tod":
 			world.set_time_of_day(str(value))
+			if modes.has("race"):
+				(modes["race"] as RaceMode).set_time_of_day(str(value))
 		"fullscreen":
 			_apply_window()
 		"tel", "tel_host", "tel_port":
@@ -157,10 +179,39 @@ func _on_setting(key: String, value) -> void:
 
 func _on_fly(vr: bool) -> void:
 	Diag.write("CLICK: %s" % ("Fly in VR" if vr else "Fly"))
-	if vr and not await _start_vr():
+	if vr and not vr_active and not await _start_vr():
 		Diag.write("VR did not start")
 		return
-	start_flight()
+	start_game()
+
+
+func start_game() -> void:
+	if str(Settings.get_value("game")) == "flight":
+		start_flight()
+	else:
+		await start_mode()
+
+
+func _on_vr_action(what: String) -> void:
+	Diag.write("CLICK: VR %s" % what)
+	match what:
+		"recentre":
+			_recentre_vr()
+		"hz":
+			var rates := _vr_rates()
+			if rates.size() > 1:
+				var cur := _vr_hz()
+				var nxt: float = rates[0]
+				for r in rates:
+					if float(r) > cur + 1.0:
+						nxt = float(r)
+						break
+				_on_setting("vr_hz", nxt)
+				_apply_vr_hz()
+			ui.set_vr(vr_active, _vr_hz_label())
+		"exit":
+			_stop_vr()
+			to_menu()
 
 
 func _copy_diag() -> void:
@@ -176,9 +227,115 @@ func _xr_mode_flag() -> bool:
 	return args.has("xr")
 
 
+## Switches the scene to a game: "flight" shows the Duxford world; "race" and "space" build their own world
+## the first time (a few seconds) and hide Duxford while they run.
+func _activate(g: String) -> void:
+	while activating:
+		await get_tree().process_frame   # already being built (e.g. chosen and started at once)
+	if g != "flight" and not modes.has(g):
+		activating = true
+		Diag.write("Building the %s game" % g)
+		var was_menu := ui.menu.visible
+		ui.show_loading()
+		ui.set_progress(0.4, "Building the racing circuit" if g == "race" else "Building the space station and asteroid field")
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var t0 := Time.get_ticks_msec()
+		var m: GameMode = RaceMode.new() if g == "race" else SpaceMode.new()
+		m.visible = false
+		add_child(m)
+		await m.build(world, quality)
+		Diag.write("%s built in %.1f s" % [g, (Time.get_ticks_msec() - t0) / 1000.0])
+		m.finished.connect(end_flight)
+		m.toast.connect(func(t: String, secs: float): _toast(t, secs))
+		if m is SpaceMode:
+			(m as SpaceMode).sfx.connect(synth.blip)
+		modes[g] = m
+		activating = false
+		ui.loading.visible = false
+		if was_menu or state == "menu":
+			ui.show_menu()
+	game = g
+	if mode != null:
+		mode.visible = false
+		mode.running = false
+	if g == "flight":
+		mode = null
+		world.visible = true
+		cam.environment = null
+		cam.far = 40000.0
+		synth.set_profile("plane")
+	else:
+		mode = modes[g]
+		mode.visible = true
+		world.visible = false
+		cam.environment = mode.env
+		cam.far = mode.camera_far()
+		synth.set_profile("race" if g == "race" else "space")
+		mode.set_vr(vr_active)
+	if xr_cam != null:
+		xr_cam.environment = cam.environment
+		xr_cam.far = cam.far
+	_attach_rig()
+
+
+## In VR the headset's origin rides in the vehicle (aircraft, car or ship).
+func _attach_rig() -> void:
+	if not vr_active or xr_origin == null:
+		return
+	var p: Node3D = mode.vehicle if mode != null else plane
+	if p == null:
+		return
+	if xr_origin.get_parent() != p:
+		if xr_origin.get_parent() != null:
+			xr_origin.get_parent().remove_child(xr_origin)
+		p.add_child(xr_origin)
+		vr_frames = 0   # recentres in the new seat a few frames later
+
+
+func _eye() -> Vector3:
+	if mode != null:
+		return mode.eye
+	return plane.eye if plane != null else Vector3.ZERO
+
+
+func start_mode() -> void:
+	var g := str(Settings.get_value("game"))
+	if mode == null or game != g:
+		await _activate(g)
+	if mode == null:
+		return
+	if not cam_mode in mode.camera_modes():
+		cam_mode = "chase"
+	cam_init = false
+	space_thr = 0.5
+	mkb = {"steer": 0.0}
+	mode.set_cockpit(cam_mode == "cockpit" or vr_active)
+	mode.start()
+	state = "fly"
+	paused = false
+	_vr_menu_show(false, "")
+	_vr_text("")
+	ui.show_hud()
+	ui.show_pause(false)
+	ui.adi.visible = false
+	ui.set_corner_boxes(true)
+	ui.set_hud_kind(g)
+	ui.set_message("", false)
+	Diag.write("started %s" % g)
+
+
 func showcase() -> void:
 	state = "menu"
 	paused = false
+	var g := str(Settings.get_value("game"))
+	if g != "flight":
+		await _activate(g)
+		if mode != null:
+			mode.showcase()
+			mode.set_cockpit(vr_active)
+		return
+	_activate("flight")
 	world.wind = Vector3.ZERO
 	fm = FlightModel.new(str(Settings.get_value("aircraft")), world.terrain)
 	var xz := world.terrain.from_runway(-Terrain.RW_LEN / 2.0 + 70.0, 0.0)
@@ -191,11 +348,13 @@ func showcase() -> void:
 
 
 func to_menu() -> void:
-	_stop_vr()
 	ui.hide_sheets()
 	ui.show_menu()
 	ui.show_pause(false)
-	showcase()
+	ui.set_game(str(Settings.get_value("game")))
+	await showcase()
+	if vr_active:
+		_panel_show(true)   # in VR the menu floats in front of you; you stay in the headset
 
 
 func _mount_plane() -> void:
@@ -205,13 +364,14 @@ func _mount_plane() -> void:
 	var key := str(Settings.get_value("aircraft"))
 	plane.build(key, world.logo if key == "trainer" else world.logo_dark)
 	add_child(plane)
-	if vr_active and xr_origin != null:
-		xr_origin.get_parent().remove_child(xr_origin)
-		plane.add_child(xr_origin)
+	_attach_rig()
 
 
 func _apply_view() -> void:
 	var cp := cam_mode == "cockpit" or vr_active
+	if mode != null:
+		mode.set_cockpit(cp)
+		return
 	if plane != null:
 		plane.set_cockpit_view(cp)
 	if ui != null and ui.adi != null:
@@ -242,6 +402,8 @@ func _start_pose() -> Dictionary:
 
 
 func start_flight() -> void:
+	_activate("flight")
+	ui.set_hud_kind("flight")
 	world.wind = Vector3(-3.5, 0, 2) if Settings.get_value("wind") == "breezy" else Vector3.ZERO
 	world.set_time_of_day(str(Settings.get_value("tod")))
 	fm = FlightModel.new(str(Settings.get_value("aircraft")), world.terrain)
@@ -302,6 +464,8 @@ func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventKey and e.pressed and not e.echo:
 		match e.physical_keycode:
 			KEY_F:
+				if mode != null:
+					return
 				flaps_idx = (flaps_idx + 1) % 3
 				_toast("Flaps " + ["up", "half", "full"][flaps_idx])
 			KEY_V, KEY_C:
@@ -315,7 +479,7 @@ func _unhandled_input(e: InputEvent) -> void:
 					_pause(not paused)
 			KEY_R:
 				if state == "fly" or state == "ended":
-					start_flight()
+					start_game()
 			KEY_T:
 				ui.tel_panel.visible = not ui.tel_panel.visible
 			KEY_M:
@@ -360,7 +524,7 @@ func _cycle_camera() -> void:
 	if vr_active:
 		_recentre_vr()   # V or C recentres the view in VR, so a keyboard alone is enough
 		return
-	cam_mode = {"chase": "cockpit", "cockpit": "orbit", "orbit": "chase"}[cam_mode]
+	cam_mode = {"chase": "cockpit", "cockpit": "orbit", "orbit": "chase"}.get(cam_mode, "chase")
 	_apply_view()
 	cam_init = false
 	_toast({"chase": "Chase view", "cockpit": "Cockpit view", "orbit": "Orbit view (right mouse + drag)"}[cam_mode])
@@ -508,8 +672,15 @@ func _start_vr() -> bool:
 	vr_label.no_depth_test = true
 	vr_label.render_priority = 10
 	xr_cam.add_child(vr_label)
-	if plane != null:
-		plane.add_child(xr_origin)
+	vr_panel = VRPanel.new()
+	xr_origin.add_child(vr_panel)
+	vr_panel.setup(ui, self, xr_origin)
+	ui.set_vr(true, _vr_hz_label())
+	xr_cam.environment = cam.environment
+	xr_cam.far = cam.far
+	_attach_rig()
+	if mode != null:
+		mode.set_vr(true)
 	xr_cam.current = true
 	_apply_view()
 	DisplayServer.window_move_to_foreground()
@@ -528,6 +699,13 @@ func _stop_vr() -> void:
 	var xr := XRServer.find_interface("OpenXR")
 	if xr != null and xr.is_initialized():
 		xr.uninitialize()
+	if vr_panel != null:
+		vr_panel.teardown()
+		vr_panel = null
+	ui.set_vr(false)
+	if mode != null:
+		mode.set_vr(false)
+		mode.set_cockpit(cam_mode == "cockpit")
 	if xr_origin != null:
 		xr_origin.queue_free()
 		xr_origin = null
@@ -569,29 +747,13 @@ func _read_vr() -> Dictionary:
 
 
 func _recentre_vr() -> void:
-	if xr_origin == null or plane == null:
+	if xr_origin == null or (plane == null and mode == null):
 		return
-	xr_origin.position = plane.eye - xr_cam.position
+	xr_origin.position = _eye() - xr_cam.position
 	_toast("View recentred")
 
 
-# ------------------------------------------------------------ VR menu (in the headset, no keyboard needed)
-func _vr_menu_items() -> Array:
-	var ac := "Bulldog G-SMAT" if Settings.get_value("aircraft") == "bulldog" else "WW2 Fighter"
-	return [
-		["resume", "Fly again" if state == "ended" else "Resume"],
-		["restart", "Restart from the start"],
-		["aircraft", "Aircraft:  " + ac],
-		["start", "Start:  " + ("On the runway" if Settings.get_value("start") == "runway" else "In the air")],
-		["mode", "Mode:  " + ("Free flight" if Settings.get_value("mode") == "free" else "Gate run")],
-		["tod", "Time:  " + ("Day" if Settings.get_value("tod") == "day" else "Golden hour")],
-		["assist", "Flying:  " + ("Easy (levels itself)" if Settings.get_value("assist") else "Pro (real controls)")],
-		["hz", _vr_hz_label()],
-		["recentre", "Recentre my view"],
-		["exit", "Leave VR"],
-	]
-
-
+# ------------------------------------------------------------ VR menu (the real menus on a panel in the headset)
 func _vr_hz_label() -> String:
 	var t := "Headset:  %d Hz" % roundi(_vr_hz())
 	if _vr_rates().size() < 2:
@@ -602,156 +764,45 @@ func _vr_hz_label() -> String:
 	return t
 
 
-func _vr_menu_show(on: bool, title: String) -> void:
-	if not vr_active or xr_origin == null:
+func _vr_menu_show(on: bool, _title: String) -> void:
+	_panel_show(on)
+
+
+func _panel_show(on: bool) -> void:
+	if not vr_active or vr_panel == null or xr_cam == null:
 		return
-	if vr_menu == null:
-		vr_menu = Node3D.new()
-		xr_origin.add_child(vr_menu)
-		var bg := MeshInstance3D.new()
-		var q := QuadMesh.new()
-		q.size = Vector2(0.5, 0.42)
-		bg.mesh = q
-		var bm := StandardMaterial3D.new()
-		bm.albedo_color = Color(0.008, 0.008, 0.18, 0.88)
-		bm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		bm.no_depth_test = true
-		bm.render_priority = 9
-		bg.mesh.surface_set_material(0, bm)
-		vr_menu.add_child(bg)
-		var bar := MeshInstance3D.new()
-		var bq := QuadMesh.new()
-		bq.size = Vector2(0.5, 0.006)
-		bar.mesh = bq
-		var om := bm.duplicate() as StandardMaterial3D
-		om.albedo_color = Color("#ff4c00")
-		bar.material_override = om
-		bar.position = Vector3(0, 0.21, 0.001)
-		vr_menu.add_child(bar)
-		var f: Font = load("res://assets/fonts/Barlow-SemiBold.ttf")
-		vr_menu_title = _vr_line(f, 46, Vector3(0, 0.17, 0.002))
-		vr_menu_title.font = load("res://assets/fonts/BarlowSemiCondensed-ExtraBoldItalic.ttf")
-		var n_items := _vr_menu_items().size()
-		for i in n_items:
-			vr_menu_lines.append(_vr_line(f, 30, Vector3(0, 0.115 - i * (0.3 / n_items), 0.002)))
-		var hint := _vr_line(f, 20, Vector3(0, -0.19, 0.002))
-		hint.modulate = Color("#a9acd0")
-		hint.text = "Stick up/down to choose · A to select · B or X to resume"
-	vr_menu.visible = on
-	for k in ["ma", "mb", "mx", "my", "vA", "vB", "vX", "vY"]:
-		vr_edge[k] = true   # a button must be released and pressed again (no double actions from one press)
 	if on:
-		# fixed in the cockpit, just in front of where your head is now (comfortable, doesn't follow your head)
-		vr_menu.position = xr_cam.position + Vector3(0, -0.06, -0.55)
-		vr_menu_title.text = title
-		vr_menu_idx = 0
-		_vr_menu_refresh()
+		ui.set_vr(true, _vr_hz_label())
+	vr_panel.show_panel(on, xr_cam.transform)
+	for k in ["mx", "my"]:
+		vr_edge[k] = true   # a button must be released and pressed again
 
 
-func _vr_set(key: String, value) -> void:
-	_on_setting(key, value)
-	ui.set_seg(key, value)   # keep the desktop screens in step
-
-
-func _vr_line(f: Font, size: int, pos: Vector3) -> Label3D:
-	var l := Label3D.new()
-	l.font = f
-	l.font_size = size
-	l.pixel_size = 0.0005
-	l.position = pos
-	l.no_depth_test = true
-	l.render_priority = 11
-	l.outline_size = 0
-	l.modulate = Color.WHITE
-	vr_menu.add_child(l)
-	return l
-
-
-func _vr_menu_refresh() -> void:
-	var items := _vr_menu_items()
-	for i in vr_menu_lines.size():
-		var l: Label3D = vr_menu_lines[i]
-		var sel := i == vr_menu_idx
-		l.text = ("›  " + items[i][1] + "  ‹") if sel else items[i][1]
-		l.modulate = Color("#ff4c00") if sel else Color.WHITE
-
-
-func _vr_menu_input() -> void:
-	if vr_menu == null or not vr_menu.visible:
+## While the panel is up: point and click, plus X to carry on and Y to restart.
+func _vr_panel_tick(dt: float) -> void:
+	if not vr_active or vr_panel == null or not vr_panel.shown:
 		return
-	var y := 0.0
-	var a := false
-	var b := false
-	var x := false
-	var yb := false
-	if xr_right != null and xr_right.get_is_active():
-		y = xr_right.get_vector2("primary").y
-		a = xr_right.is_button_pressed("ax_button")
-		b = xr_right.is_button_pressed("by_button")
+	vr_panel.update({"l": xr_left, "r": xr_right}, dt)
 	if xr_left != null and xr_left.get_is_active():
-		var ly := xr_left.get_vector2("primary").y
-		if absf(ly) > absf(y):
-			y = ly
-		x = xr_left.is_button_pressed("ax_button")
-		yb = xr_left.is_button_pressed("by_button")
-	var n := _vr_menu_items().size()
-	if _edge("mu", y > 0.6 or Input.is_physical_key_pressed(KEY_UP)):
-		vr_menu_idx = (vr_menu_idx - 1 + n) % n
-		_vr_menu_refresh()
-	if _edge("md", y < -0.6 or Input.is_physical_key_pressed(KEY_DOWN)):
-		vr_menu_idx = (vr_menu_idx + 1) % n
-		_vr_menu_refresh()
-	if _edge("ma", a or Input.is_physical_key_pressed(KEY_ENTER)):
-		_vr_menu_pick(_vr_menu_items()[vr_menu_idx][0])
-	if _edge("mb", b) or _edge("mx", x):
-		_vr_menu_pick("resume")
-	if _edge("my", yb):
-		_vr_menu_pick("restart")
-
-
-func _vr_menu_pick(key: String) -> void:
-	match key:
-		"resume":
-			if state == "ended":
-				start_flight()
-			else:
+		if _edge("mx", xr_left.is_button_pressed("ax_button")):
+			if state == "fly" and paused:
 				_pause(false)
-		"restart":
-			start_flight()
-		"aircraft":
-			_vr_set("aircraft", "fighter" if Settings.get_value("aircraft") == "bulldog" else "bulldog")
-			start_flight()
-		"start":
-			_vr_set("start", "air" if Settings.get_value("start") == "runway" else "runway")
-			start_flight()
-		"mode":
-			_vr_set("mode", "gates" if Settings.get_value("mode") == "free" else "free")
-			start_flight()
-		"tod":
-			_vr_set("tod", "golden" if Settings.get_value("tod") == "day" else "day")
-			_vr_menu_refresh()
-		"assist":
-			_vr_set("assist", not Settings.get_value("assist"))
-			fm.assist = bool(Settings.get_value("assist"))
-			ui.tag_assist.text = "EASY" if fm.assist else "PRO"
-			_vr_menu_refresh()
-		"hz":
-			var rates := _vr_rates()
-			if rates.size() > 1:
-				var cur := _vr_hz()
-				var nxt: float = rates[0]
-				for r in rates:
-					if float(r) > cur + 1.0:
-						nxt = float(r)
-						break
-				_on_setting("vr_hz", nxt)
-				_apply_vr_hz()
-			_vr_menu_refresh()
-		"recentre":
-			_recentre_vr()
-		"exit":
-			to_menu()
+			elif state == "ended":
+				start_game()
+		if _edge("my", xr_left.is_button_pressed("by_button")) and state != "menu":
+			start_game()
+
+
+func _input(e: InputEvent) -> void:
+	# while VR is on the menus live on the headset panel: the laptop's mouse and arrow keys still work them
+	if vr_active and vr_panel != null and vr_panel.shown:
+		if e is InputEventMouse and vr_panel.desktop_mouse(e, get_viewport().get_visible_rect().size):
+			get_viewport().set_input_as_handled()
+		elif e is InputEventKey and e.pressed and not e.echo:
+			var act: String = {KEY_UP: "ui_up", KEY_DOWN: "ui_down", KEY_ENTER: "ui_accept", KEY_KP_ENTER: "ui_accept"}.get(e.physical_keycode, "")
+			if act != "":
+				vr_panel._push_action(act)
+				get_viewport().set_input_as_handled()
 
 
 func _vr_text(t: String) -> void:
@@ -768,14 +819,21 @@ func _toast(t: String, secs := 2.2) -> void:
 
 
 func _process(delta: float) -> void:
-	if world == null or world.terrain == null or fm == null or plane == null:
+	if world == null or world.terrain == null:
+		return
+	if mode != null:
+		frame_count += 1
+		_perf_frame()
+		_process_mode(minf(delta, 0.05), delta)
+		_shot_tick(delta)
+		return
+	if fm == null or plane == null:
 		return
 	frame_count += 1
 	_perf_frame()
 	var dt := minf(delta, 0.05)
 	run_time += dt
-	if vr_active and (paused or state == "ended"):
-		_vr_menu_input()
+	_vr_panel_tick(dt)
 	if state == "fly" or state == "ended":
 		if not paused:
 			if state == "fly":
@@ -841,6 +899,10 @@ func _process(delta: float) -> void:
 			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),
 			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
 			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME), Engine.get_frames_per_second()])
+	_shot_tick(delta)
+
+
+func _shot_tick(delta: float) -> void:
 	if shot_timer >= 0.0:
 		shot_timer -= delta
 		if shot_timer < 0.0:
@@ -873,8 +935,8 @@ func _perf_frame() -> void:
 				perf["late"], perf["n"], _frame_budget_ms() * 1.5, perf["gpu"], roundi(vr_scale * 100.0), perf["fm"] / n / 1000.0, perf["world"] / n / 1000.0, perf["instr"] / n / 1000.0, BulldogPanel.draw_us / n / 1000.0, BulldogPanel.draw_n])
 			BulldogPanel.draw_us = 0
 			BulldogPanel.draw_n = 0
-		if vr_menu != null and vr_menu.visible:
-			_vr_menu_refresh()   # keep the smoothness readout up to date
+		if vr_panel != null and vr_panel.shown:
+			ui.set_vr(true, _vr_hz_label())   # keep the smoothness readout up to date
 		for k in ["n", "sum", "worst", "late", "t", "fm", "world", "instr"]:
 			perf[k] = 0 if k in ["n", "late"] else 0.0
 
@@ -882,7 +944,7 @@ func _perf_frame() -> void:
 ## Gloved hands: follow the controllers; near the stick (right) or throttle (left) they close around it and
 ## move with it, so you see your hand flying the aircraft.
 func _update_hands(dt: float) -> void:
-	var bd: Bulldog = plane.bulldog if plane != null else null
+	var bd: Bulldog = plane.bulldog if plane != null and mode == null else null
 	for side in ["l", "r"]:
 		var h: VRHand = hand_l if side == "l" else hand_r
 		var c: XRController3D = xr_left if side == "l" else xr_right
@@ -895,7 +957,11 @@ func _update_hands(dt: float) -> void:
 		var free := c.global_transform
 		var grip := Transform3D()
 		var reach := 0.0
-		if bd != null:
+		if mode != null:
+			var gr: Array = mode.grip(side)
+			grip = gr[0]
+			reach = gr[1]
+		elif bd != null:
 			grip = bd.stick_grip() if side == "r" else bd.throttle_grip()
 			reach = 0.2 if side == "r" else 0.13
 		var near := reach > 0.0 and free.origin.distance_to(grip.origin) < reach
@@ -1114,3 +1180,165 @@ func _update_camera(dt: float) -> void:
 	var gy := world.terrain.height(cam.global_position.x, cam.global_position.z) + 0.6
 	if cam.global_position.y < gy:
 		cam.global_position.y = gy
+
+
+# ------------------------------------------------------------ Racing and Space
+func _process_mode(dt: float, delta: float) -> void:
+	run_time += dt
+	_vr_panel_tick(dt)
+	if state == "menu":
+		mode.idle(dt)
+		orbit_yaw += dt * 0.15
+	if (state == "fly" or state == "ended") and not paused:
+		var mi := _read_mode_input(dt) if state == "fly" else {"steer": 0.0, "throttle": 0.0, "brake": 0.6, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "fire": false, "boost": false}
+		var t0 := Time.get_ticks_usec()
+		mode.step(dt, mi)
+		perf["fm"] += Time.get_ticks_usec() - t0
+		tel.push_frame(mode.tel_frame, run_time)
+	if state == "fly":
+		mode.hud(ui)
+		if vr_active and not paused:
+			var m: String = ui.msg_label.text if ui.msg_label.visible else ""
+			if m != "":
+				_vr_text(m)
+				vr_warn = true
+			elif vr_warn:
+				_vr_text("")
+				vr_warn = false
+	if vr_active and xr_origin != null:
+		vr_frames += 1
+		if vr_frames == 12:
+			_recentre_vr()
+		XRServer.world_origin = xr_origin.global_transform   # same frame as the vehicle moved (no lag)
+		_update_hands(dt)
+		_vr_auto_resolution(delta)
+		mode.follow_camera(xr_cam.global_position)
+	else:
+		cam.current = true
+		mode.place_camera(cam, cam_mode, dt, {"yaw": orbit_yaw, "pitch": orbit_pitch, "dist": orbit_dist, "look": look})
+	var snd: Array = mode.sound()
+	synth.set_state(float(snd[0]), float(snd[2]), false, state == "fly" and not paused and bool(Settings.get_value("sound")))
+	var f: Dictionary = mode.tel_frame
+	if not f.is_empty():
+		ui.tel_label.text = "Rig link: %s\npitch %.1f°  roll %.1f°  yaw rate %.1f°/s\nsurge %.2fg  sway %.2fg  heave %.2fg" % [tel.status, f["att"]["pitch_deg"], f["att"]["roll_deg"], f["rate"]["yaw_dps"], f["g_felt"]["surge"], f["g_felt"]["sway"], f["g_felt"]["heave"]]
+	ui.set_status.text = "Status: " + tel.status
+
+
+## Controls for Racing and Space, from the keyboard, a gamepad and the VR controllers.
+func _read_mode_input(dt: float) -> Dictionary:
+	var out := {"steer": 0.0, "throttle": 0.0, "brake": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "fire": false, "boost": false}
+	var pads := Input.get_connected_joypads()
+	var pad := -1 if pads.is_empty() else int(pads[0])
+	var vl := xr_left if vr_active and xr_left != null and xr_left.get_is_active() else null
+	var vrr := xr_right if vr_active and xr_right != null and xr_right.get_is_active() else null
+	if vrr != null:
+		if _edge("vB", vrr.is_button_pressed("by_button")):
+			_recentre_vr()
+	if vl != null:
+		if _edge("vX", vl.is_button_pressed("ax_button")):
+			_pause(true)
+		if _edge("vY", vl.is_button_pressed("by_button")):
+			start_game()
+	if pad >= 0 and _edge("ps", Input.is_joy_button_pressed(pad, JOY_BUTTON_START)):
+		_pause(true)
+	if pad >= 0 and _edge("pb", Input.is_joy_button_pressed(pad, JOY_BUTTON_B)):
+		_cycle_camera()
+	if args.has("autopilot") and mode is RaceMode:
+		return (mode as RaceMode).autopilot()   # test option: the car drives itself
+	if game == "race":
+		var ks := clampf((_k(KEY_D) + _k(KEY_RIGHT)) - (_k(KEY_A) + _k(KEY_LEFT)), -1.0, 1.0)
+		mkb["steer"] = _approach(mkb["steer"], ks, 3.2 if ks != 0.0 else 5.0, dt)
+		var steer: float = mkb["steer"]
+		var thr := maxf(_k(KEY_W), _k(KEY_UP))
+		var brk := maxf(maxf(_k(KEY_S), _k(KEY_DOWN)), _k(KEY_SPACE))
+		if pad >= 0:
+			steer += _dz(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X))
+			thr = maxf(thr, Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_RIGHT))
+			brk = maxf(brk, Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_LEFT))
+		if vrr != null:
+			thr = maxf(thr, vrr.get_float("trigger"))
+			steer += _dz(vrr.get_vector2("primary").x)
+		if vl != null:
+			brk = maxf(brk, vl.get_float("trigger"))
+			steer += _dz(vl.get_vector2("primary").x)
+		out["steer"] = clampf(steer, -1.0, 1.0)
+		out["throttle"] = clampf(thr, 0.0, 1.0)
+		out["brake"] = clampf(brk, 0.0, 1.0)
+		return out
+	# space: like the aircraft (W/S nose, A/D roll, Q/E yaw), plus guns and boost
+	var tp := clampf(-(_k(KEY_UP) + _k(KEY_W)) + (_k(KEY_DOWN) + _k(KEY_S)), -1.0, 1.0)
+	var tr := clampf((_k(KEY_RIGHT) + _k(KEY_D)) - (_k(KEY_LEFT) + _k(KEY_A)), -1.0, 1.0)
+	var ty := _k(KEY_E) - _k(KEY_Q)
+	kb["pitch"] = _approach(kb["pitch"], tp, 3.0 if tp != 0.0 else 5.0, dt)
+	kb["roll"] = _approach(kb["roll"], tr, 3.5 if tr != 0.0 else 5.0, dt)
+	kb["yaw"] = _approach(kb["yaw"], ty, 4.0 if ty != 0.0 else 6.0, dt)
+	var pitch: float = 0.0
+	var roll: float = 0.0
+	var yaw: float = 0.0
+	var thr_axis := (_k(KEY_SHIFT) + _k(KEY_PAGEUP) + _k(KEY_X)) - (_k(KEY_CTRL) + _k(KEY_PAGEDOWN) + _k(KEY_Z))
+	var fire := _k(KEY_SPACE) > 0.0 or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var boost := _k(KEY_TAB) > 0.0 or _k(KEY_B) > 0.0
+	if pad >= 0:
+		roll += _dz(Input.get_joy_axis(pad, JOY_AXIS_RIGHT_X))
+		pitch += _dz(Input.get_joy_axis(pad, JOY_AXIS_RIGHT_Y))
+		yaw += _dz(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X))
+		thr_axis += -_dz(Input.get_joy_axis(pad, JOY_AXIS_LEFT_Y))
+		fire = fire or Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_RIGHT) > 0.4
+		boost = boost or Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_LEFT) > 0.4
+	if vrr != null:
+		var r2 := vrr.get_vector2("primary")
+		roll += _dz(r2.x)
+		pitch += -_dz(r2.y)
+		fire = fire or vrr.get_float("trigger") > 0.5
+	if vl != null:
+		var l2 := vl.get_vector2("primary")
+		yaw += _dz(l2.x)
+		thr_axis += _dz(l2.y)
+		boost = boost or vl.get_float("trigger") > 0.5
+	var inv := -1.0 if Settings.get_value("invert") else 1.0
+	space_thr = clampf(space_thr + thr_axis * 0.8 * dt, 0.0, 1.0)
+	out["pitch"] = clampf(kb["pitch"] + pitch * inv, -1.0, 1.0)
+	out["roll"] = clampf(kb["roll"] + roll, -1.0, 1.0)
+	out["yaw"] = clampf(kb["yaw"] + yaw, -1.0, 1.0)
+	out["throttle"] = space_thr
+	out["fire"] = fire or args.has("autopilot")
+	out["boost"] = boost
+	return out
+
+
+## Test option --test_panel (runs headless, before anything else): the VR menu panel passes clicks and
+## stick/A presses to the real menus. Prints PASS/FAIL lines and quits.
+func _test_panel() -> void:
+	var got := {}
+	ui.setting_changed.connect(func(k: String, v): got[k] = v)
+	ui.fly_pressed.connect(func(vr: bool): got["fly"] = vr)
+	var origin := XROrigin3D.new()
+	add_child(origin)
+	var p := VRPanel.new()
+	origin.add_child(p)
+	p.setup(ui, self, origin)
+	ui.loading.visible = false
+	ui.show_menu()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	p.show_panel(true, Transform3D())
+	var want := "space" if str(Settings.get_value("game")) != "space" else "race"
+	var btn: Button = null
+	for e in ui.seg_buttons["game"]:
+		if e[0] == want:
+			btn = e[1]
+	var c := btn.get_global_rect().get_center()
+	p._push_mouse(c)
+	p._push_mouse(c, MOUSE_BUTTON_LEFT, true)
+	p._push_mouse(c, MOUSE_BUTTON_LEFT, false)
+	await get_tree().process_frame
+	print(("PASS" if got.get("game") == want else "FAIL") + " pointer click on the %s button (got %s)" % [want, str(got.get("game"))])
+	p._focus_first()
+	await get_tree().process_frame
+	p._push_action("ui_accept")
+	await get_tree().process_frame
+	print(("PASS" if got.has("fly") else "FAIL") + " A presses the highlighted button (%s)" % str(got))
+	p.teardown()
+	await get_tree().process_frame
+	print(("PASS" if ui.get_parent() == self else "FAIL") + " menus back on the laptop screen after VR")
+	get_tree().quit()

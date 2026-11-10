@@ -65,3 +65,12 @@ func push(fm: FlightModel, inp: Dictionary, t: float, paused: bool) -> void:
 		_next = t + 1.0 / 60.0 - 0.002
 		udp.put_packet(JSON.stringify(frame).to_utf8_buffer())
 		_sent += 1
+
+
+## Racing and Space send their own frame (same field names for the motion: att, rate, g_felt, vel_body).
+func push_frame(f: Dictionary, t: float) -> void:
+	frame = f
+	if enabled and not f.is_empty() and t >= _next:
+		_next = t + 1.0 / 60.0 - 0.002
+		udp.put_packet(JSON.stringify(f).to_utf8_buffer())
+		_sent += 1

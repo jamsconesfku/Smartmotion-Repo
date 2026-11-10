@@ -8,6 +8,7 @@ signal restart_pressed
 signal menu_pressed
 signal setting_changed(key: String, value)
 signal diag_pressed
+signal vr_action(what: String)
 
 const NAVY := Color("#02022f")
 const ORANGE := Color("#ff4c00")
@@ -58,6 +59,25 @@ var set_tel_btn: Button
 var set_status: Label
 var toast_t := 0.0
 var fit := {}   # sheet -> [scroll container, content]
+var title_b: Label
+var subtitle: Label
+var mode_boxes := {}       # game -> VBoxContainer of its own options
+var style_cap: Label
+var tod_box: Control
+var fly_btn: Button
+var again_btn: Button
+var in_vr := false
+var vr_box: VBoxContainer
+var vr_hz_btn: Button
+var cap_speed: Label
+var cap_alt: Label
+var cap_hdg: Label
+var adi_slot: Control
+const GAMES := {
+	"flight": ["Flight", "Fly the skies around Duxford in Skysmart's Bulldog or a WW2 fighter.", "Fly"],
+	"race": ["Racing", "Drive an open-wheel racing car round a 4 km circuit: race seven rivals or set a fast lap.", "Race"],
+	"space": ["Space", "Fly a space fighter round a space station and asteroid field and shoot down waves of drones.", "Launch"],
+}
 
 
 func _ready() -> void:
@@ -249,31 +269,76 @@ func _build_menu() -> void:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 0)
 	h.add_child(_lbl("Smart", 54, Color.WHITE, true))
-	h.add_child(_lbl("Flight", 54, ORANGE, true))
+	title_b = _lbl("Flight", 54, ORANGE, true)
+	h.add_child(title_b)
 	v.add_child(h)
-	var sub := _lbl("Fly the skies around Duxford. On your gaming laptop, and in VR on a Meta Quest.", 15, MUTED)
-	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	sub.custom_minimum_size = Vector2(480, 0)
-	v.add_child(sub)
-	_section(v, "Aircraft")
-	_seg(v, "aircraft", [["bulldog", "Bulldog G-SMAT (trainer)"], ["fighter", "WW2 Fighter (fast)"]], Settings.get_value("aircraft"))
-	_section(v, "Start")
-	_seg(v, "start", [["runway", "On the runway"], ["air", "In the air"]], Settings.get_value("start"))
-	_section(v, "Game")
-	_seg(v, "mode", [["free", "Free flight"], ["gates", "Gate run"]], Settings.get_value("mode"))
-	_section(v, "Flying style")
+	# the three games
+	var gr := HBoxContainer.new()
+	gr.add_theme_constant_override("separation", 6)
+	v.add_child(gr)
+	var gg := ButtonGroup.new()
+	seg_buttons["game"] = []
+	for g in ["flight", "race", "space"]:
+		var b := Button.new()
+		b.text = GAMES[g][0]
+		b.toggle_mode = true
+		b.button_group = gg
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, 50)
+		b.add_theme_font_override("font", ital)
+		b.add_theme_font_size_override("font_size", 24)
+		b.add_theme_stylebox_override("pressed", _sb(ORANGE, 12))
+		b.add_theme_stylebox_override("hover_pressed", _sb(ORANGE, 12))
+		b.add_theme_color_override("font_pressed_color", Color.WHITE)
+		b.add_theme_color_override("font_hover_pressed_color", Color.WHITE)
+		b.button_pressed = Settings.get_value("game") == g
+		b.pressed.connect(func(): setting_changed.emit("game", g))
+		gr.add_child(b)
+		seg_buttons["game"].append([g, b])
+	subtitle = _lbl("", 15, MUTED)
+	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	subtitle.custom_minimum_size = Vector2(480, 0)
+	v.add_child(subtitle)
+	var fb := VBoxContainer.new()
+	fb.add_theme_constant_override("separation", 7)
+	v.add_child(fb)
+	mode_boxes["flight"] = fb
+	_section(fb, "Aircraft")
+	_seg(fb, "aircraft", [["bulldog", "Bulldog G-SMAT (trainer)"], ["fighter", "WW2 Fighter (fast)"]], Settings.get_value("aircraft"))
+	_section(fb, "Start")
+	_seg(fb, "start", [["runway", "On the runway"], ["air", "In the air"]], Settings.get_value("start"))
+	_section(fb, "Game")
+	_seg(fb, "mode", [["free", "Free flight"], ["gates", "Gate run"]], Settings.get_value("mode"))
+	_section(fb, "Wind")
+	_seg(fb, "wind", [["calm", "Calm"], ["breezy", "Breezy"]], Settings.get_value("wind"))
+	var rb := VBoxContainer.new()
+	rb.add_theme_constant_override("separation", 7)
+	v.add_child(rb)
+	mode_boxes["race"] = rb
+	_section(rb, "Race")
+	_seg(rb, "race", [["race", "3 laps against 7 cars"], ["trial", "Time trial (fastest lap)"]], Settings.get_value("race"))
+	mode_boxes["space"] = VBoxContainer.new()
+	v.add_child(mode_boxes["space"])
+	style_cap = _lbl("FLYING STYLE", 12, MUTED)
+	v.add_child(style_cap)
 	_seg(v, "assist", [[true, "Easy (assisted)"], [false, "Pro (manual)"]], Settings.get_value("assist"))
-	_section(v, "Time of day")
-	_seg(v, "tod", [["day", "Day"], ["golden", "Golden hour"]], Settings.get_value("tod"))
-	_section(v, "Wind")
-	_seg(v, "wind", [["calm", "Calm"], ["breezy", "Breezy"]], Settings.get_value("wind"))
+	tod_box = VBoxContainer.new()
+	tod_box.add_theme_constant_override("separation", 7)
+	v.add_child(tod_box)
+	_section(tod_box, "Time of day")
+	_seg(tod_box, "tod", [["day", "Day"], ["golden", "Golden hour"]], Settings.get_value("tod"))
 	var fly := _big_button("Fly", true)
 	fly.pressed.connect(func(): fly_pressed.emit(false))
 	v.add_child(fly)
-	vr_btn = _big_button("Fly in VR (Meta Quest)", false)
+	fly_btn = fly
+	vr_btn = _big_button("Play in VR (Meta Quest)", false)
 	vr_btn.add_theme_font_size_override("font_size", 20)
 	vr_btn.custom_minimum_size = Vector2(0, 46)
-	vr_btn.pressed.connect(func(): fly_pressed.emit(true))
+	vr_btn.pressed.connect(func():
+		if in_vr:
+			vr_action.emit("exit")
+		else:
+			fly_pressed.emit(true))
 	v.add_child(vr_btn)
 	vr_note = _lbl("", 14, Color("#ffb347"))
 	vr_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -307,6 +372,42 @@ func _build_menu() -> void:
 	gpu_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	gpu_label.custom_minimum_size = Vector2(480, 0)
 	v.add_child(gpu_label)
+	set_game(str(Settings.get_value("game")))
+
+
+## Shows the options for the chosen game (Flight, Racing or Space).
+func set_game(g: String) -> void:
+	if not GAMES.has(g):
+		g = "flight"
+	title_b.text = GAMES[g][0]
+	subtitle.text = GAMES[g][1] + " On your gaming laptop, and in VR on a Meta Quest."
+	fly_btn.text = GAMES[g][2]
+	for k in mode_boxes.keys():
+		(mode_boxes[k] as Control).visible = k == g
+	style_cap.text = {"flight": "FLYING STYLE", "race": "DRIVING STYLE", "space": "DIFFICULTY"}[g]
+	tod_box.visible = g != "space"
+	if again_btn != null:
+		again_btn.text = {"flight": "Fly again", "race": "Race again", "space": "Play again"}[g]
+	if cap_speed != null:
+		set_hud_kind(g)
+
+
+## The speed, height and heading boxes show different things in each game.
+func set_hud_kind(g: String) -> void:
+	cap_speed.text = {"flight": "KNOTS", "race": "KM/H", "space": "M/S"}.get(g, "KNOTS")
+	cap_alt.text = {"flight": "FEET", "race": "GEAR", "space": "SCORE"}.get(g, "FEET")
+	cap_hdg.text = {"flight": "HEADING", "race": "LAP", "space": "WAVE"}.get(g, "HEADING")
+	tag_brake.text = "FIRE" if g == "space" else "BRAKE"
+	arrow.visible = g != "race"
+	gate_box.visible = g != "flight"
+
+
+func set_vr(on: bool, hz_text := "") -> void:
+	in_vr = on
+	vr_btn.text = "Leave VR" if on else "Play in VR (Meta Quest)"
+	vr_box.visible = on
+	if hz_text != "":
+		vr_hz_btn.text = hz_text
 
 
 func set_vr_note(t: String) -> void:
@@ -343,7 +444,8 @@ func _build_hud() -> void:
 	hp.add_child(hv)
 	l_hdg = _lbl("062°", 34, Color.WHITE, true, HORIZONTAL_ALIGNMENT_CENTER)
 	hv.add_child(l_hdg)
-	hv.add_child(_lbl("HEADING", 11, MUTED, false, HORIZONTAL_ALIGNMENT_CENTER))
+	cap_hdg = _lbl("HEADING", 11, MUTED, false, HORIZONTAL_ALIGNMENT_CENTER)
+	hv.add_child(cap_hdg)
 	# speed, bottom left
 	var sp := _glass(hud)
 	sp.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
@@ -357,7 +459,8 @@ func _build_hud() -> void:
 	sp.add_child(sv)
 	l_speed = _lbl("0", 50, Color.WHITE, true)
 	sv.add_child(l_speed)
-	sv.add_child(_lbl("KNOTS", 11, MUTED))
+	cap_speed = _lbl("KNOTS", 11, MUTED)
+	sv.add_child(cap_speed)
 	thr_bar = ProgressBar.new()
 	thr_bar.custom_minimum_size = Vector2(0, 8)
 	thr_bar.show_percentage = false
@@ -386,7 +489,8 @@ func _build_hud() -> void:
 	ap.add_child(av)
 	l_alt = _lbl("0", 50, Color.WHITE, true, HORIZONTAL_ALIGNMENT_RIGHT)
 	av.add_child(l_alt)
-	av.add_child(_lbl("FEET", 11, MUTED, false, HORIZONTAL_ALIGNMENT_RIGHT))
+	cap_alt = _lbl("FEET", 11, MUTED, false, HORIZONTAL_ALIGNMENT_RIGHT)
+	av.add_child(cap_alt)
 	l_vs = _lbl("0 FT/MIN", 13, MUTED, false, HORIZONTAL_ALIGNMENT_RIGHT)
 	av.add_child(l_vs)
 	# artificial horizon, bottom centre
@@ -499,6 +603,21 @@ func _build_sheets() -> void:
 		b.custom_minimum_size = Vector2(0, 42)
 		b.pressed.connect(e[1])
 		v.add_child(b)
+	# VR only: recentre, headset refresh rate, leave VR
+	vr_box = VBoxContainer.new()
+	vr_box.add_theme_constant_override("separation", 8)
+	vr_box.visible = false
+	v.add_child(vr_box)
+	_section(vr_box, "VR")
+	for e in [["Recentre my view", "recentre"], ["Headset", "hz"], ["Leave VR", "exit"]]:
+		var b := Button.new()
+		b.text = e[0]
+		b.custom_minimum_size = Vector2(0, 42)
+		var what: String = e[1]
+		b.pressed.connect(func(): vr_action.emit(what))
+		vr_box.add_child(b)
+		if what == "hz":
+			vr_hz_btn = b
 	r = _sheet("Flight over")
 	end_sheet = r[0]
 	v = r[1]
@@ -511,6 +630,7 @@ func _build_sheets() -> void:
 	end_text.custom_minimum_size = Vector2(460, 0)
 	v.add_child(end_text)
 	var again := _big_button("Fly again", true)
+	again_btn = again
 	again.pressed.connect(func(): restart_pressed.emit())
 	v.add_child(again)
 	var mb := Button.new()
@@ -522,7 +642,7 @@ func _build_sheets() -> void:
 	r = _sheet("Controls")
 	help_sheet = r[0]
 	v = r[1]
-	var txt := _lbl("KEYBOARD (works in VR too)\nW / S: push the nose down / pull it up (or Up / Down)\nA / D: bank left / right to turn (or Left / Right)\nShift / Ctrl: more / less power, 0 to full in about a second (or keys 1 to 0)\nQ / E: rudder (steers on the ground)\nSpace: brakes   F: flaps   V: change camera\nRight mouse + drag: look around   Mouse wheel: zoom (orbit camera)\nP or Esc: pause   R: restart   T: telemetry   M: sound   F11: full screen\n\nGAMEPAD\nRight stick: pitch and roll   Left stick: power and rudder\nLeft trigger: brakes   A: flaps   B: camera   Start: pause\n\nVR (Meta Quest)\nRight stick: pitch and roll   Right trigger / grip: more / less power\nLeft stick: power and rudder   Left trigger: brakes\nA: flaps   B: recentre view   X: menu (pause)   Y: restart\nIn the menu: stick up/down to choose, A to select, B or X to carry on\nKeyboard works in VR too (click the game window before putting the headset on); V recentres the view\n\nEasy mode sets full power on the runway and levels the aircraft for you: just hold S to lift off. Pro mode is direct control, like the real thing.", 15, INK)
+	var txt := _lbl("KEYBOARD (works in VR too)\nW / S: push the nose down / pull it up (or Up / Down)\nA / D: bank left / right to turn (or Left / Right)\nShift / Ctrl: more / less power, 0 to full in about a second (or keys 1 to 0)\nQ / E: rudder (steers on the ground)\nSpace: brakes   F: flaps   V: change camera\nRight mouse + drag: look around   Mouse wheel: zoom (orbit camera)\nP or Esc: pause   R: restart   T: telemetry   M: sound   F11: full screen\n\nGAMEPAD\nRight stick: pitch and roll   Left stick: power and rudder\nLeft trigger: brakes   A: flaps   B: camera   Start: pause\n\nVR (Meta Quest)\nRight stick: pitch and roll   Right trigger / grip: more / less power\nLeft stick: power and rudder   Left trigger: brakes\nA: flaps   B: recentre view   X: menu (pause)   Y: restart\nMenus in VR: point with a controller and pull the trigger to click (or stick up/down and A). X opens the menu\nKeyboard works in VR too (click the game window before putting the headset on); V recentres the view\n\nRACING\nW / Up or right trigger: accelerate   S / Down or left trigger: brake (hold when stopped to reverse)\nA / D or a stick: steer (gamepad: left stick, right trigger, left trigger)   V: camera   R: restart\nEasy: traction control, anti-lock brakes and stability control. Pro: none of them\n\nSPACE\nW / S: nose down / up   A / D: roll   Q / E: yaw   Shift / Ctrl: speed   Space or left mouse: fire   Tab: boost\nVR: right stick pitch and roll, left stick speed and yaw, right trigger fire, left trigger boost\nGamepad: right stick pitch and roll, left stick speed and yaw, right trigger fire, left trigger boost\n\nEasy mode sets full power on the runway and levels the aircraft for you: just hold S to lift off. Pro mode is direct control, like the real thing.", 15, INK)
 	txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	txt.custom_minimum_size = Vector2(480, 0)
 	v.add_child(txt)

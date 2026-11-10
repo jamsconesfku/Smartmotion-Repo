@@ -119,5 +119,12 @@
     "ids": [
       "F-07"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.8.0: SmartMotion Flight is now three games in one program, picked at the top of the menu. Racing: drive an open-wheel racing car in SmartMotion colours round a new 4 km circuit with kerbs, gravel, SmartMotion barrier boards, grandstands with crowds, pits and start lights; race seven computer cars over 3 laps or set a fast lap on your own. Space: fly a space fighter round a space station, an asteroid field, a ringed planet and a moon, and shoot down waves of drones. In VR the game's own menus now float in front of you (point and pull the trigger to click), so you can change game and settings without taking the headset off. Both new games drive the motion rig too.",
+    "ids": [
+      "F-02"
+    ]
   }
 ]
