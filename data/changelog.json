@@ -192,5 +192,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.11.7: VR menus click every time: the trigger (index finger) clicks the moment it goes down, with a short buzz, so a small hand wobble can't make it miss. Better seats in VR and the cockpit view: the racing car's eye point is higher so you see over the halo and the road isn't at your chin; on the roller coaster you now sit in the front seat instead of behind the seat back; in the WW2 fighter the still propeller blade no longer stands in the middle of the windscreen and the stick sits lower so the instruments are clear.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

@@ -7,7 +7,7 @@ extends Node3D
 
 const WB := 3.6
 const R_TYRE := 0.36
-const EYE := Vector3(0, 0.84, 0.12)
+const EYE := Vector3(0, 1.04, 0.1)   # sat up a little higher than a real driver: clear over the halo, and the road at a natural height in VR
 
 var body_col := Color("#02022f")
 var accent := Color("#ff4c00")

@@ -40,7 +40,8 @@ VR ON A META QUEST 3
   Controls: right stick = pitch and roll, right trigger / grip = more / less power,
   left stick = power and rudder, left trigger = brakes, A = flaps, B = recentre, X = menu, Y = restart.
   THE MENU IN VR: the game's own menu floats in front of you in the headset (the main menu, pause menu and
-  results). Point at it with either controller (an orange beam) and pull the trigger to click; stick up/down
+  results). Point at it with either controller (an orange beam) and pull the trigger (index finger) to click: it clicks the moment the
+  trigger goes down, with a short buzz in the controller; stick up/down
   scrolls. Or push the stick up/down to move between buttons and press A. X opens the menu while playing and
   carries on; Y restarts. You can switch between Flight, Racing and Space without taking the headset off.
   The pause menu also has "Recentre my view", the headset refresh rate and "Leave VR".

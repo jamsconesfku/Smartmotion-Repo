@@ -2,7 +2,9 @@ class_name VRPanel
 extends Node3D
 ## The game's real menus inside the headset. While VR is on, the menu screens (GameUI) are drawn into a
 ## SubViewport and shown on a floating panel in front of you. Point with either controller (an orange beam)
-## and pull the trigger to click; push the stick up/down to scroll. Stick up/down and A also move through
+## and pull the trigger (index finger) to click: the click happens the moment the trigger goes down, so a
+## small wobble of the hand while pulling can't make it miss, and the controller buzzes to confirm.
+## Push the stick up/down to scroll. Stick up/down and A also move through
 ## the buttons without pointing. The same picture is shown on the laptop screen, where the mouse still works.
 
 const PX := Vector2i(1600, 900)
@@ -23,6 +25,10 @@ var last_px := Vector2(-1, -1)
 var scroll_t := 0.0
 var edge := {}
 var shown := false
+var held := {}                  # side -> trigger held (with a gap between press and release levels)
+var pend := 0.0                 # a trigger pull that hasn't hit a button yet (counts for a moment)
+const TRIG_ON := 0.55
+const TRIG_OFF := 0.3
 
 
 func setup(ui_: GameUI, home: Node, origin: XROrigin3D) -> void:
@@ -191,10 +197,16 @@ func update(ctl: Dictionary, dt: float) -> void:
 	if not shown:
 		return
 	# which hand points: the one whose trigger was pulled last
+	var pulled := false
 	for side in ["l", "r"]:
 		var c: XRController3D = ctl.get(side)
-		if c != null and c.get_is_active() and c.get_float("trigger") > 0.6:
+		var tv := c.get_float("trigger") if c != null and c.get_is_active() else 0.0
+		var was: bool = held.get(side, false)
+		var now := tv > TRIG_ON or (was and tv > TRIG_OFF)
+		held[side] = now
+		if now and not was:
 			hand = side
+			pulled = true
 	var c2: XRController3D = ctl.get(hand)
 	var aim: XRController3D = aims.get(hand)
 	var src: Transform3D
@@ -232,13 +244,13 @@ func update(ctl: Dictionary, dt: float) -> void:
 		if px.distance_to(last_px) > 0.5:
 			_push_mouse(px)
 		last_px = px
-	var trig := c2 != null and c2.get_is_active() and c2.get_float("trigger") > 0.6
-	if _edge("trig_" + hand, trig) and hit:
-		down = true
-		_push_mouse(px, MOUSE_BUTTON_LEFT, true)
-	elif not trig and down:
-		down = false
-		_push_mouse(last_px, MOUSE_BUTTON_LEFT, false)
+	if pulled:
+		pend = 0.25   # if the beam is just off a button, a pull still counts when it gets there
+	if pend > 0.0:
+		pend -= dt
+		if hit:
+			pend = 0.0
+			_click(px, c2)
 	_buttons(ctl, dt)
 	if hit and c2 != null and c2.get_is_active():
 		var sy := c2.get_vector2("primary").y
@@ -246,6 +258,17 @@ func update(ctl: Dictionary, dt: float) -> void:
 		if absf(sy) > 0.6 and scroll_t <= 0.0:
 			scroll_t = 0.12
 			_push_mouse(px, MOUSE_BUTTON_WHEEL_UP if sy > 0.0 else MOUSE_BUTTON_WHEEL_DOWN, true)
+
+
+## Press and release at the same spot straight away: one click, wherever the hand goes next.
+func _click(px: Vector2, c: XRController3D) -> void:
+	last_px = Vector2(-1, -1)
+	_push_mouse(px)
+	_push_mouse(px, MOUSE_BUTTON_LEFT, true)
+	_push_mouse(px, MOUSE_BUTTON_LEFT, false)
+	last_px = px
+	if c != null:
+		c.trigger_haptic_pulse("haptic", 0.0, 0.5, 0.06, 0.0)
 
 
 func _buttons(ctl: Dictionary, _dt: float) -> void:

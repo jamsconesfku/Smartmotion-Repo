@@ -18,6 +18,7 @@ var rudder := Node3D.new()
 var pilot_nodes: Array = []
 var instruments: Instruments
 var yoke := Node3D.new()
+var in_cockpit := false
 var bulldog: Bulldog
 var ctl := {}   ## pilot inputs for moving cockpit parts (set by main.gd every frame)
 var eye := Vector3.ZERO
@@ -280,11 +281,13 @@ func _build_cockpit() -> void:
 	_mi(_box(Vector3(pw + 0.5, 0.35, 0.8)), dark, cockpit_node, Vector3(cx, eye.y - 0.62, eye.z - 1.05))
 	_mi(_box(Vector3(pw + 0.6, 0.5, 0.3)), dark, cockpit_node, Vector3(cx, eye.y - 0.75, eye.z - 0.35))
 	yoke.position = Vector3(eye.x, eye.y - 0.46, eye.z - 0.42)
+	if fighter:
+		yoke.position = Vector3(eye.x, eye.y - 0.5, eye.z - 0.36)   # low between the knees: the grip stays below the instruments
 	cockpit_node.add_child(yoke)
 	var steel := _solid(Color(0.17, 0.18, 0.22), 0.5)
 	if fighter:
-		_mi(_cyl(0.014, 0.018, 0.34, 8), steel, yoke, Vector3(0, 0.15, 0))
-		_mi(_sphere(0.04, 8), _solid(C("#ff4c00"), 0.4), yoke, Vector3(0, 0.33, 0))
+		_mi(_cyl(0.014, 0.018, 0.2, 8), steel, yoke, Vector3(0, 0.1, 0))
+		_mi(_sphere(0.04, 8), _solid(C("#ff4c00"), 0.4), yoke, Vector3(0, 0.2, 0))
 	else:
 		_mi(_cyl(0.02, 0.02, 0.3, 8), steel, yoke, Vector3(0, 0, 0.12), Vector3(PI / 2, 0, 0))
 		var rim := TorusMesh.new()
@@ -314,7 +317,8 @@ func update_visuals(surf: Dictionary, engine: float, dt: float, ias: float) -> v
 	var blur := clampf((engine - 0.2) / 0.5, 0.0, 1.0)
 	(disc.material_override as StandardMaterial3D).albedo_color.a = 0.17 * blur
 	for b in blades:
-		(b as Node3D).visible = blur < 0.8
+		# from the cockpit a running prop is only the faint disc (a still blade would stand in the middle of the view)
+		(b as Node3D).visible = blur < 0.8 and not (in_cockpit and bulldog == null and engine > 0.12)
 	for w in wheels:
 		(w as Node3D).rotation.x += ias * dt * 3.0
 	if bulldog != null:
@@ -328,6 +332,6 @@ func set_cockpit_view(on: bool) -> void:
 			(p as Node3D).visible = not on
 		cockpit_node.visible = on
 		return
+	in_cockpit = on
 	fus.visible = not on
 	cockpit_node.visible = on
-	disc.visible = not on

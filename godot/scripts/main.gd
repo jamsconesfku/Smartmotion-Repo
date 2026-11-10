@@ -2,7 +2,7 @@ extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 ## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.11.6"
+const APP_VERSION := "1.11.7"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -360,6 +360,8 @@ func start_mode() -> void:
 	if mode == null:
 		return
 	cam_mode = mode.camera_modes()[0]   # chase view (racing, space); the rider's view on the coaster
+	if args.has("cam") and str(args["cam"]) in mode.camera_modes():
+		cam_mode = str(args["cam"])   # test option (screenshots from the seat)
 	cam_init = false
 	space_thr = 0.5
 	mkb = {"steer": 0.0}
@@ -1442,9 +1444,7 @@ func _test_panel() -> void:
 		if e[0] == want:
 			btn = e[1]
 	var c := btn.get_global_rect().get_center()
-	p._push_mouse(c)
-	p._push_mouse(c, MOUSE_BUTTON_LEFT, true)
-	p._push_mouse(c, MOUSE_BUTTON_LEFT, false)
+	p._click(c, null)   # what a trigger pull does
 	await get_tree().process_frame
 	print(("PASS" if got.get("game") == want else "FAIL") + " pointer click on the %s button (got %s)" % [want, str(got.get("game"))])
 	p._focus_first()
@@ -1457,9 +1457,7 @@ func _test_panel() -> void:
 	await get_tree().process_frame
 	var card: Button = ui.seg_buttons["rig"][2][1]
 	var cc := card.get_global_rect().get_center()
-	p._push_mouse(cc)
-	p._push_mouse(cc, MOUSE_BUTTON_LEFT, true)
-	p._push_mouse(cc, MOUSE_BUTTON_LEFT, false)
+	p._click(cc, null)   # what a trigger pull does
 	await get_tree().process_frame
 	print(("PASS" if got.get("rig") == "ride" and not ui.lobby.visible else "FAIL") + " set-up screen: pointing at 'Hands-free ride' picks it (got %s)" % str(got.get("rig")))
 	ui.set_rig("wheel")

@@ -23,7 +23,7 @@ const DS := 0.5
 const G := 9.81
 const CARS := 4
 const CAR_GAP := 2.7
-const RIDER := Vector3(-0.32, 1.02, 0.15)   # your eyes, in the front car (left seat, front row)
+const RIDER := Vector3(-0.32, 1.42, -0.34)   # your eyes, sitting in the front car (left seat, front row), in front of the seat back
 
 var n := 0
 var length := 0.0
