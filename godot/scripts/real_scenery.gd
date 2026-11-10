@@ -27,6 +27,8 @@ var near_tree_range := 1100.0
 var tree_density := 1.0
 var _last_focus := Vector2(1e9, 1e9)
 var _pending: Array = []
+var _jobs: Array = []
+var chunk_cells := {}                ## Vector2i square -> the crash-box cells it filled (so freeing it is quick)                ## squares being made on worker threads
 var total_buildings := 0
 
 
@@ -156,23 +158,30 @@ func update(p: Vector2, budget := 1) -> void:
 			if not chunks.has(c):
 				_pending.append(c)
 		_pending.sort_custom(func(a, b): return _chunk_centre(a).distance_squared_to(p) < _chunk_centre(b).distance_squared_to(p))
-	var n := 0
-	while n < budget and _pending.size() > 0:
-		_build_chunk(_pending.pop_front())
-		n += 1
+	if budget > 1:
+		# loading screen: build everything now
+		while _pending.size() > 0:
+			_build_chunk(_pending.pop_front())
+		return
+	_poll_jobs()
+	while _jobs.size() < 3 and _pending.size() > 0:
+		_start_job(_pending.pop_front())
 
 
 func _free_chunk(c: Vector2i) -> void:
 	var node: Node3D = chunks[c]
 	node.queue_free()
 	chunks.erase(c)
-	for k in coll_grid.keys():
-		var arr: Array = coll_grid[k]
+	for k in chunk_cells.get(c, {}).keys():
 		var keep: Array = []
-		for col in arr:
+		for col in coll_grid.get(k, []):
 			if col["chunk"] != c:
 				keep.append(col)
-		coll_grid[k] = keep
+		if keep.is_empty():
+			coll_grid.erase(k)
+		else:
+			coll_grid[k] = keep
+	chunk_cells.erase(c)
 
 
 ## Buildings the aircraft could hit near p (a short list for the flight model).
@@ -187,54 +196,108 @@ func colliders_near(p: Vector2) -> Array:
 	return out
 
 
-func _build_chunk(c: Vector2i) -> void:
-	var node := Node3D.new()
-	add_child(node)
-	chunks[c] = node
-	var centre := _chunk_centre(c)
+## Thread-safe: everything for one square except the scene nodes.
+func _chunk_data(c: Vector2i, want_trees: bool) -> Dictionary:
+	var d := {"bld": null, "trees": PackedFloat32Array()}
 	if bld.has(c):
-		var mesh := _building_mesh(bld[c], c)
-		if mesh != null:
+		d["bld"] = _building_data(bld[c], c)
+	if want_trees and lc_data.size() > 0:
+		d["trees"] = _tree_data(c)
+	return d
+
+
+func _chunk_finish(c: Vector2i, node: Node3D, d: Dictionary) -> void:
+	var bd = d["bld"]
+	if bd != null:
+		if bd["arrays"] != null:
+			var m := ArrayMesh.new()
+			m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, bd["arrays"])
 			var mi := MeshInstance3D.new()
-			mi.mesh = mesh
+			mi.mesh = m
 			mi.material_override = bld_mat
 			mi.visibility_range_end = radius_bld
 			mi.visibility_range_end_margin = 400.0
 			mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 			node.add_child(mi)
-	if lc_data.size() > 0 and centre.distance_to(_last_focus) < radius_tree + CHUNK:
-		_trees(c, node)
+		var cells := {}
+		chunk_cells[c] = cells
+		for e in bd["colls"]:
+			var ck: Vector2i = e[0]
+			cells[ck] = true
+			if not coll_grid.has(ck):
+				coll_grid[ck] = []
+			coll_grid[ck].append(e[1])
+	_add_trees(d["trees"], node)
 
 
-# ---------------------------------------------------------------- buildings
-var _v := PackedVector3Array()
-var _n := PackedVector3Array()
-var _c := PackedColorArray()
-var _uv := PackedVector2Array()
+## Builds a square straight away on the main thread (loading screen).
+func _build_chunk(c: Vector2i) -> void:
+	var node := Node3D.new()
+	add_child(node)
+	chunks[c] = node
+	_chunk_finish(c, node, _chunk_data(c, _chunk_centre(c).distance_to(_last_focus) < radius_tree + CHUNK))
 
 
-func _tri(a: Vector3, b: Vector3, cc: Vector3, n: Vector3, col: Color, ua: Vector2, ub: Vector2, uc: Vector2) -> void:
-	# Godot front faces are clockwise: flip the triangle if it faces the other way
-	if (b - a).cross(cc - a).dot(n) > 0.0:
-		_v.append_array([a, cc, b])
-		_uv.append_array([ua, uc, ub])
-	else:
-		_v.append_array([a, b, cc])
-		_uv.append_array([ua, ub, uc])
-	_n.append_array([n, n, n])
-	_c.append_array([col, col, col])
+## Starts a square on a worker thread; _poll_jobs() adds it to the scene when it's ready.
+func _start_job(c: Vector2i) -> void:
+	var node := Node3D.new()
+	add_child(node)
+	chunks[c] = node
+	var job := {"c": c, "node": node, "result": {}}
+	var trees := _chunk_centre(c).distance_to(_last_focus) < radius_tree + CHUNK
+	job["id"] = WorkerThreadPool.add_task(func(): job["result"] = _chunk_data(c, trees))   # a Dictionary, so the lambda can fill it
+	_jobs.append(job)
 
 
-func _quad(a: Vector3, b: Vector3, cc: Vector3, d: Vector3, n: Vector3, col: Color, ua: Vector2, ub: Vector2, uc: Vector2, ud: Vector2) -> void:
-	_tri(a, b, cc, n, col, ua, ub, uc)
-	_tri(a, cc, d, n, col, ua, uc, ud)
+func _exit_tree() -> void:
+	for job in _jobs:
+		WorkerThreadPool.wait_for_task_completion(job["id"])
+	_jobs = []
 
 
-func _building_mesh(list: Array, c: Vector2i) -> ArrayMesh:
-	_v = PackedVector3Array()
-	_n = PackedVector3Array()
-	_c = PackedColorArray()
-	_uv = PackedVector2Array()
+func _poll_jobs() -> void:
+	var still: Array = []
+	var finished := 0
+	for job in _jobs:
+		if finished < 1 and WorkerThreadPool.is_task_completed(job["id"]):
+			WorkerThreadPool.wait_for_task_completion(job["id"])
+			var c: Vector2i = job["c"]
+			var node: Node3D = job["node"]
+			# the square may have been dropped while it was being made
+			if chunks.get(c) == node and is_instance_valid(node):
+				_chunk_finish(c, node, job["result"])
+			finished += 1
+		else:
+			still.append(job)
+	_jobs = still
+
+
+class Buf:
+	var v := PackedVector3Array()
+	var n := PackedVector3Array()
+	var c := PackedColorArray()
+	var uv := PackedVector2Array()
+
+	func tri(a: Vector3, b: Vector3, cc: Vector3, nn: Vector3, col: Color, ua: Vector2, ub: Vector2, uc: Vector2) -> void:
+		# Godot front faces are clockwise: flip the triangle if it faces the other way
+		if (b - a).cross(cc - a).dot(nn) > 0.0:
+			v.append_array([a, cc, b])
+			uv.append_array([ua, uc, ub])
+		else:
+			v.append_array([a, b, cc])
+			uv.append_array([ua, ub, uc])
+		n.append_array([nn, nn, nn])
+		c.append_array([col, col, col])
+
+	func quad(a: Vector3, b: Vector3, cc: Vector3, d: Vector3, nn: Vector3, col: Color, ua: Vector2, ub: Vector2, uc: Vector2, ud: Vector2) -> void:
+		tri(a, b, cc, nn, col, ua, ub, uc)
+		tri(a, cc, d, nn, col, ua, uc, ud)
+
+
+## Runs on a worker thread: builds the arrays for one square's buildings and their crash boxes.
+func _building_data(list: Array, c: Vector2i) -> Dictionary:
+	var bf := Buf.new()
+	var colls: Array = []
 	var rng := RandomNumberGenerator.new()
 	for rec in list:
 		var pts: PackedVector2Array = rec[0]
@@ -301,7 +364,7 @@ func _building_mesh(list: Array, c: Vector2i) -> ArrayMesh:
 			var A := Vector3(a.x, base, a.y)
 			var B := Vector3(b.x, base, b.y)
 			var wall_top := top - gmin
-			_quad(A, B, Vector3(b.x, top, b.y), Vector3(a.x, top, a.y), nrm, wall_col,
+			bf.quad(A, B, Vector3(b.x, top, b.y), Vector3(a.x, top, a.y), nrm, wall_col,
 				Vector2(ulen, -0.6), Vector2(ulen + len, -0.6), Vector2(ulen + len, wall_top), Vector2(ulen, wall_top))
 			ulen += len
 		# roof
@@ -328,21 +391,21 @@ func _building_mesh(list: Array, c: Vector2i) -> ArrayMesh:
 					nrm2 = -nrm2
 				if nrm2.y < 0.0:
 					nrm2.y = -nrm2.y
-				_quad(sa, sb, rb, ra, nrm2.normalized(), roof_col, Vector2(sa.x, sa.z), Vector2(sb.x, sb.z), Vector2(rb.x, rb.z), Vector2(ra.x, ra.z))
+				bf.quad(sa, sb, rb, ra, nrm2.normalized(), roof_col, Vector2(sa.x, sa.z), Vector2(sb.x, sb.z), Vector2(rb.x, rb.z), Vector2(ra.x, ra.z))
 			# gable ends (triangles, wall material)
 			for g in [[T[0], T[3], R0], [T[1], T[2], R1]]:
 				var ga: Vector3 = g[0]
 				var gb: Vector3 = g[1]
 				var gr: Vector3 = g[2]
 				var gn := Vector3(gr.x - mid.x, 0, gr.z - mid.z).normalized()
-				_tri(ga, gb, gr, gn, wall_col, Vector2(0, wall_h), Vector2(ga.distance_to(gb), wall_h), Vector2(ga.distance_to(gb) / 2.0, wall_h + ridge))
+				bf.tri(ga, gb, gr, gn, wall_col, Vector2(0, wall_h), Vector2(ga.distance_to(gb), wall_h), Vector2(ga.distance_to(gb) / 2.0, wall_h + ridge))
 		else:
 			var tris := Geometry2D.triangulate_polygon(pts)
 			for t in range(0, tris.size(), 3):
 				var a2 := pts[tris[t]]
 				var b2 := pts[tris[t + 1]]
 				var c2 := pts[tris[t + 2]]
-				_tri(Vector3(a2.x, top, a2.y), Vector3(b2.x, top, b2.y), Vector3(c2.x, top, c2.y), Vector3.UP, roof_col, a2, b2, c2)
+				bf.tri(Vector3(a2.x, top, a2.y), Vector3(b2.x, top, b2.y), Vector3(c2.x, top, c2.y), Vector3.UP, roof_col, a2, b2, c2)
 		# crash boxes for the flight model: an oriented box around the footprint
 		var ax := (pts[1] - pts[0]).normalized() if long_i == 0 else (pts[2] - pts[1]).normalized()
 		var lo := Vector2(1e9, 1e9)
@@ -355,31 +418,28 @@ func _building_mesh(list: Array, c: Vector2i) -> ArrayMesh:
 		var cw := ax * qc.x + Vector2(-ax.y, ax.x) * qc.y
 		var col := {"cx": cw.x, "cz": cw.y, "c": ax.x, "s": ax.y, "hu": (hi.x - lo.x) / 2.0, "hv": (hi.y - lo.y) / 2.0, "top": gmin + h, "chunk": c}
 		var ck := Vector2i(int(floor(cw.x / COLL_CELL)), int(floor(cw.y / COLL_CELL)))
-		if not coll_grid.has(ck):
-			coll_grid[ck] = []
-		coll_grid[ck].append(col)
-	if _v.size() == 0:
-		return null
+		colls.append([ck, col])
+	if bf.v.size() == 0:
+		return {"arrays": null, "colls": colls}
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = _v
-	arrays[Mesh.ARRAY_NORMAL] = _n
-	arrays[Mesh.ARRAY_COLOR] = _c
-	arrays[Mesh.ARRAY_TEX_UV] = _uv
-	var m := ArrayMesh.new()
-	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	return m
+	arrays[Mesh.ARRAY_VERTEX] = bf.v
+	arrays[Mesh.ARRAY_NORMAL] = bf.n
+	arrays[Mesh.ARRAY_COLOR] = bf.c
+	arrays[Mesh.ARRAY_TEX_UV] = bf.uv
+	return {"arrays": arrays, "colls": colls}
 
 
 # ---------------------------------------------------------------- trees
-func _trees(c: Vector2i, node: Node3D) -> void:
+## Runs on a worker thread: places the trees for one square and packs them into a MultiMesh buffer
+## (12 floats of transform + 4 of colour per tree), so the main thread copies it in one go.
+func _tree_data(c: Vector2i) -> PackedFloat32Array:
+	var buf := PackedFloat32Array()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = c.x * 7919 + c.y * 104729
 	var px0 := c.x * int(CHUNK / 8.0)
 	var py0 := c.y * int(CHUNK / 8.0)
 	var span := int(CHUNK / 8.0)
-	var near_xf: Array = []
-	var cols: Array = []
 	for y in range(py0, py0 + span):
 		for x in range(px0, px0 + span):
 			var o := (y * LC_PX + x) * 4
@@ -393,21 +453,25 @@ func _trees(c: Vector2i, node: Node3D) -> void:
 				continue
 			var h := 7.0 + rng.randf() * 10.0
 			var w := h * (0.55 + rng.randf() * 0.25)
-			var b := Basis.from_euler(Vector3((rng.randf() - 0.5) * 0.08, rng.randf() * TAU, (rng.randf() - 0.5) * 0.08)).scaled(Vector3(w, h, w))
-			near_xf.append(Transform3D(b, Vector3(wx, terrain.height(wx, wz) - 0.4, wz)))
+			var bs := Basis.from_euler(Vector3((rng.randf() - 0.5) * 0.08, rng.randf() * TAU, (rng.randf() - 0.5) * 0.08)).scaled(Vector3(w, h, w))
+			var org := Vector3(wx, terrain.height(wx, wz) - 0.4, wz)
 			var g := rng.randf()
-			cols.append(Color(0.16, 0.27, 0.10).lerp(Color(0.30, 0.40, 0.15), g).lerp(Color(0.36, 0.34, 0.16), rng.randf() * 0.25).srgb_to_linear())
-	if near_xf.is_empty():
+			var col := Color(0.16, 0.27, 0.10).lerp(Color(0.30, 0.40, 0.15), g).lerp(Color(0.36, 0.34, 0.16), rng.randf() * 0.25).srgb_to_linear()
+			buf.append_array([bs.x.x, bs.y.x, bs.z.x, org.x, bs.x.y, bs.y.y, bs.z.y, org.y, bs.x.z, bs.y.z, bs.z.z, org.z, col.r, col.g, col.b, col.a])
+	return buf
+
+
+func _add_trees(buf: PackedFloat32Array, node: Node3D) -> void:
+	var count := buf.size() / 16
+	if count == 0:
 		return
 	for lod in 2:
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_colors = true
 		mm.mesh = tree_near if lod == 0 else tree_far
-		mm.instance_count = near_xf.size()
-		for i in near_xf.size():
-			mm.set_instance_transform(i, near_xf[i])
-			mm.set_instance_color(i, cols[i])
+		mm.instance_count = count
+		mm.buffer = buf
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		mmi.material_override = tree_mat

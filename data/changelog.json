@@ -77,5 +77,12 @@
     "ids": [
       "F-02"
     ]
+  },
+  {
+    "date": "2026-11-10",
+    "summary": "Version 1.6.2: smoother flying (buildings and trees now load in the background, so no more stutters when new scenery appears), sharper shadows in the cockpit, a lighter instrument panel, and a cleaner cockpit view on the laptop screen. New automatic check for the scenery loading.",
+    "ids": [
+      "F-02"
+    ]
   }
 ]

@@ -10,6 +10,8 @@ rm -rf "$OUT" && mkdir -p "$OUT/SmartMotionFlight"
 echo "Checking the flight physics..."
 "$GODOT" --headless --path godot --script res://tests/test_flight.gd | grep -E "FAIL|All checks passed|failed" || true
 "$GODOT" --headless --path godot --script res://tests/test_flight.gd >/dev/null   # a failing check stops the build
+"$GODOT" --headless --path godot --script res://tests/test_scenery.gd | grep -E "FAIL|All checks passed|failed" || true
+"$GODOT" --headless --path godot --script res://tests/test_scenery.gd >/dev/null   # scenery streaming checks
 echo "Exporting the Windows build..."
 "$GODOT" --headless --path godot --export-release "Windows Desktop" "$PWD/$OUT/SmartMotionFlight/SmartMotionFlight.exe" >/dev/null 2>&1
 test -s "$OUT/SmartMotionFlight/SmartMotionFlight.exe" || { echo "Export failed"; exit 1; }

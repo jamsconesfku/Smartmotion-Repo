@@ -610,6 +610,13 @@ func show_menu() -> void:
 	menu.visible = true
 
 
+## The speed and height boxes in the bottom corners (hidden in the Bulldog's cockpit, where the real gauges show it).
+func set_corner_boxes(on: bool) -> void:
+	for l in [l_speed, l_alt]:
+		if l != null and l.get_parent() != null and l.get_parent().get_parent() != null:
+			(l.get_parent().get_parent() as Control).visible = on
+
+
 func show_hud() -> void:
 	loading.visible = false
 	menu.visible = false

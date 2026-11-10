@@ -39,6 +39,23 @@ func _init() -> void:
 	bold = load("res://assets/fonts/BarlowSemiCondensed-BoldItalic.ttf")
 
 
+var _grain: ImageTexture
+
+
+func _grain_tex() -> ImageTexture:
+	if _grain == null:
+		var img := Image.create_empty(256, 256, false, Image.FORMAT_RGBA8)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 7
+		for i in 1400:
+			var x := rng.randi() % 255
+			var y := rng.randi() % 255
+			var c := Color(0, 0, 0, 0.14) if i % 2 == 0 else Color(1, 1, 1, 0.03)
+			img.fill_rect(Rect2i(x, y, 2, 2), c)
+		_grain = ImageTexture.create_from_image(img)
+	return _grain
+
+
 func set_data(nd: Dictionary) -> void:
 	for k in nd.keys():
 		d[k] = nd[k]
@@ -117,12 +134,8 @@ func _draw() -> void:
 	var H := px(PH)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	draw_rect(Rect2(0, 0, W, H), PANEL)
-	# subtle crackle-paint grain
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 7
-	for i in 2500:
-		var p := Vector2(rng.randf() * W, rng.randf() * H)
-		draw_rect(Rect2(p, Vector2(2, 2)), Color(0, 0, 0, 0.12) if i % 2 == 0 else Color(1, 1, 1, 0.025))
+	# subtle crackle-paint grain: one small tiled texture, made once (the panel redraws every frame)
+	draw_texture_rect(_grain_tex(), Rect2(0, 0, W, H), true)
 	# sub-panels
 	draw_rect(Rect2(px(0.012), px(0.012), px(0.39), px(0.29)), Color("#1f2124"), true)
 	draw_rect(Rect2(px(0.012), px(0.012), px(0.39), px(0.29)), Color("#3a3c40"), false, 3.0)

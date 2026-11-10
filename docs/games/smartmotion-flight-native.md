@@ -38,6 +38,14 @@ A 32.8 km square centred on the middle of Duxford's hard runway (real heading 05
 ## Performance (RTX 4060 target)
 High: about 1 M triangles of nearby trees, about 2 M of far trees, 16,000 buildings within 7 km, 72 cloud steps a pixel. If it drops below 60 fps, use Medium (fewer trees, shorter range, 44 cloud steps). In VR the 3D clouds, SSAO and SSIL are switched off. Load with `--stats` (after `--`) to log triangles, draw calls and fps every two seconds in the diagnostics log.
 
+## Smoothness and polish (v1.6.2)
+- Scenery squares (buildings and trees) are now made on worker threads (`WorkerThreadPool`) and added to the scene one per frame; trees go in as one MultiMesh buffer copy. Worst streaming frame went from about 38 ms (a visible hitch) to under 6 ms. Freeing a square only touches its own crash-box cells.
+- Building crash checks are skipped when more than 160 m above the ground.
+- Shadow cascades put most detail in the nearest 40 m: crisp shadows in the cockpit and on the aircraft.
+- The Bulldog panel's paint grain is one cached texture (it used to be 2,500 rectangles drawn every frame); 2x MSAA on the panel.
+- In the Bulldog cockpit view the speed/height boxes are hidden (the real gauges show them).
+- New check: `godot --headless --path godot --script res://tests/test_scenery.gd` (streaming, crash boxes, freeing, frame time); it also runs in the Windows build.
+
 ## VR menu (v1.6.1)
 X (or a crash, or finishing the gate run) opens a menu inside the headset, fixed in the cockpit in front of you: stick up/down, A to select, B or X to carry on, Y to restart. It changes aircraft, start position, free flight / gate run, time of day and Easy/Pro, recentres the view or leaves VR, so the keyboard is never needed. Also in v1.6.1: VR draws without TAA (sharper when you turn your head; 4x MSAA instead), STALL/PULL UP clear from the headset when they're over, and the controllers now work while paused and after a crash (before, X paused but couldn't resume).
 

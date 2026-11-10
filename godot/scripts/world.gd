@@ -29,6 +29,7 @@ var _vp_counter := 0
 var scenery: RealScenery
 var ortho_tex: Texture2D
 var focus := Vector2.ZERO
+var focus_agl := 0.0   ## the aircraft's height above the ground (no building checks when far above the roofs)
 var _coll_t := 0.0
 var vol_mat: ShaderMaterial
 var vol_mi: MeshInstance3D
@@ -123,6 +124,11 @@ func _environment() -> void:
 	sun.shadow_enabled = quality != "low"
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 	sun.directional_shadow_max_distance = 3500.0
+	# cascades: most of the shadow detail close in, so the cockpit, aircraft and nearby buildings get crisp shadows
+	sun.directional_shadow_split_1 = 0.012   # ~40 m
+	sun.directional_shadow_split_2 = 0.06    # ~210 m
+	sun.directional_shadow_split_3 = 0.25    # ~875 m
+	sun.directional_shadow_fade_start = 0.85
 	sun.directional_shadow_blend_splits = true
 	sun.light_angular_distance = 0.5 if quality == "high" else 0.0   # soft shadow edges
 	sun.shadow_bias = 0.05
@@ -920,7 +926,7 @@ func update_world(dt: float, cam_pos: Vector3) -> void:
 		_coll_t -= dt
 		if _coll_t <= 0.0:
 			_coll_t = 0.2
-			terrain.colliders = scenery.colliders_near(focus)
+			terrain.colliders = scenery.colliders_near(focus) if focus_agl < 160.0 else []
 	if blimp != null:
 		blimp_t += dt
 		var a := blimp_t * 0.0125

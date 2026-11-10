@@ -1,7 +1,7 @@
 extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 
-const APP_VERSION := "1.6.1"
+const APP_VERSION := "1.6.2"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -205,6 +205,7 @@ func _apply_view() -> void:
 		plane.set_cockpit_view(cp)
 	if ui != null and ui.adi != null:
 		ui.adi.visible = not cp
+		ui.set_corner_boxes(not (cp and plane != null and plane.bulldog != null))
 
 
 func _place_plane(dt: float) -> void:
@@ -746,6 +747,7 @@ func _process(delta: float) -> void:
 			tel.push(fm, inp, run_time, false)
 	_place_plane(0.0 if paused else dt)
 	world.focus = Vector2(fm.pos.x, fm.pos.z)
+	world.focus_agl = float(fm.i["alt_agl"])
 	_update_camera(dt)
 	world.update_world(dt, cam.global_position if not vr_active else xr_cam.global_position)
 	if vr_active and state == "fly":

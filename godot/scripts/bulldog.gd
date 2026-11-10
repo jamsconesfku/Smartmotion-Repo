@@ -863,7 +863,7 @@ func _cockpit() -> void:
 	vp.size = Vector2i(int(pw * BulldogPanel.PXM), int(ph * BulldogPanel.PXM))
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	vp.disable_3d = true
-	vp.msaa_2d = Viewport.MSAA_4X
+	vp.msaa_2d = Viewport.MSAA_2X   # smooth needle edges; 2x is plenty at this resolution
 	panel_ui = BulldogPanel.new()
 	panel_ui.size = Vector2(vp.size)
 	vp.add_child(panel_ui)
