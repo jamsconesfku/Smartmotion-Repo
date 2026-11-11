@@ -2,7 +2,7 @@ extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 ## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.13.1"
+const APP_VERSION := "1.14.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -102,12 +102,16 @@ func _ready() -> void:
 		Settings.data["clouds3d"] = args["clouds"] != "off" and args["clouds"] != "false"
 	if args.has("view"):
 		Settings.data["view"] = args["view"]
+	for k in ["aa", "weather", "brightness"]:
+		if args.has(k):
+			Settings.data[k] = args[k]
+	if args.has("grass"):
+		Settings.data["grass"] = args["grass"] != "off" and args["grass"] != "false"
 	# "ultra" is "high" plus extras (World.ultra, RealScenery.ultra): the rest of the code treats it as high
 	ultra = str(Settings.get_value("quality")) == "ultra"
 	quality = "high" if ultra else str(Settings.get_value("quality"))
 	_apply_window()
-	var vp := get_viewport()
-	vp.msaa_3d = {"low": Viewport.MSAA_DISABLED, "medium": Viewport.MSAA_2X, "high": Viewport.MSAA_4X}.get(quality, Viewport.MSAA_2X)
+	_apply_render()
 	cam = Camera3D.new()
 	cam.far = 40000.0
 	cam.near = 0.4
@@ -140,6 +144,9 @@ func _ready() -> void:
 	world.ultra = ultra
 	world.view = str(Settings.get_value("view"))
 	world.clouds_on = bool(Settings.get_value("clouds3d"))
+	world.weather = str(Settings.get_value("weather"))
+	world.grass_on = bool(Settings.get_value("grass"))
+	world.set_brightness(str(Settings.get_value("brightness")))
 	await world.build(ui.set_progress, quality, str(Settings.get_value("tod")))
 	for g in ["race", "coaster"]:
 		await _build_mode(g)   # part of the same world: built now so you can fly over them
@@ -198,6 +205,39 @@ func _start_flypt() -> void:
 
 func _apply_window() -> void:
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if Settings.get_value("fullscreen") else DisplayServer.WINDOW_MODE_WINDOWED)
+	if not vr_active:
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if Settings.get_value("vsync") else DisplayServer.VSYNC_DISABLED)
+
+
+## Anti-aliasing and render resolution (setting "aa"), and the per-preset picture options (v1.14.0).
+## TAA: the old default (TAA plus MSAA). FSR 2: AMD's upscaler (works on any card) used either as
+## anti-aliasing at full resolution (smoothest) or to draw at a lower resolution and sharpen it back up
+## (faster: more frames for the same picture). SMAA: sharp edges without TAA's softness, but more shimmer.
+## VR sets its own (MSAA, no TAA or FSR) in _start_vr.
+func _apply_render() -> void:
+	var vp := get_viewport()
+	vp.use_debanding = true   # no stepped bands in the smooth sky
+	vp.anisotropic_filtering_level = Viewport.ANISOTROPY_16X if quality == "high" else Viewport.ANISOTROPY_4X
+	vp.mesh_lod_threshold = 0.6 if ultra else 1.0
+	if vr_active:
+		return
+	var msaa: int = {"low": Viewport.MSAA_DISABLED, "medium": Viewport.MSAA_2X, "high": Viewport.MSAA_4X}.get(quality, Viewport.MSAA_2X)
+	var aa := str(Settings.get_value("aa"))
+	var fplus := RenderingServer.get_current_rendering_method() == "forward_plus"
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+	if fplus and aa.begins_with("fsr"):
+		vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
+		vp.scaling_3d_scale = {"fsr_native": 1.0, "fsr_quality": 0.67, "fsr_balanced": 0.59, "fsr_perf": 0.5}.get(aa, 1.0)
+		vp.fsr_sharpness = 0.25 if aa == "fsr_native" else 0.4   # 0 = sharpest
+		vp.use_taa = false
+		vp.msaa_3d = Viewport.MSAA_DISABLED
+	else:
+		vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+		vp.scaling_3d_scale = 1.0
+		vp.use_taa = aa != "smaa"
+		vp.msaa_3d = msaa
+		if aa == "smaa":
+			vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_SMAA
 
 
 # ------------------------------------------------------------ settings and menu
@@ -240,6 +280,18 @@ func _on_setting(key: String, value) -> void:
 			ui.toast("This changes next time you start the game", 3.0)
 		"clouds3d":
 			world.set_clouds(bool(value))
+		"aa":
+			_apply_render()
+		"vsync":
+			_apply_window()
+		"weather":
+			world.set_weather(str(value))
+		"brightness":
+			world.set_brightness(str(value))
+		"grass":
+			world.set_grass(bool(value))
+		"show_fps":
+			ui.show_fps(bool(value))
 
 
 func _on_fly(vr: bool) -> void:
@@ -300,6 +352,7 @@ func _activate(g: String) -> void:
 	if g != "flight" and not modes.has(g):
 		await _build_mode(g)
 	game = g
+	world.grass_allowed = g == "flight"   # the racing car and the coaster station would have grass through them
 	if mode != null:
 		mode.visible = false
 		if mode.running:
@@ -741,6 +794,7 @@ func _start_vr() -> bool:
 	get_viewport().use_taa = false            # TAA smears when you turn your head; MSAA keeps VR sharp
 	# 2x MSAA: 4x on two eyes at headset resolution cost too much time per frame (judder when looking around)
 	get_viewport().msaa_3d = Viewport.MSAA_2X
+	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 	# v1.6.3 also turned on foveated rendering, depth submission and a 72 Hz request here: VR then stuck on
 	# Quest Link's loading hourglass on Sam's PC, so those are out. The refresh rate is only changed from the VR menu.
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)   # the headset sets the pace, not the laptop screen
@@ -804,8 +858,6 @@ func _stop_vr() -> void:
 		return
 	vr_active = false
 	get_viewport().use_xr = false
-	get_viewport().use_taa = true
-	get_viewport().msaa_3d = {"low": Viewport.MSAA_DISABLED, "medium": Viewport.MSAA_2X, "high": Viewport.MSAA_4X}.get(quality, Viewport.MSAA_2X)
 	var xr := XRServer.find_interface("OpenXR")
 	if xr != null and xr.is_initialized():
 		xr.uninitialize()
@@ -821,10 +873,10 @@ func _stop_vr() -> void:
 		xr_origin = null
 	hand_l = null
 	hand_r = null
-	get_viewport().scaling_3d_scale = 1.0
 	vr_menu = null
 	vr_menu_lines = []
-	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
+	_apply_window()
+	_apply_render()
 	world.env.ssao_enabled = quality != "low"
 	world.env.ssil_enabled = quality == "high"
 	world.set_vr_mode(false)
@@ -1039,7 +1091,7 @@ func _shot_tick(delta: float) -> void:
 		shot_timer -= delta
 		if shot_timer < 0.0:
 			Engine.time_scale = 0.0
-			shot_still = 30
+			shot_still = int(args.get("shot_frames", "30"))   # frames for TAA to settle (test option --shot_frames)
 
 
 func _save_shot() -> void:

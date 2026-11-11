@@ -26,7 +26,7 @@ uniform float far_size = 163840.0;
 uniform float y_bias = 0.0;
 uniform vec4 rw = vec4(0.848, -0.530, 1448.0, 46.0);   // runway dir.x, dir.z, length, width
 uniform float exposure = 1.12;
-uniform float saturation = 0.92;
+uniform float saturation = 0.98;
 uniform float cloud_shadow = 0.0;
 uniform vec2 cloud_offset = vec2(0.0);
 uniform float cloud_scale = 1.0;
@@ -99,6 +99,19 @@ vec3 grain(sampler2D t, vec2 p, float s) {
 void fragment() {
 	vec2 p = v_world.xz;
 	float dist = length(v_world - CAMERA_POSITION_WORLD);
+	// the slope worked out per pixel from the height data (v1.14.0): the coarse far rings (128-2048 m
+	// triangles) used to light whole hillsides flat; now every valley and ridge is shaded as on the map
+	{
+		float e = cell;
+		float hl = hgt(p - vec2(e, 0.0)); float hr = hgt(p + vec2(e, 0.0));
+		float hu = hgt(p - vec2(0.0, e)); float hd = hgt(p + vec2(0.0, e));
+		vec3 nw = normalize(vec3(hl - hr, 2.0 * e, hu - hd));
+		vec3 tw = normalize(vec3(1.0, 0.0, 0.0) - nw * nw.x);
+		vec3 bw = normalize(vec3(0.0, 0.0, 1.0) - nw * nw.z);
+		NORMAL = normalize((VIEW_MATRIX * vec4(nw, 0.0)).xyz);
+		TANGENT = normalize((VIEW_MATRIX * vec4(tw, 0.0)).xyz);
+		BINORMAL = normalize((VIEW_MATRIX * vec4(bw, 0.0)).xyz);
+	}
 	vec2 ouv = p / (2.0 * half_size) + 0.5;
 	float edge = max(abs(p.x), abs(p.y));
 	float inside = 1.0 - smoothstep(half_size - 1800.0, half_size - 150.0, edge);
@@ -186,7 +199,10 @@ void fragment() {
 	if (water > 0.0) {
 		col = mix(col, vec3(0.05, 0.09, 0.08), water * 0.8);
 		vec2 wv = vec2(sin(p.x * 0.7 + TIME * 1.3) + sin(p.y * 0.9 - TIME * 1.1), cos(p.x * 0.5 - TIME * 0.9) + cos(p.y * 0.6 + TIME * 1.4));
+		float wf = 1.0 - smoothstep(60.0, 600.0, dist);
+		wv += vec2(sin(dot(p, vec2(2.3, 1.7)) + TIME * 2.9) + sin(dot(p, vec2(-1.9, 3.1)) - TIME * 3.4), cos(dot(p, vec2(3.3, -1.2)) + TIME * 3.1) + cos(dot(p, vec2(1.1, 2.7)) - TIME * 2.6)) * 0.45 * wf;
 		NORMAL_MAP = mix(NORMAL_MAP, normalize(vec3(wv * 0.04, 1.0)) * 0.5 + 0.5, water);
+		NORMAL_MAP_DEPTH = mix(NORMAL_MAP_DEPTH, 1.0, water);
 	}
 	// shadows of the clouds drifting over the ground
 	if (cloud_shadow > 0.0) {

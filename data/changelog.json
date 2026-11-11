@@ -220,5 +220,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-11",
+    "summary": "Version 1.14.0: graphics overhaul. A physical sky (the colours come from how sunlight scatters in the air, so the sky, haze, sunlight and clouds always match), four times of day (Morning, Midday, Golden hour, Sunset) and a new Weather choice (Clear, Few clouds, Scattered, Broken, Overcast). The aircraft and buildings now go into the shadow of a cloud with the ground, the 3D clouds are lit more like real cumulus, hills and valleys are shaded properly to the horizon, and there is 3D grass round you on the ground. Film-like colour (AgX), sharper textures at low angles, no banding in the sky. New settings: Smooth edges and resolution (TAA, SMAA, FSR 2 Native/Quality/Fast for more frames), 3D grass, Brightness, V-Sync and a frames-per-second counter. Frame rates on Sam's RTX 4060 still to check.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

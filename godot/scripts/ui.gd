@@ -59,6 +59,8 @@ var end_lab: Label
 var set_tel_btn: Button
 var set_status: Label
 var toast_t := 0.0
+var fps_label: Label
+var fps_t := 0.0
 var fit := {}   # sheet -> [scroll container, content]
 var title_b: Label
 var subtitle: Label
@@ -111,6 +113,7 @@ func _ready() -> void:
 	_build_lobby()
 	_build_loading()
 	show_loading()
+	show_fps(bool(Settings.get_value("show_fps")))
 
 
 func _sb(bg: Color, radius := 14, border := Color(0, 0, 0, 0), bw := 0) -> StyleBoxFlat:
@@ -203,6 +206,13 @@ func _seg(parent: Control, key: String, options: Array, current) -> void:
 		b.pressed.connect(func(): setting_changed.emit(key, o[0]))
 		row.add_child(b)
 		seg_buttons[key].append([o[0], b])
+
+
+func _note(parent: Control, text: String) -> void:
+	var l := _lbl(text, 12, MUTED)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(420, 0)
+	parent.add_child(l)
 
 
 func set_seg(key: String, value) -> void:
@@ -360,7 +370,9 @@ func _build_menu() -> void:
 	tod_box.add_theme_constant_override("separation", 7)
 	v.add_child(tod_box)
 	_section(tod_box, "Time of day")
-	_seg(tod_box, "tod", [["day", "Day"], ["golden", "Golden hour"]], Settings.get_value("tod"))
+	_seg(tod_box, "tod", [["morning", "Morning"], ["day", "Midday"], ["golden", "Golden hour"], ["sunset", "Sunset"]], Settings.get_value("tod"))
+	_section(tod_box, "Weather")
+	_seg(tod_box, "weather", [["clear", "Clear"], ["few", "Few clouds"], ["scattered", "Scattered"], ["broken", "Broken"], ["overcast", "Overcast"]], Settings.get_value("weather"))
 	var fly := _big_button("Fly", true)
 	fly.pressed.connect(func(): fly_pressed.emit(false))
 	v.add_child(fly)
@@ -841,14 +853,22 @@ func _build_sheets() -> void:
 	v = r[1]
 	_section(v, "Graphics quality (applies on the next start)")
 	_seg(v, "quality", [["low", "Fast"], ["medium", "Balanced"], ["high", "Best"], ["ultra", "Ultra"]], Settings.get_value("quality"))
-	var qn := _lbl("Ultra: sharper shadows further out, more trees, buildings further away and reflections. Use it if Best runs smoothly; on battery or in VR, Best is safer.", 12, MUTED)
-	qn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	qn.custom_minimum_size = Vector2(420, 0)
-	v.add_child(qn)
+	_note(v, "Ultra: sharper shadows further out, more trees, buildings further away, reflections in water and windows, finer 3D clouds and more grass. Use it if Best runs smoothly; on battery or in VR, Best is safer.")
+	_section(v, "Smooth edges and resolution")
+	_seg(v, "aa", [["taa", "TAA"], ["smaa", "SMAA"], ["fsr_native", "FSR 2 Native"], ["fsr_quality", "FSR 2 Quality"], ["fsr_perf", "FSR 2 Fast"]], Settings.get_value("aa"))
+	_note(v, "TAA: the standard, smooth picture. SMAA: sharper, a little more shimmer. FSR 2 Native: the smoothest edges at full resolution. FSR 2 Quality / Fast draw the 3D picture smaller and sharpen it back up: more frames per second for nearly the same picture. Not used in VR.")
 	_section(v, "View distance (applies on the next start)")
 	_seg(v, "view", [["near", "Near (fastest)"], ["normal", "Normal"], ["far", "Far"]], Settings.get_value("view"))
 	_section(v, "3D clouds (the biggest cost on the screen; not used in VR)")
 	_seg(v, "clouds3d", [[true, "On"], [false, "Off"]], Settings.get_value("clouds3d"))
+	_section(v, "3D grass near the ground (Flight)")
+	_seg(v, "grass", [[true, "On"], [false, "Off"]], Settings.get_value("grass"))
+	_section(v, "Brightness")
+	_seg(v, "brightness", [["dark", "Darker"], ["normal", "Normal"], ["bright", "Brighter"]], Settings.get_value("brightness"))
+	_section(v, "V-Sync (off: more frames, but the picture may tear)")
+	_seg(v, "vsync", [[true, "On"], [false, "Off"]], Settings.get_value("vsync"))
+	_section(v, "Show frames per second")
+	_seg(v, "show_fps", [[false, "Off"], [true, "On"]], Settings.get_value("show_fps"))
 	_section(v, "Sound")
 	_seg(v, "sound", [[true, "On"], [false, "Off"]], Settings.get_value("sound"))
 	_section(v, "Pitch control")
@@ -989,6 +1009,28 @@ func _process(delta: float) -> void:
 		toast_t -= delta
 		if toast_t <= 0.0:
 			toast_label.visible = false
+	if fps_label != null and fps_label.visible:
+		fps_t -= delta
+		if fps_t <= 0.0:
+			fps_t = 0.5
+			var f := Engine.get_frames_per_second()
+			fps_label.text = "%d fps" % f
+			fps_label.add_theme_color_override("font_color", Color("#7ee08a") if f >= 55 else (Color("#ffb347") if f >= 40 else Color("#ff5a4f")))
+
+
+## Frames-per-second counter in the top-right corner (setting "Show frames per second").
+func show_fps(on: bool) -> void:
+	if fps_label == null:
+		fps_label = _lbl("", 16, Color.WHITE, true)
+		fps_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		fps_label.offset_left = -110
+		fps_label.offset_right = -14
+		fps_label.offset_top = 8
+		fps_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		fps_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		fps_label.z_index = 50
+		root.add_child(fps_label)
+	fps_label.visible = on
 
 
 func set_message(t: String, warn: bool) -> void:

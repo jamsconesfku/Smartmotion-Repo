@@ -86,7 +86,9 @@ void fragment() {
 	float t = t0 + stp * ign(FRAGCOORD.xy + vec2(TIME * 61.0, TIME * 37.0));
 	vec3 sd = normalize(sun_dir);
 	float cs = dot(rd, sd);
-	float phase = mix(hg(cs, 0.65), hg(cs, -0.2), 0.3) * 12.566 * 0.5 + 0.25;
+	float ph0 = mix(hg(cs, 0.65), hg(cs, -0.2), 0.3) * 12.566 * 0.5 + 0.25;
+	float ph1 = mix(hg(cs, 0.325), hg(cs, -0.1), 0.3) * 12.566 * 0.5 + 0.25;
+	float ph2 = mix(hg(cs, 0.16), hg(cs, -0.05), 0.3) * 12.566 * 0.5 + 0.25;
 	float T = 1.0;
 	vec3 L = vec3(0.0);
 	int n = 0;
@@ -102,11 +104,16 @@ void fragment() {
 			for (int k = 1; k <= light_steps; k++) {
 				od += dens(p + sd * lstep * float(k), k > 2) * lstep;
 			}
-			float beer = exp(-od * density * 1.1) * 0.75 + exp(-od * density * 0.25) * 0.25;
+			// light scattered once and several times inside the cloud (three "octaves": each one weaker,
+			// reaching further in and spread more evenly), which gives the soft bright cores of real cumulus
 			float powder = 1.0 - exp(-sig * 140.0);
+			float odd = od * density * 1.1;
+			float sunl = exp(-odd) * ph0 + 0.5 * exp(-odd * 0.4) * ph1 + 0.25 * exp(-odd * 0.16) * ph2;
 			float h = clamp((p.y - cloud_base) / (cloud_top - cloud_base), 0.0, 1.0);
-			vec3 amb = mix(amb_bottom, amb_top, h) * (0.55 + 0.45 * h);
-			vec3 Ls = sun_col * sun_energy * beer * phase * mix(1.0, powder, 0.6) + amb;
+			// sky light: from above at the tops, from the ground (darker) underneath; less deep inside
+			float occl = exp(-d * 1.6);
+			vec3 amb = mix(amb_bottom, amb_top, h) * (0.45 + 0.55 * h) * (0.6 + 0.4 * occl);
+			vec3 Ls = sun_col * sun_energy * sunl * mix(1.0, powder, 0.55) + amb;
 			float a = exp(-sig * stp);
 			// energy-conserving integration (Hillaire)
 			L += T * Ls * (1.0 - a);

@@ -4,8 +4,18 @@ extends Node3D
 ## villages, woods, clouds, a blimp and the gate course. Everything is built from code.
 
 const TOD := {
+	"morning": {"el": 17.0, "az": 108.0, "sun": Color(1, 0.86, 0.68), "top": Color(0.13, 0.32, 0.72), "hor": Color(0.8, 0.84, 0.9), "amb": 0.85, "sun_e": 1.5, "fog": 0.000048, "shade": Color(0.58, 0.6, 0.7)},
 	"day": {"el": 46.0, "az": 205.0, "sun": Color(1, 0.96, 0.88), "top": Color(0.14, 0.36, 0.78), "hor": Color(0.74, 0.84, 0.95), "amb": 0.9, "sun_e": 1.6, "fog": 0.000034, "shade": Color(0.6, 0.66, 0.77)},
 	"golden": {"el": 9.0, "az": 252.0, "sun": Color(1, 0.62, 0.32), "top": Color(0.12, 0.2, 0.5), "hor": Color(0.97, 0.74, 0.56), "amb": 0.7, "sun_e": 1.7, "fog": 0.00006, "shade": Color(0.55, 0.45, 0.52)},
+	"sunset": {"el": 2.2, "az": 266.0, "sun": Color(1, 0.45, 0.18), "top": Color(0.08, 0.12, 0.32), "hor": Color(0.95, 0.55, 0.35), "amb": 0.55, "sun_e": 1.2, "fog": 0.00007, "shade": Color(0.45, 0.35, 0.42)},
+}
+## Weather (v1.14.0): cloud cover, haze (Mie haze in the air model: 5 = about 40 km visibility, an English summer day), and how much the cloud dims the sun. Picked in the menu, applied live.
+const WEATHER := {
+	"clear": {"cover": 0.15, "haze": 3.0, "fog": 0.7, "sun": 1.0, "amb": 1.0, "cirrus": 0.32, "overcast": 0.0, "base": 1300.0, "top": 2200.0, "shadow": 0.38, "dens": 0.045},
+	"few": {"cover": 0.36, "haze": 4.0, "fog": 0.85, "sun": 1.0, "amb": 1.0, "cirrus": 0.5, "overcast": 0.0, "base": 1100.0, "top": 2300.0, "shadow": 0.38, "dens": 0.045},
+	"scattered": {"cover": 0.48, "haze": 5.0, "fog": 1.0, "sun": 1.0, "amb": 1.0, "cirrus": 0.55, "overcast": 0.0, "base": 950.0, "top": 2300.0, "shadow": 0.4, "dens": 0.045},
+	"broken": {"cover": 0.63, "haze": 6.5, "fog": 1.3, "sun": 0.9, "amb": 1.05, "cirrus": 0.3, "overcast": 0.0, "base": 850.0, "top": 2500.0, "shadow": 0.45, "dens": 0.05},
+	"overcast": {"cover": 0.9, "haze": 10.0, "fog": 1.9, "sun": 0.3, "amb": 1.3, "cirrus": 0.0, "overcast": 0.92, "base": 650.0, "top": 1800.0, "shadow": 0.15, "dens": 0.032},
 }
 
 var terrain: Terrain
@@ -39,6 +49,19 @@ var vol_mi: MeshInstance3D
 var cloud_cards: MultiMeshInstance3D
 var cloud_off := Vector2.ZERO
 var vr_mode := false
+var tod_name := "day"
+var weather := "scattered"
+var brightness := 1.0       # the Brightness setting (exposure)
+var _tod_exposure := 1.0
+var _sun_e := 1.6           # sunlight strength before any cloud above dims it
+var _sun_dir := Vector3.UP
+var _cloud_img: Image       # the cloud map, read on the CPU to dim the sun under a cloud
+var _cloud_dim := 0.0
+var _sky_alt := -1.0
+var grass: MultiMeshInstance3D
+var grass_mat: ShaderMaterial
+var grass_on := true
+var grass_allowed := true   # only in Flight (the racing car and coaster would have grass through them)
 const CLOUD_WIND := Vector2(7.0, 2.5)   # m/s the clouds drift
 
 
@@ -82,6 +105,7 @@ func build(progress: Callable, quality_: String, tod: String) -> void:
 	await _signs()
 	await _clouds()
 	await _volumetric_clouds()
+	_grass()
 	_blimp()
 	_gates()
 	set_time_of_day(tod)
@@ -95,40 +119,58 @@ func _environment() -> void:
 	sky_mat.shader = load("res://shaders/sky.gdshader")
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
+	# the sky shader only changes with the sun, the weather and (in steps) the camera height, so its
+	# reflections are worked out a little at a time when one of them changes, not every frame
+	sky.process_mode = Sky.PROCESS_MODE_INCREMENTAL
+	sky.radiance_size = Sky.RADIANCE_SIZE_512 if ultra else Sky.RADIANCE_SIZE_256
 	env = Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_sky_contribution = 1.0
-	sky.radiance_size = Sky.RADIANCE_SIZE_256
-	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_white = 8.0
-	env.tonemap_exposure = 1.05
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	# AgX: a film-like tone curve that keeps colour in bright skies and sunlit paint (no orange-yellow skew)
+	env.tonemap_mode = Environment.TONE_MAPPER_AGX
+	env.tonemap_white = 12.0
+	env.tonemap_agx_white = 12.0
+	env.tonemap_agx_contrast = 1.18
+	env.tonemap_exposure = 1.0
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
 	env.fog_sky_affect = 0.0
-	env.fog_aerial_perspective = 0.35   # distant land takes on the colour of the sky behind it
-	env.fog_sun_scatter = 0.12
+	env.fog_aerial_perspective = 0.62   # distant land takes on the colour of the sky behind it
+	env.fog_sun_scatter = 0.18
 	env.glow_enabled = true
-	env.glow_intensity = 0.6
-	env.glow_bloom = 0.05
-	env.glow_hdr_threshold = 1.1
+	env.glow_intensity = 0.55
+	env.glow_strength = 1.0
+	env.glow_bloom = 0.04
+	env.glow_hdr_threshold = 1.2
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT if quality == "low" else Environment.GLOW_BLEND_MODE_SCREEN
+	env.set_glow_level(0, 0.0)
+	env.set_glow_level(2, 0.6)
+	env.set_glow_level(3, 0.8)
+	env.set_glow_level(4, 0.8)
+	env.set_glow_level(5, 0.6)
+	env.set_glow_level(6, 0.4)
 	env.ssao_enabled = quality != "low"
 	env.ssao_radius = 2.5
 	env.ssao_intensity = 1.6
+	env.ssao_detail = 0.6
 	env.ssil_enabled = quality == "high"   # light bouncing between nearby surfaces
 	env.ssil_radius = 6.0
 	env.ssil_intensity = 0.8
 	if ultra:
-		# reflections in water and windows, and the shadow map at double resolution
+		# reflections in water and windows, the shadow map at double resolution, finer AO and bounce light
 		env.ssr_enabled = true
-		env.ssr_max_steps = 48
+		env.ssr_max_steps = 64
 		env.ssr_fade_in = 0.2
 		env.ssr_fade_out = 2.5
 		RenderingServer.directional_shadow_atlas_set_size(8192, true)
+		RenderingServer.environment_set_ssao_quality(RenderingServer.ENV_SSAO_QUALITY_HIGH, false, 0.5, 2, 50.0, 300.0)
+		RenderingServer.environment_set_ssil_quality(RenderingServer.ENV_SSIL_QUALITY_HIGH, false, 0.5, 4, 50.0, 300.0)
 	env.adjustment_enabled = true
 	env.adjustment_saturation = 1.16
-	env.adjustment_contrast = 1.08
+	env.adjustment_contrast = 1.04
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -145,43 +187,118 @@ func _environment() -> void:
 	sun.light_angular_distance = 0.5 if quality == "high" else 0.0   # soft shadow edges
 	sun.shadow_bias = 0.05
 	sun.shadow_normal_bias = 1.5
+	sun.light_specular = 1.0
 	add_child(sun)
 
 
 func set_time_of_day(name: String) -> void:
-	var t: Dictionary = TOD.get(name, TOD["day"])
+	tod_name = name if TOD.has(name) else "day"
+	_apply_light()
+
+
+func set_weather(name: String) -> void:
+	weather = name if WEATHER.has(name) else "scattered"
+	_apply_light()
+
+
+func set_brightness(name: String) -> void:
+	brightness = {"dark": 0.85, "normal": 1.0, "bright": 1.18}.get(name, 1.0)
+	if env != null:
+		env.tonemap_exposure = _tod_exposure * brightness
+
+
+## Sun, sky, haze and cloud colours for the time of day and the weather. The colours come from the
+## physical air model (Atmosphere, the same as the sky shader), so they always match the sky.
+func _apply_light() -> void:
+	if sun == null:
+		return
+	var t: Dictionary = TOD[tod_name]
+	var w: Dictionary = WEATHER[weather]
+	var haze: float = w["haze"]
 	var el: float = deg_to_rad(t["el"])
 	var az: float = deg_to_rad(t["az"])
 	var sd := Vector3(sin(az) * cos(el), sin(el), -cos(az) * cos(el))
+	_sun_dir = sd
 	sun.basis = Basis.looking_at(-sd, Vector3.UP)
-	sun.light_color = t["sun"]
-	sun.light_energy = t["sun_e"]
-	sky_mat.set_shader_parameter("top_col", Vector3(t["top"].r, t["top"].g, t["top"].b))
-	sky_mat.set_shader_parameter("hor_col", Vector3(t["hor"].r, t["hor"].g, t["hor"].b))
-	sky_mat.set_shader_parameter("sun_col", Vector3(t["sun"].r, t["sun"].g, t["sun"].b))
-	env.fog_light_color = t["hor"]
-	env.fog_density = t["fog"]
-	env.ambient_light_energy = t["amb"]
+	var ground := Vector3(0.0, Atmosphere.RE + 0.04, 0.0)
+	var tr := Atmosphere.sun_trans(ground, sd, haze)
+	var lum := tr.dot(Vector3(0.2126, 0.7152, 0.0722))
+	var tn := tr / maxf(maxf(tr.x, tr.y), maxf(tr.z, 1e-4))
+	# the eye (and a camera) sees noon sunlight as white: keep some of that, but let the low sun go orange
+	var sun_c := Atmosphere.to_color(tn).lerp(Color.WHITE, 0.45 * smoothstep(0.1, 0.6, lum))
+	var sky_e := 0.85
+	var hor := Atmosphere.to_color(Atmosphere.horizon(sd, haze) * sky_e)
+	var top := Atmosphere.to_color(Atmosphere.sky(Vector3.UP, sd, haze) * sky_e)
+	var oc: float = w["overcast"]
+	if oc > 0.0:
+		# under a cloud deck the light is grey and comes from the whole sky
+		var grey := (hor * 0.55 + top * 0.45)
+		var gl := grey.get_luminance()
+		var deck := Color(gl, gl * 1.02, gl * 1.07) * 0.95
+		hor = hor.lerp(deck, oc * 0.85)
+		top = top.lerp(deck * 0.9, oc)
+		sky_mat.set_shader_parameter("overcast_col", Vector3(deck.r, deck.g, deck.b))
+	_sun_e = 1.75 * pow(maxf(lum, 0.0), 0.6) * float(w["sun"])
+	sun.light_color = sun_c
+	sun.light_energy = _sun_e * (1.0 - _cloud_dim)
+	# low sun: open the "camera" up a little, as the eye does, so sunset isn't murky
+	_tod_exposure = clampf(pow(0.86 / maxf(lum, 0.05), 0.3), 1.0, 1.55) * (1.0 + 0.25 * oc)
+	env.tonemap_exposure = _tod_exposure * brightness
+	sky_mat.set_shader_parameter("sky_energy", sky_e)
+	sky_mat.set_shader_parameter("haze", haze)
+	sky_mat.set_shader_parameter("cirrus", w["cirrus"])
+	sky_mat.set_shader_parameter("overcast", oc)
+	env.fog_light_color = hor
+	env.fog_density = float(t["fog"]) * float(w["fog"])
+	env.fog_sun_scatter = 0.18 * (1.0 - 0.8 * oc)   # no bright patch in the haze when the sun is behind cloud
+	env.ambient_light_energy = float(t["amb"]) * float(w["amb"]) / 0.9 * 0.95
+	var shade: Color = hor * 0.62 + top * 0.22
+	# cloud undersides are lit by the sky, so they stay a cool blue-grey even when the sun is orange
+	var sl := shade.get_luminance()
+	shade = shade.lerp(Color(sl * 0.88, sl * 0.94, sl * 1.12), 0.5)
 	if cloud_mat != null:
-		var tint: Color = Color(1, 1, 1).lerp(t["sun"], 0.35)
-		var sh: Color = t["shade"]
-		cloud_mat.set_shader_parameter("tint", Vector3(tint.r, tint.g, tint.b))
-		cloud_mat.set_shader_parameter("shade", Vector3(sh.r, sh.g, sh.b))
-		cloud_mat.set_shader_parameter("sun_col", Vector3(t["sun"].r, t["sun"].g, t["sun"].b))
+		var tint: Color = Color(1, 1, 1).lerp(sun_c, 0.35)
+		cloud_mat.set_shader_parameter("tint", Vector3(tint.r, tint.g, tint.b) * (1.0 - 0.45 * oc))
+		cloud_mat.set_shader_parameter("shade", Vector3(shade.r, shade.g, shade.b))
+		cloud_mat.set_shader_parameter("sun_col", Vector3(sun_c.r, sun_c.g, sun_c.b))
 		cloud_mat.set_shader_parameter("sun_dir", sd)
+	if cloud_cards != null:
+		cloud_cards.multimesh.visible_instance_count = int(cloud_cards.multimesh.instance_count * clampf(float(w["cover"]) / 0.48, 0.15, 1.0))
 	for m in ground_mats:
-		(m as ShaderMaterial).set_shader_parameter("shadow_shift", Vector2(sd.x, sd.z) / maxf(sd.y, 0.1) * 1500.0)
+		(m as ShaderMaterial).set_shader_parameter("shadow_shift", Vector2(sd.x, sd.z) / maxf(sd.y, 0.1) * (float(w["base"]) + 500.0))
+		(m as ShaderMaterial).set_shader_parameter("cloud_cover", w["cover"])
 	if vol_mat != null:
 		vol_mat.set_shader_parameter("sun_dir", sd)
-		vol_mat.set_shader_parameter("sun_col", Vector3(t["sun"].r, t["sun"].g, t["sun"].b))
-		vol_mat.set_shader_parameter("sun_energy", float(t["sun_e"]) * 1.15)
-		var top: Color = t["top"]
-		var hor: Color = t["hor"]
-		var shd: Color = t["shade"]
+		vol_mat.set_shader_parameter("sun_col", Vector3(sun_c.r, sun_c.g, sun_c.b))
+		vol_mat.set_shader_parameter("sun_energy", _sun_e * 1.15)
 		vol_mat.set_shader_parameter("amb_top", Vector3(top.r, top.g, top.b).lerp(Vector3(hor.r, hor.g, hor.b), 0.5) * 0.9)
-		vol_mat.set_shader_parameter("amb_bottom", Vector3(shd.r, shd.g, shd.b) * 0.62)
+		vol_mat.set_shader_parameter("amb_bottom", Vector3(shade.r, shade.g, shade.b) * 0.62)
 		vol_mat.set_shader_parameter("haze_col", Vector3(hor.r, hor.g, hor.b))
-		vol_mat.set_shader_parameter("haze", float(t["fog"]))
+		vol_mat.set_shader_parameter("haze", env.fog_density)
+		vol_mat.set_shader_parameter("coverage", w["cover"])
+		vol_mat.set_shader_parameter("cloud_base", w["base"])
+		vol_mat.set_shader_parameter("cloud_top", w["top"])
+		vol_mat.set_shader_parameter("density", w["dens"])
+	_apply_cloud_mode()
+
+
+## Is the camera (or the aircraft) under a cloud? Read the same cloud map as the clouds, along the sun,
+## and dim the sunlight: the aircraft, buildings and trees nearby go into the cloud's shadow with the ground.
+func _update_cloud_dim(dt: float, cam_pos: Vector3) -> void:
+	var target := 0.0
+	var w: Dictionary = WEATHER[weather]
+	var vol := vol_mi != null and vol_mi.visible
+	if vol and _cloud_img != null and cam_pos.y < float(w["base"]):
+		var up := (float(w["base"]) + 500.0 - cam_pos.y) / maxf(_sun_dir.y, 0.1)
+		var p := Vector2(cam_pos.x, cam_pos.z) + Vector2(_sun_dir.x, _sun_dir.z) * up + cloud_off
+		var sz := _cloud_img.get_width()
+		var u := fposmod(p.x / 24000.0, 1.0) * sz
+		var v := fposmod(p.y / 24000.0, 1.0) * sz
+		var c := _cloud_img.get_pixel(int(u) % sz, int(v) % sz).r
+		var cover: float = w["cover"]
+		target = smoothstep(1.0 - cover, 1.0 - cover + 0.18, c) * float(w["shadow"]) * 1.4
+	_cloud_dim = lerpf(_cloud_dim, clampf(target, 0.0, 0.7), clampf(dt * 0.8, 0.0, 1.0))
+	sun.light_energy = _sun_e * (1.0 - _cloud_dim)
 
 
 ## 3D clouds (Forward+ renderer, not in VR): a full-screen raymarch. The flat cloud cards are the fallback.
@@ -193,22 +310,23 @@ func _volumetric_clouds() -> void:
 	wn.seed = 4
 	wn.frequency = 0.011
 	wn.fractal_octaves = 4
-	var weather := NoiseTexture2D.new()
-	weather.width = 512
-	weather.height = 512
-	weather.seamless = true
-	weather.normalize = true
-	weather.generate_mipmaps = true
-	weather.noise = wn
+	var wtex := NoiseTexture2D.new()
+	wtex.width = 1024 if ultra else 512
+	wtex.height = 1024 if ultra else 512
+	wtex.seamless = true
+	wtex.normalize = true
+	wtex.generate_mipmaps = true
+	wtex.noise = wn
 	var sn := FastNoiseLite.new()
 	sn.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	sn.seed = 8
 	sn.frequency = 0.07
 	sn.fractal_octaves = 3
 	var shape := NoiseTexture3D.new()
-	shape.width = 64
-	shape.height = 64
-	shape.depth = 64
+	var sres := 96 if ultra else 64
+	shape.width = sres
+	shape.height = sres
+	shape.depth = sres
 	shape.seamless = true
 	shape.normalize = true
 	shape.noise = sn
@@ -228,17 +346,21 @@ func _volumetric_clouds() -> void:
 	detail.noise = dn
 	# the noise is made on another thread: wait until each texture has its pixels (at most about 10 s)
 	for k in 600:
-		if weather.get_image() != null and shape.get_data().size() > 0 and detail.get_data().size() > 0:
+		if wtex.get_image() != null and shape.get_data().size() > 0 and detail.get_data().size() > 0:
 			break
 		await get_tree().process_frame
 	vol_mat = ShaderMaterial.new()
 	vol_mat.shader = load("res://shaders/clouds_volumetric.gdshader")
-	vol_mat.set_shader_parameter("weather", weather)
+	vol_mat.set_shader_parameter("weather", wtex)
 	vol_mat.set_shader_parameter("shape_noise", shape)
 	vol_mat.set_shader_parameter("detail_noise", detail)
 	vol_mat.set_shader_parameter("steps", (96 if ultra else 72) if quality == "high" else 44)
-	vol_mat.set_shader_parameter("light_steps", 5 if quality == "high" else 4)
-	vol_mat.set_shader_parameter("coverage", 0.48)
+	vol_mat.set_shader_parameter("light_steps", (6 if ultra else 5) if quality == "high" else 4)
+	_cloud_img = wtex.get_image().duplicate() if wtex.get_image() != null else null
+	if _cloud_img != null:
+		if _cloud_img.is_compressed():
+			_cloud_img.decompress()
+		_cloud_img.clear_mipmaps()
 	vol_mi = MeshInstance3D.new()
 	var qm := QuadMesh.new()
 	qm.size = Vector2(1, 1)
@@ -248,10 +370,8 @@ func _volumetric_clouds() -> void:
 	vol_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(vol_mi)
 	for m in ground_mats:
-		(m as ShaderMaterial).set_shader_parameter("cloud_map", weather)
-		(m as ShaderMaterial).set_shader_parameter("cloud_cover", 0.48)
-		(m as ShaderMaterial).set_shader_parameter("cloud_shadow", 0.38)
-	_apply_cloud_mode()
+		(m as ShaderMaterial).set_shader_parameter("cloud_map", wtex)
+	_apply_light()
 
 
 ## VR draws two views, so it uses the light cloud cards instead of the 3D clouds.
@@ -263,6 +383,7 @@ func _roof_fade() -> void:
 
 func set_vr_mode(on: bool) -> void:
 	vr_mode = on
+	_grass_size()
 	if scenery != null:
 		scenery.set_vr(on)
 		_roof_fade()
@@ -304,7 +425,7 @@ func _apply_cloud_mode() -> void:
 	if cloud_cards != null:
 		cloud_cards.visible = not vol
 	for m in ground_mats:
-		(m as ShaderMaterial).set_shader_parameter("cloud_shadow", 0.38 if vol else 0.0)
+		(m as ShaderMaterial).set_shader_parameter("cloud_shadow", float(WEATHER[weather]["shadow"]) if vol else 0.0)
 
 
 # ---------------------------------------------------------------- ground
@@ -481,6 +602,109 @@ func follow(cam_pos: Vector3) -> void:
 		var snap: float = r["snap"]
 		var n: MeshInstance3D = r["node"]
 		n.position = Vector3(round(cam_pos.x / snap) * snap, 0.0, round(cam_pos.z / snap) * snap)
+
+
+## One clump of grass: five tapering blades leaning out a little, 1 unit tall (the shader sizes it).
+func _grass_clump() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	for b in 5:
+		var a := TAU * float(b) / 5.0 + rng.randf() * 0.8
+		var dirv := Vector3(cos(a), 0.0, sin(a))
+		var side := Vector3(-dirv.z, 0.0, dirv.x)
+		var off := dirv * rng.randf_range(0.02, 0.09)
+		var lean := rng.randf_range(0.12, 0.35)
+		var w := rng.randf_range(0.022, 0.034)
+		var hh := rng.randf_range(0.7, 1.0)
+		var pts: Array = []
+		for k in 3:
+			var f := float(k) / 2.0
+			var c := off + dirv * lean * f * f + Vector3(0.0, hh * f, 0.0)
+			var ww := w * (1.0 - f * 0.75)
+			pts.append([c - side * ww, c + side * ww, f * hh])
+		var tip := off + dirv * lean * 1.25 + Vector3(0.0, hh * 1.1, 0.0)
+		for k in 2:
+			var p0: Array = pts[k]
+			var p1: Array = pts[k + 1]
+			for v in [p0[0], p0[1], p1[1], p0[0], p1[1], p1[0]]:
+				st.add_vertex(v)
+		var p2: Array = pts[2]
+		for v in [p2[0], p2[1], tip]:
+			st.add_vertex(v)
+	return st.commit()
+
+
+## 3D grass round the camera near the ground (Flight only; setting "Grass"). Fast quality has none.
+func _grass() -> void:
+	if quality == "low":
+		return
+	grass_mat = ShaderMaterial.new()
+	grass_mat.shader = load("res://shaders/grass.gdshader")
+	var hm: Texture2D = (ground_mats[0] as ShaderMaterial).get_shader_parameter("heightmap")
+	grass_mat.set_shader_parameter("heightmap", hm)
+	grass_mat.set_shader_parameter("ortho", ortho_tex)
+	grass_mat.set_shader_parameter("landcover", load("res://assets/world/landcover.png"))
+	grass_mat.set_shader_parameter("roofmask", load("res://assets/world/roofmask.png"))
+	grass_mat.set_shader_parameter("cell", Terrain.CELL)
+	grass_mat.set_shader_parameter("size_cells", float(Terrain.SIZE))
+	grass_mat.set_shader_parameter("half_size", Terrain.LEN / 2.0)
+	grass_mat.set_shader_parameter("rw", Vector4(terrain.dir.x, terrain.dir.y, Terrain.RW_LEN, Terrain.RW_WIDTH))
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = _grass_clump()
+	grass = MultiMeshInstance3D.new()
+	grass.multimesh = mm
+	grass.material_override = grass_mat
+	grass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	grass.custom_aabb = AABB(Vector3(-80, -400, -80), Vector3(160, 1200, 160))
+	grass.visible = false
+	add_child(grass)
+	_grass_size()
+
+
+## How big the patch of grass is: Ultra the most, VR the least (it is drawn twice there).
+func _grass_size() -> void:
+	if grass == null:
+		return
+	var spacing := 0.5
+	var radius := 36.0
+	if ultra:
+		spacing = 0.42
+		radius = 46.0
+	elif quality == "medium":
+		spacing = 0.6
+		radius = 28.0
+	if vr_mode:
+		spacing *= 1.15
+		radius *= 0.75
+	var n := int(ceil(radius * 2.0 / spacing))
+	grass.multimesh.instance_count = n * n
+	for i in n * n:
+		grass.multimesh.set_instance_transform(i, Transform3D.IDENTITY)
+	grass_mat.set_shader_parameter("spacing", spacing)
+	grass_mat.set_shader_parameter("grid", n)
+	grass_mat.set_shader_parameter("radius", radius)
+	grass.set_meta("spacing", spacing)
+	grass.set_meta("radius", radius)
+
+
+func set_grass(on: bool) -> void:
+	grass_on = on
+
+
+func _update_grass(cam_pos: Vector3) -> void:
+	if grass == null:
+		return
+	var radius: float = grass.get_meta("radius")
+	var agl := cam_pos.y - terrain.height(cam_pos.x, cam_pos.z)
+	var show := grass_on and grass_allowed and agl < radius * 1.4
+	grass.visible = show
+	if show:
+		var sp: float = grass.get_meta("spacing")
+		grass.global_position = Vector3(round(cam_pos.x / sp) * sp, 0.0, round(cam_pos.z / sp) * sp)
+		grass_mat.set_shader_parameter("wind", 0.6 + wind.length() * 0.12)
 
 
 # ---------------------------------------------------------------- signs
@@ -966,6 +1190,14 @@ func set_gates(active: bool, next: int) -> void:
 # ---------------------------------------------------------------- per frame
 func update_world(dt: float, cam_pos: Vector3) -> void:
 	follow(cam_pos)
+	if sun != null:
+		_update_cloud_dim(dt, cam_pos)
+	# the sky depends a little on the camera's height: update it in 150 m steps (each step redraws its reflections)
+	var alt := maxf(cam_pos.y, 0.0) / 1000.0 + 0.01
+	if absf(alt - _sky_alt) > 0.15:
+		_sky_alt = alt
+		sky_mat.set_shader_parameter("cam_alt_km", alt)
+	_update_grass(cam_pos)
 	cloud_off += CLOUD_WIND * dt
 	if vol_mi != null:
 		vol_mi.global_position = cam_pos

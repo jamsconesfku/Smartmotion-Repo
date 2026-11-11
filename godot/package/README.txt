@@ -21,10 +21,18 @@ HOW TO START
 
 GRAPHICS SETTINGS (Settings on the menu)
   Graphics quality: Fast, Balanced, Best (the default) or Ultra. Ultra draws buildings and trees further,
-  more trees, sharper shadows further out and reflections in water and windows: use it if Best runs
-  smoothly; on battery or in VR, Best is the safe choice. View distance: Near (fastest), Normal or Far.
-  3D clouds: On or Off (Off is the quickest way to win back speed on the screen; VR never uses them).
-  Quality and view distance change the next time you start the game.
+  more trees, sharper shadows further out, reflections in water and windows, finer 3D clouds and more
+  grass: use it if Best runs smoothly; on battery or in VR, Best is the safe choice.
+  Smooth edges and resolution: TAA (the standard), SMAA (sharper, a little more shimmer), FSR 2 Native
+  (smoothest edges), FSR 2 Quality or FSR 2 Fast (draw the picture smaller and sharpen it back up: more
+  frames per second). If the game stutters on Ultra, try FSR 2 Quality before turning things off.
+  View distance: Near (fastest), Normal or Far. 3D clouds: On or Off (Off is the quickest way to win back
+  speed on the screen; VR never uses them). 3D grass near the ground: On or Off. Brightness: Darker,
+  Normal, Brighter. V-Sync: On (no tearing) or Off. Show frames per second: a counter in the top corner
+  (green: smooth, amber: OK, red: too slow).
+  Quality and view distance change the next time you start the game; the rest change straight away.
+  The menu also has Time of day (Morning, Midday, Golden hour, Sunset) and Weather (Clear, Few clouds,
+  Scattered, Broken, Overcast).
 
 USE YOUR GAMING GRAPHICS CARD
   The menu shows which graphics card the game is using ("Graphics: ..."). On a laptop with two

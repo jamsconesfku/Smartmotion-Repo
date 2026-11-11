@@ -6,6 +6,7 @@ var data := {
 	"aircraft": "bulldog", "start": "runway", "mode": "free", "assist": true, "tod": "day", "wind": "calm",
 	"invert": false, "invert_roll": false, "invert_yaw": false, "sound": true, "quality": "high", "tel": false, "tel_host": "127.0.0.1", "tel_port": 4123, "fullscreen": false,
 	"clouds3d": true, "view": "normal",
+	"aa": "taa", "weather": "scattered", "brightness": "normal", "grass": true, "show_fps": false, "vsync": true,
 	"flypt": true, "flypt_port": 49000, "flypt_out": 49001,
 	"vr_hz": 72.0, "game": "flight", "race": "race", "rig": "all", "rig_map": {},
 }
