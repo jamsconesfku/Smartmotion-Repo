@@ -213,5 +213,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-11",
+    "summary": "Version 1.13.1: joystick left/right (roll, and steering in Racing) and rudder can now be set to Inverted in Settings, like pitch already could. They change the joystick, wheel and gamepad only, not the keyboard or the VR controllers.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

@@ -14,7 +14,8 @@ HOW TO START
      Steering wheel (Racing), Hands-free ride (Roller coaster) or Laptop or gamepad (every game).
      The menu then shows the games for that set-up ("Change setup" to pick again).
   4. With a joystick or wheel fitted, press "Set up controls" once: press Set beside each control and move it
-     as asked (the game remembers it).
+     as asked (the game remembers it). If a direction comes out the wrong way round, Settings has
+     Inverted options for pitch (nose up/down), left / right (roll, and steering in Racing) and rudder.
   5. Choose the options and press Fly / Race / Launch / Ride.
      (Racing, Space and the Coaster take a few seconds to build the first time you pick them.)
 

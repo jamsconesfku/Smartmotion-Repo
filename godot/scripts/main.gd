@@ -2,7 +2,7 @@ extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 ## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.13.0"
+const APP_VERSION := "1.13.1"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -656,9 +656,9 @@ func _read_input(dt: float) -> void:
 	var pads := Input.get_connected_joypads()
 	if pads.size() > 0 and not _has_map():
 		var id: int = pads[0]
-		roll = _dz(Input.get_joy_axis(id, JOY_AXIS_RIGHT_X))
+		roll = _dz(Input.get_joy_axis(id, JOY_AXIS_RIGHT_X)) * _inv("invert_roll")
 		pitch = _dz(Input.get_joy_axis(id, JOY_AXIS_RIGHT_Y))
-		yaw = _dz(Input.get_joy_axis(id, JOY_AXIS_LEFT_X))
+		yaw = _dz(Input.get_joy_axis(id, JOY_AXIS_LEFT_X)) * _inv("invert_yaw")
 		thr_axis = -_dz(Input.get_joy_axis(id, JOY_AXIS_LEFT_Y))
 		brake = Input.get_joy_axis(id, JOY_AXIS_TRIGGER_LEFT)
 		if Input.is_joy_button_pressed(id, JOY_BUTTON_LEFT_SHOULDER):
@@ -692,11 +692,11 @@ func _read_input(dt: float) -> void:
 	var my := _mapped("rudder")
 	var mt := _mapped("throttle")
 	if not is_nan(mr):
-		inp["roll"] = clampf(inp["roll"] + mr, -1.0, 1.0)
+		inp["roll"] = clampf(inp["roll"] + mr * _inv("invert_roll"), -1.0, 1.0)
 	if not is_nan(mp):
 		inp["pitch"] = clampf(inp["pitch"] + mp * inv, -1.0, 1.0)
 	if not is_nan(my):
-		inp["yaw"] = clampf(inp["yaw"] + my, -1.0, 1.0)
+		inp["yaw"] = clampf(inp["yaw"] + my * _inv("invert_yaw"), -1.0, 1.0)
 	if not is_nan(mt) and thr_axis == 0.0:
 		throttle = mt
 	inp["throttle"] = throttle
@@ -1397,7 +1397,7 @@ func _read_mode_input(dt: float) -> Dictionary:
 		var thr := maxf(_k(KEY_W), _k(KEY_UP))
 		var brk := maxf(maxf(_k(KEY_S), _k(KEY_DOWN)), _k(KEY_SPACE))
 		if pad >= 0:
-			steer += _dz(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X))
+			steer += _dz(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X)) * _inv("invert_roll")
 			thr = maxf(thr, Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_RIGHT))
 			brk = maxf(brk, Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_LEFT))
 		if vrr != null:
@@ -1410,7 +1410,7 @@ func _read_mode_input(dt: float) -> Dictionary:
 		var ma := _mapped("accel")
 		var mb := _mapped("brake")
 		if not is_nan(ms):
-			steer += ms
+			steer += ms * _inv("invert_roll")
 		if not is_nan(ma):
 			thr = maxf(thr, ma)
 		if not is_nan(mb):
@@ -1433,9 +1433,9 @@ func _read_mode_input(dt: float) -> Dictionary:
 	var fire := _k(KEY_SPACE) > 0.0 or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	var boost := _k(KEY_TAB) > 0.0 or _k(KEY_B) > 0.0
 	if pad >= 0:
-		roll += _dz(Input.get_joy_axis(pad, JOY_AXIS_RIGHT_X))
+		roll += _dz(Input.get_joy_axis(pad, JOY_AXIS_RIGHT_X)) * _inv("invert_roll")
 		pitch += _dz(Input.get_joy_axis(pad, JOY_AXIS_RIGHT_Y))
-		yaw += _dz(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X))
+		yaw += _dz(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X)) * _inv("invert_yaw")
 		thr_axis += -_dz(Input.get_joy_axis(pad, JOY_AXIS_LEFT_Y))
 		fire = fire or Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_RIGHT) > 0.4
 		boost = boost or Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_LEFT) > 0.4
@@ -1455,11 +1455,11 @@ func _read_mode_input(dt: float) -> Dictionary:
 		var mv := _mapped(e[0])
 		if not is_nan(mv):
 			if e[1] == "r":
-				roll += mv
+				roll += mv * _inv("invert_roll")
 			elif e[1] == "p":
 				pitch += mv
 			else:
-				yaw += mv
+				yaw += mv * _inv("invert_yaw")
 	var mth := _mapped("throttle")
 	if not is_nan(mth) and thr_axis == 0.0:
 		space_thr = mth
@@ -1566,6 +1566,11 @@ func _test_panel() -> void:
 
 
 # ------------------------------------------------------------ the simulator's own controls (joystick, wheel, pedals)
+## -1 when a joystick/wheel/gamepad direction is set to Inverted in Settings (not the keyboard or VR controllers).
+func _inv(key: String) -> float:
+	return -1.0 if Settings.get_value(key) else 1.0
+
+
 func _rig_map() -> Dictionary:
 	var m = Settings.get_value("rig_map")
 	return m if m is Dictionary else {}
