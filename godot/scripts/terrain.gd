@@ -167,6 +167,17 @@ func height(x: float, z: float) -> float:
 
 
 func coarse_height(x: float, z: float) -> float:
+	var h := _map_height(x, z)
+	if real:
+		# v1.17.1: beyond the real 32 km map the ground levels out at 45 m (as the ground shader draws it);
+		# before, the map's hills repeated there
+		var e := maxf(absf(x), absf(z))
+		h = lerpf(h, FLAT_H, _sstep(LEN / 2.0 - 1500.0, LEN / 2.0 + 4000.0, e))
+	return h
+
+
+const FLAT_H := 45.0
+func _map_height(x: float, z: float) -> float:
 	var gx := x / CELL + SIZE / 2.0
 	var gz := z / CELL + SIZE / 2.0
 	var i0 := int(floor(gx))

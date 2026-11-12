@@ -3,7 +3,12 @@ render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 // The ground: a ring mesh that follows the camera; heights come from the real elevation data.
 // Colour is a real satellite photo (Copernicus Sentinel-2) inside the 32.8 km square, and the painted
 // countryside beyond it. Up close, free CC0 photo textures (ambientCG) add grain and bumps, chosen by land cover.
-uniform sampler2D heightmap : filter_linear, repeat_enable;
+uniform sampler2D heightmap : filter_linear_mipmap, repeat_enable;   // with mipmaps (v1.17.1): far rings read smoothed heights
+// v1.17.1: the real curve of the Earth beyond 8 km (the scenery stops before that), so the horizon sits where it
+// really is and the ground goes over it instead of ending at an edge
+uniform float earth_r = 6371000.0;
+uniform float curve_from = 8000.0;
+uniform float flat_h = 45.0;   // beyond the real 32 km map the ground levels out (it used to repeat the map's hills)
 uniform sampler2D ortho : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
 uniform sampler2D landcover : filter_linear_mipmap, repeat_disable;   // r trees, g built-up, b water, a grassland
 uniform sampler2D far_map : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -28,6 +33,7 @@ uniform float size_cells = 1024.0;
 uniform float half_size = 16384.0;
 uniform float far_size = 163840.0;
 uniform float y_bias = 0.0;
+uniform float ring_cell = 8.0;   // this ring's triangle size (v1.17.1)
 uniform vec4 rw = vec4(0.848, -0.530, 1448.0, 46.0);   // runway dir.x, dir.z, length, width
 uniform float exposure = 1.12;
 uniform float saturation = 0.98;
@@ -47,9 +53,22 @@ float vnoise(vec2 q) {
 	return mix(mix(h21g(i), h21g(i + vec2(1.0, 0.0)), f.x), mix(h21g(i + vec2(0.0, 1.0)), h21g(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
+float flatten_out(vec2 xz, float h) {
+	float e = max(abs(xz.x), abs(xz.y));
+	return mix(h, flat_h, smoothstep(half_size - 1500.0, half_size + 4000.0, e));
+}
 float hgt_coarse(vec2 xz) {
 	vec2 uv = (xz / cell + size_cells * 0.5 + 0.5) / size_cells;
-	return texture(heightmap, uv).r;
+	return flatten_out(xz, texture(heightmap, uv).r);
+}
+// in the vertex shader: the far rings (big triangles) read the smoothed heights, so distant hills don't pop
+// when the rings move on with you
+float hgt_v(vec2 xz, float ring_cell) {
+	vec2 uv = (xz / cell + size_cells * 0.5 + 0.5) / size_cells;
+	float lod = max(log2(ring_cell / cell), 0.0);
+	float h = flatten_out(xz, textureLod(heightmap, uv, lod).r);
+	float w = d_weight(xz);
+	return w > 0.0 ? mix(h, d_height(xz), w) : h;
 }
 float hgt(vec2 xz) {
 	float h = hgt_coarse(xz);
@@ -59,12 +78,13 @@ float hgt(vec2 xz) {
 
 void vertex() {
 	vec3 wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	float h = hgt(wp.xz);
-	VERTEX.y = h + y_bias - MODEL_MATRIX[3].y;
+	float h = hgt_v(wp.xz, ring_cell);
+	float dd = max(length(wp.xz - CAMERA_POSITION_WORLD.xz) - curve_from, 0.0);
+	VERTEX.y = h + y_bias - dd * dd / (2.0 * earth_r) - MODEL_MATRIX[3].y;
 	v_world = vec3(wp.x, h, wp.z);
-	float e = cell * 0.5;
-	float hl = hgt(wp.xz - vec2(e, 0.0)); float hr = hgt(wp.xz + vec2(e, 0.0));
-	float hu = hgt(wp.xz - vec2(0.0, e)); float hd = hgt(wp.xz + vec2(0.0, e));
+	float e = max(cell, ring_cell) * 0.5;
+	float hl = hgt_v(wp.xz - vec2(e, 0.0), ring_cell); float hr = hgt_v(wp.xz + vec2(e, 0.0), ring_cell);
+	float hu = hgt_v(wp.xz - vec2(0.0, e), ring_cell); float hd = hgt_v(wp.xz + vec2(0.0, e), ring_cell);
 	NORMAL = normalize(vec3(hl - hr, 2.0 * e, hu - hd));
 	TANGENT = normalize(vec3(1.0, 0.0, 0.0) - NORMAL * NORMAL.x);
 	BINORMAL = normalize(vec3(0.0, 0.0, 1.0) - NORMAL * NORMAL.z);

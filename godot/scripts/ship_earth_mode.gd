@@ -43,7 +43,7 @@ func parked_in_world() -> bool:
 
 
 func camera_far() -> float:
-	return 60000.0
+	return 600000.0   # v1.17.1: past the real horizon even at 20 km up
 
 
 func start_throttle() -> float:

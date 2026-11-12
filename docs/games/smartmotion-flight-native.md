@@ -38,6 +38,17 @@ A 32.8 km square centred on the middle of Duxford's hard runway (real heading 05
 ## Performance (RTX 4060 target)
 High: about 1 M triangles of nearby trees, about 2 M of far trees, 16,000 buildings within 7 km, 72 cloud steps a pixel. If it drops below 60 fps, use Medium (fewer trees, shorter range, 44 cloud steps). In VR the 3D clouds, SSAO and SSIL are switched off. Load with `--stats` (after `--`) to log triangles, draw calls and fps every two seconds in the diagnostics log.
 
+## A real horizon at every height (v1.17.1)
+Sam, 12 Nov 2026: "make sure the horizon is realistic and never moves and is smooth at all heights".
+- **What was wrong**: the camera only drew 40 km (60 km in the spaceship), so the ground stopped at a ring 40 km away that showed as a false horizon and moved as you climbed. The far ground (2 km triangles) also moved on in 4 km steps, and its heights came straight from the 32 m map, so distant hills popped; and beyond the 32 km map the hills repeated.
+- **Now**:
+  - The camera draws to 600 km (`main.gd` `VIEW_FAR`; also racing, the coaster and the spaceship on Earth).
+  - Two more ground rings (8 and 16 km triangles) take the ground out to about 1,000 km each way.
+  - The ground follows the real curve of the Earth beyond 8 km (`earth_r`, `curve_from` in `shaders/ground.gdshader`; the scenery stops before 8 km, so buildings and trees aren't affected). The horizon sits where it really is (about 45 km away at 150 m up, 195 km at 3 km, 440 km at 15 km), a little below eye level, and the ground goes over it instead of ending.
+  - The far rings read smoothed heights (the height map has mipmaps; `hgt_v`), so distant hills don't pop as the rings move on with you.
+  - Beyond the real 32 km map the ground levels out at 45 m over 5.5 km instead of repeating the map's hills (the ground shader and `Terrain.coarse_height`, so the physics matches).
+- Checks: all flight, scenery, racing, coaster and spaceship checks pass; pictures at 150 m, 3 km and 15 km on the build machine.
+
 ## Smoother VR, real-looking vehicles, towns and roads, point-to-fly spaceship (v1.17.0)
 Sam, 12 Nov 2026: make the VR frame rate smoother; a big visual update to all the vehicles ("ultra realistic", free materials allowed); better roads; towns that look built up instead of grassy fields; in the spaceship, the right controller does all the aiming.
 - **Smoother VR** (the game draws every pixel twice in the headset):

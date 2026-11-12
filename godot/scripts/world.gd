@@ -528,7 +528,8 @@ func _ring_mesh(cell: float, n: int, hole: int) -> ArrayMesh:
 	arrays[Mesh.ARRAY_INDEX] = idx
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	m.custom_aabb = AABB(Vector3(-n / 2.0 * cell, -300.0, -n / 2.0 * cell), Vector3(n * cell, 900.0, n * cell))
+	# (deep enough for the Earth's curve: the far edge is about 80 km below the camera's level)
+	m.custom_aabb = AABB(Vector3(-n / 2.0 * cell, -120000.0, -n / 2.0 * cell), Vector3(n * cell, 121000.0, n * cell))
 	return m
 
 
@@ -567,14 +568,17 @@ func _ground() -> void:
 	var far_px: int = {"low": 1024, "medium": 2048, "high": 2048}.get(quality, 2048)
 	var far_size := far_px * 80.0
 	var hm_img := Image.create_from_data(Terrain.SIZE, Terrain.SIZE, false, Image.FORMAT_RF, terrain.data.to_byte_array())
+	hm_img.generate_mipmaps()   # smoothed heights for the far rings (v1.17.1)
 	var hm_tex := ImageTexture.create_from_image(hm_img)
 	var far_tex := await _paint(far_px, far_size, 3.0, 0.0)
 	ortho_tex = load("res://assets/world/ortho.jpg")
 	var lc_tex: Texture2D = load("res://assets/world/landcover.png")
 	var roof_tex: Texture2D = load("res://assets/world/roofmask.png")
 	var shader: Shader = load("res://shaders/ground.gdshader")
-	var cells := [8.0, 32.0, 128.0, 512.0, 2048.0]
-	var biases := [0.0, -0.6, -2.0, -4.0, -8.0]
+	# v1.17.1: two more rings (8 and 16 km triangles) take the ground out to about 1,000 km each way, past the
+	# real horizon even at 20 km up (the Earth's curve is in the ground shader), so it never ends at an edge
+	var cells := [8.0, 32.0, 128.0, 512.0, 2048.0, 8192.0, 16384.0]
+	var biases := [0.0, -0.6, -2.0, -4.0, -8.0, -16.0, -30.0]
 	if terrain.has_detail:
 		# a 2 m ring round the camera, so the LIDAR ditches, banks and field edges have real shape up close
 		cells.push_front(2.0)
@@ -603,6 +607,7 @@ func _ground() -> void:
 		mat.set_shader_parameter("half_size", Terrain.LEN / 2.0)
 		mat.set_shader_parameter("far_size", far_size)
 		mat.set_shader_parameter("y_bias", biases[k])
+		mat.set_shader_parameter("ring_cell", cell)
 		mat.set_shader_parameter("rw", Vector4(terrain.dir.x, terrain.dir.y, Terrain.RW_LEN, Terrain.RW_WIDTH))
 		mat.set_shader_parameter("roofmask", roof_tex)
 		_set_detail(mat)

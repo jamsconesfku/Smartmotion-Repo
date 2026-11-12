@@ -3,7 +3,10 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.17.0"
+const APP_VERSION := "1.17.1"
+## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
+## ground stopped at an edge that moved as you climbed)
+const VIEW_FAR := 600000.0
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -118,7 +121,7 @@ func _ready() -> void:
 	_apply_window()
 	_apply_render()
 	cam = Camera3D.new()
-	cam.far = 40000.0
+	cam.far = VIEW_FAR
 	cam.near = 0.4
 	cam.fov = 68.0
 	add_child(cam)
@@ -373,7 +376,7 @@ func _activate(g: String) -> void:
 		mode = null
 		world.visible = true
 		cam.environment = null
-		cam.far = 40000.0
+		cam.far = VIEW_FAR
 		synth.set_profile("plane")
 	else:
 		mode = modes[g]
@@ -859,7 +862,7 @@ func _start_vr() -> bool:
 	vr_base = Vector3.ZERO
 	xr_cam = XRCamera3D.new()
 	xr_cam.near = 0.05
-	xr_cam.far = 40000.0
+	xr_cam.far = VIEW_FAR
 	xr_origin.add_child(xr_cam)
 	xr_left = XRController3D.new()
 	xr_left.tracker = "left_hand"

@@ -50,7 +50,7 @@ func follow_camera(_p: Vector3) -> void:
 
 
 func camera_far() -> float:
-	return 40000.0
+	return 600000.0   # v1.17.1: past the horizon (the world modes: racing, coaster)
 
 
 ## Desktop cameras. Return true if the camera was placed.

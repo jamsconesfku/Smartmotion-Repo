@@ -255,5 +255,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-12",
+    "summary": "Version 1.17.1: a real horizon at every height. The game now draws 600 km (it stopped at 40 km, so the ground ended at an edge that moved as you climbed), the ground follows the curve of the Earth out to about 1,000 km, far-away hills no longer pop as you fly, and the land beyond the real 32 km map levels out instead of repeating hills.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]
