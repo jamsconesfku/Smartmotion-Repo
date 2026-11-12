@@ -228,7 +228,11 @@ func _holo_text(pos: Vector3, col: Color, size: int) -> Label3D:
 	return l
 
 
+var first_person := false
+
+
 func set_first_person(on: bool) -> void:
+	first_person = on
 	reticle.scale = Vector3.ONE * (1.0 if on else 2.2)   # bigger in the chase view (seen from further back)
 
 
@@ -499,4 +503,4 @@ func _plasma() -> void:
 func set_plasma(k: float) -> void:
 	plasma.visible = k > 0.01
 	if plasma.visible:
-		plasma_mat.set_shader_parameter("energy", 1.6 * k)
+		plasma_mat.set_shader_parameter("energy", 1.6 * k * (0.3 if first_person else 1.0))   # gentler from the seat (VR)
