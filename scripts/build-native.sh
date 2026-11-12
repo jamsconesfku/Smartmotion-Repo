@@ -22,6 +22,11 @@ echo "Checking the flight physics..."
 "$GODOT" --headless --path godot --script res://tests/test_xplane.gd >/dev/null   # FlyPT Mover (X-Plane) link checks
 "$GODOT" --headless --path godot -- --test_panel | grep -E "PASS|FAIL" || true
 ! "$GODOT" --headless --path godot -- --test_panel | grep -q FAIL   # VR menu panel checks
+"$GODOT" --headless --path godot --script res://tests/test_keys.gd | grep -E "FAIL|ALL PASSED" || true
+! "$GODOT" --headless --path godot --script res://tests/test_keys.gd | grep -q FAIL   # key binding checks
+"$GODOT" --headless --path godot -- --auto --key_test > "$OUT/key_test.log" 2>&1 || true   # real key presses while flying
+grep -E "^FAIL|ALL PASSED" "$OUT/key_test.log" || true
+grep -q "ALL PASSED" "$OUT/key_test.log"
 echo "Exporting the Windows build..."
 "$GODOT" --headless --path godot --export-release "Windows Desktop" "$PWD/$OUT/SmartMotionFlight/SmartMotionFlight.exe" >/dev/null 2>&1
 test -s "$OUT/SmartMotionFlight/SmartMotionFlight.exe" || { echo "Export failed"; exit 1; }

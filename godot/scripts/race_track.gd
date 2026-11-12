@@ -610,8 +610,11 @@ func _ad_texture() -> Texture2D:
 			l.size = Vector2(1024, 124)
 			vp.add_child(l)
 	add_child(vp)
-	await RenderingServer.frame_post_draw
-	await RenderingServer.frame_post_draw
+	if DisplayServer.get_name() == "headless":
+		await get_tree().process_frame   # nothing is drawn without a screen, so "frame drawn" never comes (headless checks)
+	else:
+		await RenderingServer.frame_post_draw
+		await RenderingServer.frame_post_draw
 	var img := vp.get_texture().get_image()
 	vp.queue_free()
 	if img == null or img.is_empty():
