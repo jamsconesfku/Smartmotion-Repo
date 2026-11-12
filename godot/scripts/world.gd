@@ -252,6 +252,8 @@ func _apply_light() -> void:
 	sky_mat.set_shader_parameter("cirrus", w["cirrus"])
 	sky_mat.set_shader_parameter("overcast", oc)
 	env.fog_light_color = hor
+	for gm in ground_mats:
+		(gm as ShaderMaterial).set_shader_parameter("haze_col", Vector3(hor.r, hor.g, hor.b) * 0.45)   # v1.17.1
 	_fog_base = float(t["fog"]) * float(w["fog"])
 	env.fog_density = _fog_base * clampf(exp(-(_sky_alt - 2.5) / 6.0), 0.06, 1.0)
 	env.fog_sun_scatter = 0.18 * (1.0 - 0.8 * oc)   # no bright patch in the haze when the sun is behind cloud

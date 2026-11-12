@@ -47,6 +47,7 @@ Sam, 12 Nov 2026: "make sure the horizon is realistic and never moves and is smo
   - The ground follows the real curve of the Earth beyond 8 km (`earth_r`, `curve_from` in `shaders/ground.gdshader`; the scenery stops before 8 km, so buildings and trees aren't affected). The horizon sits where it really is (about 45 km away at 150 m up, 195 km at 3 km, 440 km at 15 km), a little below eye level, and the ground goes over it instead of ending.
   - The far rings read smoothed heights (the height map has mipmaps; `hgt_v`), so distant hills don't pop as the rings move on with you.
   - Beyond the real 32 km map the ground levels out at 45 m over 5.5 km instead of repeating the map's hills (the ground shader and `Terrain.coarse_height`, so the physics matches).
+  - Far away the land's pattern evens out (fields too small to see from 20 km on) and turns to haze towards the horizon (40-420 km, `haze_col` from the sky's horizon colour), so from high up the horizon is a soft band of haze, not a hard line.
 - Checks: all flight, scenery, racing, coaster and spaceship checks pass; pictures at 150 m, 3 km and 15 km on the build machine.
 
 ## Smoother VR, real-looking vehicles, towns and roads, point-to-fly spaceship (v1.17.0)

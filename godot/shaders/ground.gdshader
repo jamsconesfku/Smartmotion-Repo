@@ -33,7 +33,8 @@ uniform float size_cells = 1024.0;
 uniform float half_size = 16384.0;
 uniform float far_size = 163840.0;
 uniform float y_bias = 0.0;
-uniform float ring_cell = 8.0;   // this ring's triangle size (v1.17.1)
+uniform float ring_cell = 8.0;
+uniform vec3 haze_col = vec3(0.30, 0.36, 0.45);   // the horizon haze (World._apply_light), as a ground colour   // this ring's triangle size (v1.17.1)
 uniform vec4 rw = vec4(0.848, -0.530, 1448.0, 46.0);   // runway dir.x, dir.z, length, width
 uniform float exposure = 1.12;
 uniform float saturation = 0.98;
@@ -285,6 +286,14 @@ void fragment() {
 		float c = texture(cloud_map, (p + shadow_shift + cloud_offset) / (cloud_scale * 24000.0)).r;
 		float sh = smoothstep(1.0 - cloud_cover, 1.0 - cloud_cover + 0.18, c);
 		col *= 1.0 - cloud_shadow * sh;
+	}
+	// far away (v1.17.1): fields are too small to see, so the land's pattern evens out, and the air in between turns
+	// it to haze towards the horizon (strongest from high up, where the fog itself is thin)
+	float far_k = smoothstep(20000.0, 160000.0, dist);
+	if (far_k > 0.0) {
+		vec3 avg = textureLod(far_map, p / far_size + 0.5, 9.0).rgb;
+		col = mix(col, mix(col, avg, 0.85), far_k);
+		col = mix(col, haze_col, smoothstep(40000.0, 420000.0, dist) * 0.85);
 	}
 	ALBEDO = col;
 	if (debug_view == 1) {
