@@ -77,6 +77,8 @@ static func _finish(src: StandardMaterial3D, kind: String) -> StandardMaterial3D
 	var m := src.duplicate() as StandardMaterial3D
 	var c := m.albedo_color
 	var lum := c.get_luminance()
+	if m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED and lum < 0.3:
+		return src                    # dark see-through: the propeller blur discs, shadows (left alone)
 	if m.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED and c.a < 0.7:
 		# glass: clear, with a sharp, bright reflection of the sky
 		m.roughness = minf(m.roughness, 0.03)
