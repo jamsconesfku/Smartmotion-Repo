@@ -35,6 +35,7 @@ var BLACK := Color("#18191b").srgb_to_linear()
 var BLUE := Color("#1f2f6b").srgb_to_linear()
 var YELLOW := Color("#f2c400").srgb_to_linear()
 var INTERIOR := Color("#2d2f33").srgb_to_linear()
+var SILVER := Color("#c3c7ca").srgb_to_linear()   # v1.18.0: G-SMAT's wings and tailplane are silver (Sam's photos)
 
 var paint: StandardMaterial3D
 var matte: StandardMaterial3D
@@ -336,11 +337,13 @@ func _fuselage() -> void:
 	var col := func(p: Vector3, n: Vector3) -> Color:
 		if p.z > -1.95 and p.z < CK0 + 0.05 and p.y > 0.12 and absf(p.x) < 0.34:
 			return BLACK                                   # anti-glare panel
-		if p.z > 2.85 and p.z < 3.2:
-			return RED                                     # trainer band round the rear fuselage
 		if p.z < -1.86:
 			return RED                                     # cowling nose ring
-		return GREY if p.y < -0.12 else WHITE
+		# v1.18.0, as in Sam's photos of G-SMAT: the cowling and the lower fuselage are red (the red rises a
+		# little towards the tail), the top white
+		if p.y < lerpf(0.06, 0.02, clampf((p.z + 1.9) / 6.6, 0.0, 1.0)):
+			return RED
+		return WHITE
 	var keep := func(a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> bool:
 		var in_ck := a.z >= CK0 - 0.01 and c.z <= CK1 + 0.01
 		return not (in_ck and a.y > SILL and b.y > SILL and c.y > SILL and d.y > SILL)
@@ -408,9 +411,9 @@ func _wings() -> void:
 		var g := wing_geo(absf(p.x))
 		return Vector3(0, p.y - float(g[2]) - 0.01, (p.z - float(g[1]) - float(g[0]) * 0.35) * 0.3).normalized()
 	var col := func(p: Vector3, n: Vector3) -> Color:
-		if absf(p.x) > 4.345:
-			return RED
-		return WHITE if n.y > -0.2 else GREY
+		if absf(p.x) > 3.35:
+			return RED                                     # v1.18.0: the outer third of each wing is red
+		return SILVER
 	for s: float in [1.0, -1.0]:
 		# spanwise pieces: root, flap bay, aileron bay, tip
 		var pieces := [[W_X0, 0.62, 0.0, 1.0], [0.62, 2.85, 0.0, 0.74], [2.85, 4.34, 0.0, 0.74], [4.35, 4.85, 0.0, 0.74], [4.85, W_X1, 0.0, 1.0]]
@@ -480,9 +483,9 @@ func _wings() -> void:
 			var outl := func(p: Vector3) -> Vector3: return Vector3(0, p.y, p.z * 0.2).normalized()
 			var cl2 := func(p: Vector3, n: Vector3) -> Color:
 				var wp := hinge.transform * p
-				if absf(wp.x) > 4.345:
+				if absf(wp.x) > 3.35:
 					return RED
-				return WHITE if n.y > -0.2 else GREY
+				return SILVER
 			_grid(P2, true, outl, cl2)
 			_end(paint, surf)
 
@@ -492,7 +495,7 @@ func _tail() -> void:
 	var col := func(p: Vector3, n: Vector3) -> Color:
 		if absf(p.x) > 1.38:
 			return RED
-		return WHITE if n.y > -0.2 else GREY
+		return SILVER
 	var tp := func(x: float, f: float, upper: bool) -> Vector3:
 		var s := clampf(absf(x) / 1.7, 0.0, 1.0)
 		var c := lerpf(0.78, 0.55, s)
@@ -657,7 +660,7 @@ func _prop() -> void:
 				var lz := sin(a) * th * 0.5
 				ring.append(Vector3(lx * cos(tw) - lz * sin(tw), r, lx * sin(tw) + lz * cos(tw)))
 			P.append(ring)
-		_grid(P, true, func(p: Vector3) -> Vector3: return Vector3(p.x, 0, p.z).normalized(), func(p: Vector3, _n): return YELLOW if p.y > 0.85 else BLACK)
+		_grid(P, true, func(p: Vector3) -> Vector3: return Vector3(p.x, 0, p.z).normalized(), func(p: Vector3, _n): return WHITE if (p.y > 0.86 or (p.y > 0.32 and fposmod((p.y - 0.32) / 0.135, 2.0) >= 1.0)) else BLACK)   # v1.18.0: black and white bands, as on G-SMAT
 		_end(matte, piv)
 		am.blades.append(piv)
 	var dm := StandardMaterial3D.new()
@@ -976,14 +979,14 @@ func _cockpit() -> void:
 	# seats (parachute bucket seats with cushions); harness straps on the empty-looking left seat would float, so
 	# only the instructor's seat shows them
 	var seat := _mat(Color("#33363b"), 0.6)
-	var cushion := _mat(Color("#3a4a63"), 0.9)
+	var cushion := _mat(Color("#2a2b2e"), 0.9)   # v1.18.0: dark charcoal, as in G-SMAT
 	for s: float in [-1.0, 1.0]:
 		var x := s * 0.3
 		_box(ck, Vector3(0.42, 0.1, 0.48), Vector3(x, -0.21, 0.42), seat)
 		_box(ck, Vector3(0.38, 0.06, 0.42), Vector3(x, -0.14, 0.42), cushion)
 		_box(ck, Vector3(0.42, 0.7, 0.08), Vector3(x, 0.15, 0.72), seat, Vector3(-0.22, 0, 0))
 		_box(ck, Vector3(0.36, 0.5, 0.05), Vector3(x, 0.15, 0.67), cushion, Vector3(-0.22, 0, 0))
-	var strap := _mat(Color("#2b3d6b"), 0.85)
+	var strap := _mat(Color("#3b3d42"), 0.85)
 	for s2: float in [-1.0, 1.0]:
 		_limb(ck, Vector3(0.3 + s2 * 0.09, 0.45, 0.66), Vector3(0.3 + s2 * 0.05, 0.05, 0.38), 0.012, strap, false)
 		_limb(ck, Vector3(0.3 + s2 * 0.18, -0.08, 0.45), Vector3(0.3, -0.04, 0.3), 0.012, strap, false)
@@ -1004,10 +1007,16 @@ func _cockpit() -> void:
 		gaiter.position = Vector3(0, 0.05, 0)
 		ck.add_child(gaiter)
 		gaiter.position = piv.position + Vector3(0, 0.05, 0)
-		_limb(piv, Vector3.ZERO, Vector3(0, 0.42, 0.02), 0.012, steel, false)
-		_limb(piv, Vector3(0, 0.42, 0.02), Vector3(0, 0.55, 0.0), 0.022, rubber)                    # grip
-		_box(piv, Vector3(0.012, 0.025, 0.02), Vector3(0, 0.5, -0.03), _mat(Color("#b01818"), 0.4))   # trigger
-		_sph(piv, 0.009, Vector3(0, 0.575, -0.005), _mat(Color("#b01818"), 0.4))                       # button
+		# v1.18.0, as in G-SMAT (Sam's video): a light grey tube that bends forward at the bottom, a white grip
+		# with a black button on top
+		var stick_m := _mat(Color("#c6c9c6"), 0.45, 0.25)
+		var grip_m := _mat(Color("#ecece8"), 0.5)
+		_limb(piv, Vector3.ZERO, Vector3(0, 0.1, -0.07), 0.016, stick_m, false)
+		_limb(piv, Vector3(0, 0.1, -0.07), Vector3(0, 0.2, -0.04), 0.016, stick_m, false)
+		_limb(piv, Vector3(0, 0.2, -0.04), Vector3(0, 0.42, 0.02), 0.014, stick_m, false)
+		_limb(piv, Vector3(0, 0.42, 0.02), Vector3(0, 0.56, 0.0), 0.026, grip_m)                     # grip
+		_sph(piv, 0.012, Vector3(0, 0.585, -0.002), _mat(Color("#121214"), 0.4))                       # button
+		_box(piv, Vector3(0.012, 0.022, 0.018), Vector3(0, 0.5, -0.032), _mat(Color("#121214"), 0.4))  # trigger
 		if s < 0.0:
 			am.yoke = piv                     # main.gd drives this one; stick_r copies it
 		else:

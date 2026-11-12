@@ -145,7 +145,11 @@ func build(w: World, qual: String) -> void:
 	pm.panorama = sky_tex
 	pm.filter = true
 	sky.sky_material = pm
-	sky.radiance_size = Sky.RADIANCE_SIZE_128
+	# v1.18.0 (crash going from Space to Flight): the same reflection size and update mode as the Duxford sky,
+	# so swapping between the two skies never makes the graphics card throw away and rebuild its sky buffers
+	var w_ultra := world_ref != null and world_ref.ultra
+	sky.radiance_size = Sky.RADIANCE_SIZE_512 if w_ultra else Sky.RADIANCE_SIZE_256
+	sky.process_mode = Sky.PROCESS_MODE_INCREMENTAL
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.16, 0.17, 0.26)
@@ -445,6 +449,26 @@ func _set_location(k: String) -> void:
 	sun.light_energy = 2.3 * clampf(pow(1.0 / float(bd["au"]), 0.25), 0.55, 1.4)
 	if loc != "saturn":
 		_clear()
+
+
+## The planet (or moon) you are looking at, if any: within about 7 degrees of the middle of your view (the
+## headset in VR, the camera on the screen), or within the planet's own size when it is bigger than that.
+func looked_at() -> String:
+	if look_dir == Vector3.ZERO:
+		return ""
+	var best := ""
+	var best_a := 1e9
+	for k in DESTS:
+		if k == loc:
+			continue
+		var a := look_dir.normalized().angle_to(_dest_dir(k))
+		var lim := deg_to_rad(7.0)
+		if k == sec and sec_r > 0.0:
+			lim = maxf(lim, atan(sec_r / maxf((sec_pc - pos).length(), 1.0)) + deg_to_rad(2.0))
+		if a < lim and a < best_a:
+			best_a = a
+			best = k
+	return best
 
 
 ## Which way to point for a place (from where you are).
@@ -992,6 +1016,12 @@ func _button(id: String) -> void:
 	match id:
 		"hyper":
 			if hyper != "":
+				return
+			# v1.18.0: look at a planet and press HYPERSPEED: it goes there (no need to choose it first)
+			var seen := looked_at()
+			if seen != "":
+				dest = DESTS.find(seen)
+				_start_hyper(seen, true)   # (lines the ship up by itself: you may be looking with your head, not the nose)
 				return
 			_start_hyper(dest_key(), false)
 		"auto":

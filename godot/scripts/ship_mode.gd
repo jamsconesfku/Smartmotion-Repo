@@ -38,6 +38,7 @@ var acc_body := Vector3(0, 9.81, 0)
 var prev_vel := Vector3.ZERO
 var cue := Vector3.ZERO         # extra push for the seat (hyperspeed), m/s² in the ship's frame
 var msg := ""
+var look_dir := Vector3.ZERO    # v1.18.0: where you are looking (headset or camera), set by main.gd each frame
 var msg_t := 0.0
 var t_total := 0.0
 var cam_q := Quaternion.IDENTITY

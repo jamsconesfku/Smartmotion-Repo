@@ -331,7 +331,7 @@ func touch(tip: Vector3, side: String) -> Array:
 		var b: Dictionary = buttons[id]
 		var d: Vector3 = lp - (b["base"] as Vector3)
 		var inside := absf(d.x) < CAP.x * 0.5 + 0.012 and absf(d.z) < CAP.z * 0.5 + 0.012
-		var top := CAP_Y + CAP.y * 0.5
+		var top := CAP_Y + CAP.y * 0.5 + VRHand.R   # v1.18.0: the hand is a ball; it presses when its surface touches
 		if inside and d.y < top + 0.004 and d.y > -0.035:
 			if b["armed"][side]:
 				b["armed"][side] = false

@@ -122,6 +122,15 @@ func _run() -> void:
 	check("Mars is in front of you when you arrive", to_mars > 2.0 and to_mars < 3.2 and (-Basis(sm.q).z).angle_to(sm.pc - sm.pos) < 0.6, "%.1f radii away" % to_mars)
 	run(sm, 1.5, 0.0, func(): return false)
 	check("after the jump the view is clear", sm.fade < 0.05 and sm.ship.tube.visible == false, "fade %.2f" % sm.fade)
+	# ---- v1.18.0: look at a planet and press HYPERSPEED: it goes there, whatever planet was chosen
+	sm.dest = SpaceMode.DESTS.find("neptune")
+	sm.look_dir = sm._dest_dir("jupiter")
+	check("looking at Jupiter, HYPERSPEED picks Jupiter", sm.looked_at() == "jupiter", "looked at %s" % sm.looked_at())
+	sm._button("hyper")
+	check("... and sets off for it (not the chosen Neptune)", sm.hyper != "" and sm.hyper_to == "jupiter", "hyper %s to %s" % [sm.hyper, sm.hyper_to])
+	secs = run(sm, 25.0, 0.0, func(): return sm.hyper == "" and sm.loc == "jupiter", [])
+	check("arrives at Jupiter", sm.loc == "jupiter", "%.1f s" % secs)
+	sm.look_dir = Vector3.ZERO
 	# ---- TO EARTH autopilot: hyperspeed home, down into the air
 	secs = run(sm, 150.0, 0.0, func(): return false, ["auto"])
 	check("TO EARTH flies home and down into the air", got.get("to", "") == "ship_earth", "%.0f s" % secs)

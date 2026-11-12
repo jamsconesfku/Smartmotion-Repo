@@ -262,5 +262,13 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-12",
+    "summary": "Version 1.18.0: the Bulldog now looks like G-SMAT in Sam's photos and video (light grey panel with the real placards, light grey sticks with white grips, red cowling and lower fuselage, silver wings with red outer panels, black-and-white propeller). VR hands are now small balls at the controllers in every game. In space, HYPERSPEED goes to the planet you are looking at. The game always opens on Flight. Going from Space to Flight now changes worlds a step at a time (likely cause of the crash), with each step logged.",
+    "ids": [
+      "F-08",
+      "DOC-07"
+    ]
   }
 ]

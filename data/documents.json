@@ -68,5 +68,16 @@
     "links": [],
     "notes": "Built as the Sky Barrage game in the Games section. Notes in docs/games/sky-barrage.md.",
     "updated": "2026-11-07"
+  },
+  {
+    "id": "DOC-07",
+    "title": "G-SMAT Bulldog photos and cockpit video (reference for the game)",
+    "format": "JPG (photos and frames from Sam's videos)",
+    "area": "Games",
+    "status": "in_repo",
+    "path": "docs/source/bulldog-g-smat/",
+    "links": [],
+    "notes": "Sam, 12 Nov 2026: two photos of G-SMAT at Duxford (front, side) and frames of the cockpit from his video (the videos themselves are not kept in the repo). Used for the v1.18.0 Bulldog: light grey panel, placards, sticks, livery and propeller.",
+    "updated": "2026-11-12"
   }
 ]

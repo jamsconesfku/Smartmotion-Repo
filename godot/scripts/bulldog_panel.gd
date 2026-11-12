@@ -33,7 +33,9 @@ var g_min := 1.0
 
 const FACE := Color("#0b0c0e")
 const INK := Color("#eceae2")
-const PANEL := Color("#26282c")
+const PANEL := Color("#bfc2bd")      # v1.18.0: G-SMAT's real panel is a very light grey (Sam's video)
+const PANEL_INK := Color("#1b1c1e")  # writing straight on the grey panel
+const LINE := Color("#d6c890")       # the thin pale line round the six flight instruments
 const GREEN := Color("#2fb34a")
 const YELLOW := Color("#f2c21b")
 const RED := Color("#e0261b")
@@ -162,8 +164,11 @@ func _draw_all() -> void:
 		# subtle crackle-paint grain: one small tiled texture, made once
 		draw_texture_rect(_grain_tex(), Rect2(0, 0, W, H), true)
 		# sub-panels
-		draw_rect(Rect2(px(0.012), px(0.012), px(0.39), px(0.29)), Color("#1f2124"), true)
-		draw_rect(Rect2(px(0.012), px(0.012), px(0.39), px(0.29)), Color("#3a3c40"), false, 3.0)
+		# (v1.18.0) as in G-SMAT: a thin pale line round the six flight instruments, no dark sub-panel
+		draw_rect(Rect2(px(0.058), px(0.058), px(0.334), px(0.224)), LINE, false, 4.0)
+		draw_line(Vector2(px(0.17), px(0.058)), Vector2(px(0.17), px(0.282)), LINE, 3.0)
+		draw_line(Vector2(px(0.28), px(0.058)), Vector2(px(0.28), px(0.282)), LINE, 3.0)
+		draw_line(Vector2(px(0.058), px(0.17)), Vector2(px(0.392), px(0.17)), LINE, 3.0)
 	_asi()
 	_ai()
 	_alt()
@@ -484,7 +489,7 @@ func _switches() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	for k in 5:
 		var a := deg_to_rad(-150.0 + k * 30.0)
-		_txt(Vector2(kx, ky) + Vector2(cos(a), sin(a)) * px(0.032), ["OFF", "R", "L", "BOTH", "START"][k], px(0.007), INK)
+		_txt(Vector2(kx, ky) + Vector2(cos(a), sin(a)) * px(0.032), ["OFF", "R", "L", "BOTH", "START"][k], px(0.007), PANEL_INK)
 
 
 func _annunciators() -> void:
@@ -513,6 +518,23 @@ func _annunciators() -> void:
 func _placards() -> void:
 	if not S:
 		return
-	_txt(Vector2(px(0.21), px(0.395)), "THIS AEROPLANE IS CLASSIFIED AS A VERY LIGHT AEROBATIC TRAINER", px(0.0075), Color("#c9c7bf"))
-	_txt(Vector2(px(0.86), px(0.395)), "G-SMAT  ·  BULLDOG T.1  ·  XX658", px(0.011), Color("#c9c7bf"), bold)
-	_txt(Vector2(px(0.86), px(0.412)), "MAX +6G  -3G   VNE 185 KT", px(0.0085), Color("#c9c7bf"))
+	# v1.18.0: black placards with white writing, as on G-SMAT's real panel
+	_plate(Rect2(0.64, 0.004, 0.10, 0.022), ["G-SMAT"], 0.015, true)
+	_plate(Rect2(0.955, 0.168, 0.15, 0.082), ["VHF FREQUENCIES", "DUXFORD INFO  122.080", "DUXFORD A/G   122.075", "CAMBRIDGE APP 125.900", "LONDON INFO   124.600", "DISTRESS      121.500"], 0.0072, false)
+	_plate(Rect2(0.62, 0.372, 0.28, 0.04), ["OPERATION", "OPERATE IN ACCORDANCE WITH APPROVED FLIGHT MANUAL", "DAY VFR OPERATION ONLY", "FLIGHT INTO KNOWN ICING CONDITIONS PROHIBITED"], 0.0058, false)
+	_plate(Rect2(0.93, 0.378, 0.15, 0.024), ["NO SMOKING"], 0.009, true)
+	_plate(Rect2(0.11, 0.382, 0.33, 0.03), ["THIS AEROPLANE IS CLASSIFIED AS A VERY LIGHT AEROBATIC TRAINER", "MAX +6G  -3G    VNE 185 KT    XX658"], 0.0068, false)
+
+
+## A black placard (rect in metres) with white lines of writing; big = one line in the middle.
+func _plate(r: Rect2, lines: Array, size: float, big: bool) -> void:
+	var rr := Rect2(px(r.position.x), px(r.position.y), px(r.size.x), px(r.size.y))
+	draw_rect(rr, Color("#0d0e10"))
+	draw_rect(rr, Color("#5c5f64"), false, 2.0)
+	if big:
+		_txt(rr.get_center(), lines[0], px(size), Color("#f2f2ee"), bold)
+		return
+	var lh := r.size.y / (lines.size() + 0.4)
+	for i in lines.size():
+		var y := r.position.y + lh * (i + 0.7)
+		_txt(Vector2(px(r.position.x + r.size.x * 0.5), px(y)), lines[i], px(size if i > 0 else size * 1.15), Color("#f2f2ee"), bold if i == 0 else font)

@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.17.1"
+const APP_VERSION := "1.18.0"
 ## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
 ## ground stopped at an edge that moved as you climbed)
 const VIEW_FAR := 600000.0
@@ -99,6 +99,12 @@ func _ready() -> void:
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	Diag.start(not args.has("xr"))
 	Diag.write("SmartMotion Flight native v%s started" % APP_VERSION)
+	# v1.18.0: the game always opens on Flight (the Flight tab), unless the simulator's set-up has no Flight (a
+	# steering wheel or the hands-free ride), or the game restarted itself in VR from the menu ("--go": it keeps
+	# the chosen game then)
+	if not args.has("go"):
+		var allowed: Array = GameUI.RIG_GAMES.get(str(Settings.get_value("rig")), GameUI.RIG_GAMES["all"])
+		Settings.data["game"] = "flight" if "flight" in allowed else allowed[0]
 	for k in ["aircraft", "start", "mode", "tod", "wind", "game", "race", "space_start", "space_game"]:
 		if args.has(k):
 			Settings.data[k] = args[k]
@@ -365,6 +371,8 @@ func _activate(g: String) -> void:
 	_set_fade(Color(0, 0, 0, 0))
 	if g != game:
 		Diag.write("switch: %s -> %s (vr %s)" % [game, g, str(vr_active)])   # if it ever crashes, the log shows where
+	var old_own := mode != null and not mode.uses_world()                       # leaving the space world?
+	var new_own := g != "flight" and not (modes[g] as GameMode).uses_world()   # going into it?
 	game = g
 	world.grass_allowed = g == "flight"   # the racing car and the coaster station would have grass through them
 	if mode != null:
@@ -372,31 +380,71 @@ func _activate(g: String) -> void:
 		if mode.running:
 			mode.showcase()   # park it (cars on the grid, the train in the station)
 		mode.running = false
+	var show_world := true
+	var want_env: Environment = null
 	if g == "flight":
 		mode = null
-		world.visible = true
-		cam.environment = null
 		cam.far = VIEW_FAR
 		synth.set_profile("plane")
 	else:
 		mode = modes[g]
 		mode.visible = true
-		world.visible = mode.uses_world()
-		cam.environment = null if mode.uses_world() else mode.env
+		show_world = mode.uses_world()
+		want_env = null if mode.uses_world() else mode.env
 		cam.far = mode.camera_far()
 		synth.set_profile({"race": "race", "space": "space", "ship_earth": "space"}.get(g, "ride"))
 		mode.set_vr(vr_active)
-	# the circuit and the coaster are part of the Duxford world: they stay there (parked) in the other games
+	if plane != null and g != "flight":
+		plane.set_active(false)   # the aircraft is only on the runway in Flight (the spaceship starts there)
+	if xr_cam != null:
+		xr_cam.far = cam.far
+	_attach_rig()
+	if old_own != new_own:
+		# v1.18.0 (crash going from Space to Flight): between the space world and Duxford, change one thing a
+		# frame behind a moment of black (hide the old world, then swap the sky, then show the new world),
+		# instead of all of it at once; each step is logged, so if it ever crashes the log shows which
+		_cross_worlds(g, show_world, want_env)
+	else:
+		world.visible = show_world
+		_set_env(want_env)
+		_parked_visibility()
+
+
+func _set_env(e: Environment) -> void:
+	cam.environment = e
+	if xr_cam != null:
+		xr_cam.environment = e
+
+
+## The circuit and the coaster are part of the Duxford world: they stay there (parked) in the other games.
+func _parked_visibility() -> void:
 	for k in modes:
 		var om: GameMode = modes[k]
 		if om != mode:
 			om.visible = om.parked_in_world() and world.visible
-	if plane != null and g != "flight":
-		plane.set_active(false)   # the aircraft is only on the runway in Flight (the spaceship starts there)
-	if xr_cam != null:
-		xr_cam.environment = cam.environment
-		xr_cam.far = cam.far
-	_attach_rig()
+
+
+func _cross_worlds(g: String, show_world: bool, want_env: Environment) -> void:
+	_set_fade(Color(0, 0, 0, 1))
+	world.visible = false
+	_parked_visibility()
+	Diag.write("switch: worlds 1/3 (old world hidden)")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if game != g:
+		return
+	_set_env(want_env)
+	Diag.write("switch: worlds 2/3 (sky changed)")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if game != g:
+		return
+	world.visible = show_world
+	_parked_visibility()
+	Diag.write("switch: worlds 3/3 (%s shown)" % ("Duxford" if show_world else "space"))
+	await get_tree().process_frame
+	if game == g:
+		_set_fade(Color(0, 0, 0, 0))
 
 
 ## Builds a game's world (once). Racing and the coaster are built while the game loads, so they are in the
@@ -1201,8 +1249,8 @@ func _perf_frame() -> void:
 			perf[k] = 0 if k in ["n", "late"] else 0.0
 
 
-## Gloved hands: follow the controllers; near the stick (right) or throttle (left) they close around it and
-## move with it, so you see your hand flying the aircraft.
+## Your hands in VR (v1.18.0: small balls, see vr_hand.gd) follow the controllers. Near the stick (right) or
+## throttle (left) they count as holding it (k), which stops them pressing the spaceship's buttons by accident.
 func _update_hands(dt: float) -> void:
 	var bd: Bulldog = plane.bulldog if plane != null and mode == null else null
 	for side in ["l", "r"]:
@@ -1227,10 +1275,7 @@ func _update_hands(dt: float) -> void:
 		var near := reach > 0.0 and free.origin.distance_to(grip.origin) < reach
 		hand_on[side] = move_toward(float(hand_on[side]), 1.0 if near else 0.0, dt * 6.0)
 		var k: float = hand_on[side]
-		var t := free
-		if k > 0.0:
-			t = free.interpolate_with(grip, k * k * (3.0 - 2.0 * k))
-		h.place(t)
+		h.place(free)   # v1.18.0: a ball at your real hand (it no longer snaps onto the stick or throttle)
 		var press := maxf(c.get_float("grip"), c.get_float("trigger"))
 		# v1.16.0: the spaceship's buttons: over the console the hand points a finger, and the fingertip presses
 		var touch := 0
@@ -1458,6 +1503,9 @@ func _process_mode(dt: float, delta: float) -> void:
 		mode.idle(dt)
 		orbit_yaw += dt * 0.15
 	_controls_tick()
+	if mode is ShipMode:
+		var vc: Node3D = xr_cam if vr_active and xr_cam != null else cam
+		(mode as ShipMode).look_dir = -vc.global_transform.basis.z   # what you look at, for HYPERSPEED (v1.18.0)
 	if (state == "fly" or state == "ended") and not paused:
 		var mi := _read_mode_input(dt) if state == "fly" else {"steer": 0.0, "throttle": 0.0, "brake": 0.6, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "fire": false, "boost": false}
 		var t0 := Time.get_ticks_usec()

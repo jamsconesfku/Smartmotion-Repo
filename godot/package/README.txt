@@ -52,8 +52,7 @@ VR ON A META QUEST 3
   5. Sit upright and press B on the right controller (or V on the keyboard) to recentre.
   You can fly with the keyboard while wearing the headset: click the game window on the laptop once
   BEFORE putting the headset on, and don't click anywhere else afterwards.
-  Your hands: move your right controller to the control stick between your knees and the glove takes hold
-  of it (it moves as you fly); the left glove takes the throttle in the same way.
+  Your hands show as small balls where the controllers are (they shrink a little when you squeeze).
   Controls: right stick = pitch and roll, right trigger / grip = more / less power,
   left stick = power and rudder, left trigger = brakes, A = flaps, B = recentre, X = menu, Y = restart.
   THE MENU IN VR: the game's own menu floats in front of you in the headset (the main menu, pause menu and
@@ -62,14 +61,15 @@ VR ON A META QUEST 3
   scrolls. Or push the stick up/down to move between buttons and press A. X opens the menu while playing and
   carries on; Y restarts. You can switch between Flight, Racing and Space without taking the headset off.
   The pause menu also has "Recentre my view", the headset refresh rate and "Leave VR".
-  Racing in VR: right trigger = accelerate, left trigger = brake, either stick = steer. Your gloves take
-  the steering wheel when you bring the controllers to it.
+  Racing in VR: right trigger = accelerate, left trigger = brake, either stick = steer.
   Space in VR: HOLD THE RIGHT GRIP AND POINT WHERE YOU WANT TO FLY: the ship turns towards where your right
   hand points and banks into the turn by itself (let go of the grip to fly straight on). The right stick also
-  does pitch and roll, left stick = speed and yaw, right trigger = fire, left trigger = boost. The gloves take the flight stick (right) and throttle (left). THE BUTTONS: lean forward and press
-  the lit buttons on the console below the screens with a fingertip (the hand points its finger over them):
+  does pitch and roll, left stick = speed and yaw, right trigger = fire, left trigger = boost. THE BUTTONS: lean forward and touch
+  the lit buttons on the console below the screens with your hand (shown as a small ball; it glows orange over a button):
   HYPERSPEED, x10 SPEED, < PLANET, PLANET >, LAND, TO SPACE / TO EARTH, EASY / PRO and LIGHTS.
   Also A = x10, right stick click = hyperspeed, left stick click = next planet.
+  HYPERSPEED goes to the planet you are looking at (turn your head to it and press it); if you aren't
+  looking at one, it goes to the planet chosen with < PLANET / PLANET >.
   If the keyboard does nothing in VR, the game shows a message: click the game window on the laptop once.
   Smooth VR: the pause menu's "Headset" button shows the frame rate. It should say "smooth". If it says "too slow",
   pick 72 Hz there (or in the Quest Link app: Settings > Graphics preferences > Refresh rate 72 Hz), and
