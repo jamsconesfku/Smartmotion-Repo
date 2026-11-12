@@ -241,5 +241,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-12",
+    "summary": "Version 1.16.0: the Space game is now a spaceship you can fly everywhere. Start on Duxford's runway (or in space): the ship lifts straight up, hovers, and flies like a fast jet; climb above 20 km and you're in space, above the Earth. Nine places to visit (Earth, the Moon, Mercury, Venus, Mars, Jupiter, Saturn with the space station, Uranus, Neptune) with a hyperspeed jump between them (stars stretch into streaks, a flash, a tunnel of light), x10 speed, and flying back down into the Earth's air brings you home over Duxford (TO EARTH does it all on autopilot and lands you). The cockpit has eight lit buttons you press with a fingertip in VR by leaning forward, and screens with speed, height, where you are and the chosen planet. Easy keeps you off the ground and lines you up for hyperspeed. The drone battle is still there as an option. The button reach and hyperspeed in the headset need Sam to try.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

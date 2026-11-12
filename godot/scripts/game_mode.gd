@@ -17,6 +17,7 @@ var vr := false
 var running := false          # false in the menu showcase
 var cockpit := false          # cockpit camera (always in VR)
 var tel_frame := {}           # for the motion rig (same field names as the flight frame)
+var thr_set := -1.0           # when 0..1, main.gd sets its throttle to this (then puts it back to -1)
 
 
 func build(w: World, q: String) -> void:
@@ -90,6 +91,31 @@ func uses_world() -> bool:
 
 func mode_name() -> String:
 	return ""
+
+
+## Which set of labels the HUD boxes use (ui.gd set_hud_kind).
+func hud_kind() -> String:
+	return mode_name()
+
+
+## True for games that stay in the Duxford world when another game runs (the circuit, the coaster).
+func parked_in_world() -> bool:
+	return uses_world()
+
+
+## Throttle at the start (keyboard, gamepad and VR stick throttle).
+func start_throttle() -> float:
+	return 0.5
+
+
+## A VR fingertip (global): 0 = nothing near, 1 = near something to press (the hand points), 2 = just pressed.
+func touch(_side: String, _tip: Vector3) -> int:
+	return 0
+
+
+## Fades the whole view (alpha 0 = clear), e.g. when going between Earth and space.
+func fade_color() -> Color:
+	return Color(0, 0, 0, 0)
 
 
 ## Builds a telemetry frame for the motion rig from the vehicle's motion.

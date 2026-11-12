@@ -84,7 +84,7 @@ var launch_sum: Label
 const GAMES := {
 	"flight": ["Flight", "Fly the skies around Duxford in Skysmart's Bulldog or a WW2 fighter.", "Fly"],
 	"race": ["Racing", "Drive an open-wheel racing car round a 4 km circuit: race seven rivals or set a fast lap.", "Race"],
-	"space": ["Space", "Fly a space fighter round a space station and asteroid field and shoot down waves of drones.", "Launch"],
+	"space": ["Space", "Fly a spaceship: take off from Duxford and climb into space, jump at hyperspeed between the planets, then fly back down and land. Or fight drones round the Saturn station.", "Launch"],
 	"coaster": ["Coaster", "Ride a roller coaster beside Duxford airfield: a 52 m lift hill, a drop to 104 km/h, airtime hills and a helix. Just sit back.", "Ride"],
 }
 ## How the simulator is set up (chosen on the first screen): what's fitted and which games suit it.
@@ -443,8 +443,20 @@ func _build_menu() -> void:
 	mode_boxes["race"] = rb
 	_section(rb, "Race")
 	_seg(rb, "race", [["race", "3 laps against 7 cars"], ["trial", "Time trial (fastest lap)"]], Settings.get_value("race"))
-	mode_boxes["space"] = VBoxContainer.new()
-	v.add_child(mode_boxes["space"])
+	var sb := VBoxContainer.new()
+	sb.add_theme_constant_override("separation", 7)
+	v.add_child(sb)
+	mode_boxes["space"] = sb
+	var sr := HBoxContainer.new()
+	sr.add_theme_constant_override("separation", 12)
+	sb.add_child(sr)
+	for spec in [["Start", "space_start", [["earth", "On Earth (Duxford)"], ["space", "In space"]]], ["Game", "space_game", [["explore", "Explore the planets"], ["battle", "Drone battle"]]]]:
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 7)
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sr.add_child(col)
+		_section(col, spec[0])
+		_seg(col, spec[1], spec[2], Settings.get_value(spec[1]))
 	style_cap = _lbl("FLYING STYLE", 12, MUTED)
 	v.add_child(style_cap)
 	_seg(v, "assist", [[true, "Easy (assisted)"], [false, "Pro (manual)"]], Settings.get_value("assist"))
@@ -571,12 +583,12 @@ func _refresh_summary() -> void:
 		"race":
 			parts = [pick.call("race")]
 		"space":
-			parts = ["Waves of drones round the station"]
+			parts = [pick.call("space_start"), pick.call("space_game")]
 		"coaster":
 			parts = ["1 km of track, 104 km/h, up to 3 g"]
 	if g != "coaster":
 		more.append(pick.call("assist"))
-	if g != "space":
+	if g != "space" or str(Settings.get_value("space_start")) == "earth":
 		more.append("%s, %s" % [pick.call("tod"), pick.call("weather").to_lower()])
 	launch_title.text = {"flight": "Ready to fly", "race": "Ready to race", "space": "Ready for launch", "coaster": "Ready to ride"}.get(g, "Ready")
 	launch_sum.text = "  ·  ".join(parts) + ("\n" + "  ·  ".join(more) if not more.is_empty() else "")
@@ -595,7 +607,7 @@ func set_game(g: String) -> void:
 	style_cap.visible = g != "coaster"
 	for e in seg_buttons.get("assist", []):
 		(e[1] as Button).get_parent().visible = g != "coaster"
-	tod_box.visible = g != "space"
+	tod_box.visible = g != "space" or str(Settings.get_value("space_start")) == "earth"
 	if again_btn != null:
 		again_btn.text = {"flight": "Fly again", "race": "Race again", "space": "Play again", "coaster": "Ride again"}[g]
 	if cap_speed != null:
@@ -605,11 +617,11 @@ func set_game(g: String) -> void:
 
 ## The speed, height and heading boxes show different things in each game.
 func set_hud_kind(g: String) -> void:
-	cap_speed.text = {"flight": "KNOTS", "race": "KM/H", "space": "M/S", "coaster": "KM/H"}.get(g, "KNOTS")
-	cap_alt.text = {"flight": "FEET", "race": "GEAR", "space": "SCORE", "coaster": "METRES UP"}.get(g, "FEET")
-	cap_hdg.text = {"flight": "HEADING", "race": "LAP", "space": "WAVE", "coaster": "FORCE"}.get(g, "HEADING")
-	tag_brake.text = "FIRE" if g == "space" else "BRAKE"
-	arrow.visible = g == "flight" or g == "space"
+	cap_speed.text = {"flight": "KNOTS", "race": "KM/H", "space": "M/S", "ship": "M/S", "coaster": "KM/H"}.get(g, "KNOTS")
+	cap_alt.text = {"flight": "FEET", "race": "GEAR", "space": "SCORE", "ship": "ALTITUDE", "coaster": "METRES UP"}.get(g, "FEET")
+	cap_hdg.text = {"flight": "HEADING", "race": "LAP", "space": "WAVE", "ship": "HEADING", "coaster": "FORCE"}.get(g, "HEADING")
+	tag_brake.text = "FIRE" if g == "space" else ("" if g == "ship" else "BRAKE")
+	arrow.visible = g == "flight" or g == "space" or g == "ship"
 	gate_box.visible = g != "flight"
 
 
@@ -977,7 +989,7 @@ func _build_sheets() -> void:
 	r = _sheet("Controls")
 	help_sheet = r[0]
 	v = r[1]
-	var txt := _lbl("KEYBOARD (works in VR too)\nW / S: push the nose down / pull it up (or Up / Down)\nA / D: bank left / right to turn (or Left / Right)\nShift / Ctrl: more / less power, 0 to full in about a second (or keys 1 to 0)\nQ / E: rudder (steers on the ground)\nSpace: brakes   F: flaps   V: change camera\nRight mouse + drag: look around   Mouse wheel: zoom (orbit camera)\nP or Esc: pause   R: restart   T: telemetry   M: sound   F11: full screen\n\nGAMEPAD\nRight stick: pitch and roll   Left stick: power and rudder\nLeft trigger: brakes   A: flaps   B: camera   Start: pause\n\nVR (Meta Quest)\nRight stick: pitch and roll   Right trigger / grip: more / less power\nLeft stick: power and rudder   Left trigger: brakes\nA: flaps   B: recentre view   X: menu (pause)   Y: restart\nMenus in VR: point with a controller and pull the trigger to click (or stick up/down and A). X opens the menu\nKeyboard works in VR too (click the game window before putting the headset on); V recentres the view\n\nRACING\nW / Up or right trigger: accelerate   S / Down or left trigger: brake (hold when stopped to reverse)\nA / D or a stick: steer (gamepad: left stick, right trigger, left trigger)   V: camera   R: restart\nEasy: traction control, anti-lock brakes and stability control. Pro: none of them\n\nSPACE\nW / S: nose down / up   A / D: roll   Q / E: yaw   Shift / Ctrl: speed   Space or left mouse: fire   Tab: boost\nVR: right stick pitch and roll, left stick speed and yaw, right trigger fire, left trigger boost\nGamepad: right stick pitch and roll, left stick speed and yaw, right trigger fire, left trigger boost\n\nEasy mode sets full power on the runway and levels the aircraft for you: just hold S to lift off. Pro mode is direct control, like the real thing.", 15, INK)
+	var txt := _lbl("KEYBOARD (works in VR too)\nW / S: push the nose down / pull it up (or Up / Down)\nA / D: bank left / right to turn (or Left / Right)\nShift / Ctrl: more / less power, 0 to full in about a second (or keys 1 to 0)\nQ / E: rudder (steers on the ground)\nSpace: brakes   F: flaps   V: change camera\nRight mouse + drag: look around   Mouse wheel: zoom (orbit camera)\nP or Esc: pause   R: restart   T: telemetry   M: sound   F11: full screen\n\nGAMEPAD\nRight stick: pitch and roll   Left stick: power and rudder\nLeft trigger: brakes   A: flaps   B: camera   Start: pause\n\nVR (Meta Quest)\nRight stick: pitch and roll   Right trigger / grip: more / less power\nLeft stick: power and rudder   Left trigger: brakes\nA: flaps   B: recentre view   X: menu (pause)   Y: restart\nMenus in VR: point with a controller and pull the trigger to click (or stick up/down and A). X opens the menu\nKeyboard works in VR too (click the game window before putting the headset on); V recentres the view\n\nRACING\nW / Up or right trigger: accelerate   S / Down or left trigger: brake (hold when stopped to reverse)\nA / D or a stick: steer (gamepad: left stick, right trigger, left trigger)   V: camera   R: restart\nEasy: traction control, anti-lock brakes and stability control. Pro: none of them\n\nSPACE (the spaceship)\nW / S: nose down / up   A / D: roll   Q / E: yaw   Shift / Ctrl: speed (on the runway: push it up to lift off)   Space or left mouse: fire   Tab: boost\nH: HYPERSPEED to the chosen planet   G: x10 speed   N / , .: choose the planet   U: TO SPACE / TO EARTH (autopilot)   L: land / lift off   K: lights   J: Easy / Pro\nVR: reach out and press the buttons on the console with a fingertip (lean forward). Right stick pitch and roll, left stick speed and yaw,\nright trigger fire, left trigger boost, A x10, right stick click hyperspeed, left stick click next planet\nGamepad: right stick pitch and roll, left stick speed and yaw, right trigger fire, left trigger boost, Y hyperspeed, X next planet, A x10, Back autopilot\nClimb above 20 km over Duxford to reach space; fly down to the Earth from space to come back\n\nEasy mode sets full power on the runway and levels the aircraft for you: just hold S to lift off. Pro mode is direct control, like the real thing.", 15, INK)
 	txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	txt.custom_minimum_size = Vector2(480, 0)
 	v.add_child(txt)

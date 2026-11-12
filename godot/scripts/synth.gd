@@ -93,7 +93,7 @@ func _process(delta: float) -> void:
 		playback.push_frame(Vector2(s, s))
 	var k := 0
 	while k < fx.size():
-		var lim := 0.9 if fx[k][0] == "boom" else 0.2
+		var lim: float = {"boom": 0.9, "hyper": 1.7, "jump": 1.3, "whoosh": 1.2}.get(fx[k][0], 0.2)
 		if float(fx[k][1]) > lim:
 			fx.remove_at(k)
 		else:
@@ -118,6 +118,20 @@ func _fx_sample() -> float:
 			"hit":
 				if t < 0.1:
 					out += rng.randf_range(-1.0, 1.0) * 0.12 * (1.0 - t / 0.1)
+			"click":
+				if t < 0.03:
+					out += sin(TAU * 1800.0 * t) * 0.06 * (1.0 - t / 0.03)
+			"hyper":
+				# hyperspeed building up: a rising hum
+				if t < 1.7:
+					var k := t / 1.7
+					out += sin(TAU * (60.0 + 420.0 * k * k) * t) * 0.07 * k + rng.randf_range(-1.0, 1.0) * 0.02 * k
+			"jump", "whoosh":
+				# the jump (and leaving or coming back into the air): a rush of noise that dies away
+				var ln := 1.3 if kind == "jump" else 1.2
+				if t < ln:
+					fx_lp += (rng.randf_range(-1.0, 1.0) - fx_lp) * (0.25 if kind == "jump" else 0.08)
+					out += fx_lp * 0.5 * pow(1.0 - t / ln, 2.0) + (sin(TAU * 38.0 * t) * 0.25 * (1.0 - t / ln) if kind == "jump" else 0.0)
 			"boom":
 				if t < 0.9:
 					fx_lp += (rng.randf_range(-1.0, 1.0) - fx_lp) * 0.06

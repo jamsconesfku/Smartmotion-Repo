@@ -2,7 +2,8 @@ SmartMotion Flight  (Windows, version @VERSION@)
 =================================================
 
 Four games for the SmartMotion simulator in one program: Flight (around the real Duxford), Racing (an
-open-wheel racing car on a 4 km circuit), Space (a space fighter battle) and a Roller coaster beside Duxford.
+open-wheel racing car on a 4 km circuit), Space (a spaceship: take off from Duxford, fly into space and
+jump at hyperspeed between the planets, or fight drones) and a Roller coaster beside Duxford.
 Runs on your PC's graphics card, no browser.
 
 HOW TO START
@@ -64,7 +65,10 @@ VR ON A META QUEST 3
   Racing in VR: right trigger = accelerate, left trigger = brake, either stick = steer. Your gloves take
   the steering wheel when you bring the controllers to it.
   Space in VR: right stick = pitch and roll, left stick = speed and yaw, right trigger = fire, left trigger
-  = boost. The gloves take the flight stick (right) and throttle (left).
+  = boost. The gloves take the flight stick (right) and throttle (left). THE BUTTONS: lean forward and press
+  the lit buttons on the console below the screens with a fingertip (the hand points its finger over them):
+  HYPERSPEED, x10 SPEED, < PLANET, PLANET >, LAND, TO SPACE / TO EARTH, EASY / PRO and LIGHTS.
+  Also A = x10, right stick click = hyperspeed, left stick click = next planet.
   If the keyboard does nothing in VR, the game shows a message: click the game window on the laptop once.
   Smooth VR: the pause menu's "Headset" button shows the frame rate. It should say "smooth". If it says "too slow",
   pick 72 Hz there (or in the Quest Link app: Settings > Graphics preferences > Refresh rate 72 Hz), and
@@ -89,11 +93,22 @@ CONTROLS (keyboard)
   anti-lock brakes and stability control; Pro has none.
   COASTER
   No controls: just ride. V changes the view (your seat, behind the train, orbit). R rides again.
-  SPACE
+  SPACE (the spaceship)
+  Menu: Start "On Earth (Duxford)" or "In space"; Game "Explore the planets" or "Drone battle".
   W/S nose down/up, A/D roll, Q/E yaw, Shift/Ctrl speed, Space or left mouse button fire, Tab boost.
-  Gamepad: right stick pitch and roll, left stick speed and yaw, right trigger fire, left trigger boost.
-  Shoot down the waves of red drones. Your shield recharges a few seconds after a hit; the hull doesn't.
-  Watch out for asteroids and the station. Easy mode helps you aim and rolls you upright when you let go.
+  H hyperspeed, G x10 speed, N (or , and .) choose the planet, U TO SPACE / TO EARTH autopilot,
+  L land / lift off, K lights, J Easy / Pro.
+  Gamepad: right stick pitch and roll, left stick speed and yaw, right trigger fire, left trigger boost,
+  Y hyperspeed, X next planet, A x10, Back autopilot.
+  ON EARTH: you start on Duxford's runway. Push the power up (Shift) and the ship lifts straight up and
+  hovers; more power and it flies. Power off = hover. Climb above 20 km and you're in space.
+  IN SPACE: choose a planet (Earth, the Moon, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune; a blue
+  ring shows where it is) and press HYPERSPEED. Fly down into the Earth's air to come back to Duxford, or
+  press TO EARTH and the autopilot flies you home and lands you.
+  Easy mode levels the ship when you let go, keeps you off the ground and turns you to the planet for
+  hyperspeed. Pro: no help, and the ground is hard.
+  DRONE BATTLE (round the Saturn station): shoot down the waves of red drones. Your shield recharges a few
+  seconds after a hit; the hull doesn't. Watch out for asteroids and the station. Easy helps you aim.
 
 MOVE THE SIMULATOR WITH THE GAME (SmartMotion Motion, replaces FlyPT Mover)
   SmartMotionMotion.exe is in this folder. It reads the game's motion data (Flight, Racing and Space) and drives the

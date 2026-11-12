@@ -12,6 +12,7 @@ uniform float life = 0.0;
 uniform vec3 sun_dir = vec3(0.0, 0.3, 1.0);
 uniform float falloff = 2.0;
 uniform float star_twinkle = 0.0;
+uniform float uv_len = 1.0;   // kind 1: 2.0 makes it fade right out at the far end (a CylinderMesh's sides use UV.y 0..0.5)
 
 varying vec3 wn;
 varying vec3 wpos;
@@ -45,8 +46,8 @@ void fragment() {
 		c = mix(color, COLOR.rgb, star_twinkle);
 	} else if (kind == 1) {
 		// UV.y runs along the cone
-		float along = UV.y;
-		a = pow(1.0 - along, 1.5) * (0.6 + 0.4 * vn3(vec3(UV * 8.0, TIME * 30.0)));
+		float along = min(UV.y * uv_len, 1.0);   // 0 at the mesh's top
+		a = pow(1.0 - along, 0.75 * falloff) * (0.6 + 0.4 * vn3(vec3(UV * 8.0, TIME * 30.0)));   // falloff 2: the engine flames
 		c = mix(color, vec3(1.0), pow(1.0 - along, 4.0));
 		float rim = abs(dot(normalize(NORMAL), normalize(VIEW)));
 		a *= rim;

@@ -1,8 +1,9 @@
 extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
-## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
+## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
+## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.15.0"
+const APP_VERSION := "1.16.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -70,6 +71,9 @@ var mode: GameMode = null
 var activating := false
 var vr_panel: VRPanel
 var space_thr := 0.5
+var point_k := {"l": 0.0, "r": 0.0}     # VR hands: 1 = pointing a finger (at the spaceship's buttons)
+var fader: MeshInstance3D               # fades the whole view (spaceship: going between Earth and space)
+var fader_vr: MeshInstance3D
 var mkb := {"steer": 0.0}
 var learning := ""
 # what each simulator set-up's controls are, for "Set up controls": [action, name, what to do]
@@ -92,7 +96,7 @@ func _ready() -> void:
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	Diag.start(not args.has("xr"))
 	Diag.write("SmartMotion Flight native v%s started" % APP_VERSION)
-	for k in ["aircraft", "start", "mode", "tod", "wind", "game", "race"]:
+	for k in ["aircraft", "start", "mode", "tod", "wind", "game", "race", "space_start", "space_game"]:
 		if args.has(k):
 			Settings.data[k] = args[k]
 	if args.has("assist"):
@@ -261,8 +265,8 @@ func _on_setting(key: String, value) -> void:
 				await _on_setting("game", allowed[0])
 			if vr_active:
 				_panel_show(true)
-		"game":
-			ui.set_game(str(value))
+		"game", "space_start":
+			ui.set_game(str(Settings.get_value("game")))
 			if state == "menu":
 				await showcase()
 				if vr_active:
@@ -355,6 +359,7 @@ func _activate(g: String) -> void:
 		await get_tree().process_frame   # already being built (e.g. chosen and started at once)
 	if g != "flight" and not modes.has(g):
 		await _build_mode(g)
+	_set_fade(Color(0, 0, 0, 0))
 	if g != game:
 		Diag.write("switch: %s -> %s (vr %s)" % [game, g, str(vr_active)])   # if it ever crashes, the log shows where
 	game = g
@@ -376,13 +381,15 @@ func _activate(g: String) -> void:
 		world.visible = mode.uses_world()
 		cam.environment = null if mode.uses_world() else mode.env
 		cam.far = mode.camera_far()
-		synth.set_profile({"race": "race", "space": "space"}.get(g, "ride"))
+		synth.set_profile({"race": "race", "space": "space", "ship_earth": "space"}.get(g, "ride"))
 		mode.set_vr(vr_active)
 	# the circuit and the coaster are part of the Duxford world: they stay there (parked) in the other games
 	for k in modes:
 		var om: GameMode = modes[k]
 		if om != mode:
-			om.visible = om.uses_world() and world.visible
+			om.visible = om.parked_in_world() and world.visible
+	if plane != null and g != "flight":
+		plane.set_active(false)   # the aircraft is only on the runway in Flight (the spaceship starts there)
 	if xr_cam != null:
 		xr_cam.environment = cam.environment
 		xr_cam.far = cam.far
@@ -398,7 +405,7 @@ func _build_mode(g: String) -> void:
 	Diag.write("Building the %s game" % g)
 	var was_menu := ui.menu.visible
 	ui.show_loading()
-	ui.set_progress(0.4, {"race": "Building the racing circuit", "space": "Building the space station and asteroid field", "coaster": "Building the roller coaster"}.get(g, "Building"))
+	ui.set_progress(0.4, {"race": "Building the racing circuit", "space": "Painting the planets and building the space station", "ship_earth": "Getting the spaceship ready", "coaster": "Building the roller coaster"}.get(g, "Building"))
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var t0 := Time.get_ticks_msec()
@@ -408,6 +415,8 @@ func _build_mode(g: String) -> void:
 			m = RaceMode.new()
 		"space":
 			m = SpaceMode.new()
+		"ship_earth":
+			m = ShipEarthMode.new()
 		_:
 			m = CoasterMode.new()
 	m.visible = false
@@ -416,8 +425,9 @@ func _build_mode(g: String) -> void:
 	Diag.write("%s built in %.1f s" % [g, (Time.get_ticks_msec() - t0) / 1000.0])
 	m.finished.connect(end_flight)
 	m.toast.connect(func(t: String, secs: float): _toast(t, secs))
-	if m is SpaceMode:
-		(m as SpaceMode).sfx.connect(synth.blip)
+	if m is ShipMode:
+		(m as ShipMode).sfx.connect(synth.blip)
+		(m as ShipMode).transfer.connect(_on_transfer)
 	modes[g] = m
 	activating = false
 	ui.loading.visible = false
@@ -445,8 +455,33 @@ func _eye() -> Vector3:
 	return plane.eye if plane != null else Vector3.ZERO
 
 
-func start_mode() -> void:
+## The game key for what the menu has chosen: Space starts in space ("space") or on Earth ("ship_earth").
+func _mode_key() -> String:
 	var g := str(Settings.get_value("game"))
+	if g == "space" and str(Settings.get_value("space_start")) == "earth":
+		return "ship_earth"
+	return g
+
+
+## The spaceship flew up out of the air, or down into it: carry on in the other world (v1.16.0).
+func _on_transfer(to: String, c: Dictionary) -> void:
+	if state != "fly" or not modes.has(to):
+		return
+	Diag.write("spaceship: %s -> %s" % [game, to])
+	await _activate(to)
+	mode.set_cockpit(cam_mode == "cockpit" or vr_active)
+	(mode as ShipMode).arrive(c)
+	cam_init = false
+	ui.set_hud_kind(mode.hud_kind())
+
+
+func start_mode() -> void:
+	var g := _mode_key()
+	if g == "space" or g == "ship_earth":
+		# both halves of the spaceship game are ready before you start, so you can fly between them
+		for k in ["space", "ship_earth"]:
+			if not modes.has(k):
+				await _build_mode(k)
 	if mode == null or game != g:
 		await _activate(g)
 	if mode == null:
@@ -455,7 +490,7 @@ func start_mode() -> void:
 	if args.has("cam") and str(args["cam"]) in mode.camera_modes():
 		cam_mode = str(args["cam"])   # test option (screenshots from the seat)
 	cam_init = false
-	space_thr = 0.5
+	space_thr = mode.start_throttle()
 	mkb = {"steer": 0.0}
 	mode.set_cockpit(cam_mode == "cockpit" or vr_active)
 	mode.start()
@@ -467,15 +502,17 @@ func start_mode() -> void:
 	ui.show_pause(false)
 	ui.adi.visible = false
 	ui.set_corner_boxes(true)
-	ui.set_hud_kind(g)
+	ui.set_hud_kind(mode.hud_kind())
 	ui.set_message("", false)
 	Diag.write("started %s" % g)
+	if mode is ShipMode:
+		(mode as ShipMode).test_options(args)
 
 
 func showcase() -> void:
 	state = "menu"
 	paused = false
-	var g := str(Settings.get_value("game"))
+	var g := _mode_key()
 	if g != "flight":
 		await _activate(g)
 		if mode != null:
@@ -1094,6 +1131,7 @@ func _process(delta: float) -> void:
 
 
 var shot_still := -1
+var shot_game_time := false   # later pictures (--shots) count game seconds, which run slow on a slow computer
 func _shot_tick(delta: float) -> void:
 	if shot_still > 0:
 		shot_still -= 1   # time stopped: a few still frames so the smoothing (TAA) settles before the picture
@@ -1101,7 +1139,7 @@ func _shot_tick(delta: float) -> void:
 			_save_shot()
 		return
 	if shot_timer >= 0.0:
-		shot_timer -= delta
+		shot_timer -= minf(delta, 0.05) if shot_game_time else delta
 		if shot_timer < 0.0:
 			Engine.time_scale = 0.0
 			shot_still = int(args.get("shot_frames", "30"))   # frames for TAA to settle (test option --shot_frames)
@@ -1111,6 +1149,22 @@ func _save_shot() -> void:
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(str(args["shot"]))
 	print("saved screenshot ", args["shot"])
+	# test option --shots=b.png@4,c.png@9: more pictures later in the same run (seconds after the one before)
+	if args.has("shots") and str(args["shots"]) != "":
+		var rest: Array = Array(str(args["shots"]).split(","))
+		var nxt: PackedStringArray = str(rest.pop_front()).split("@")
+		args["shot"] = nxt[0]
+		args["shots"] = ",".join(rest)
+		Engine.time_scale = 1.0
+		shot_still = -1
+		shot_timer = float(nxt[1]) if nxt.size() > 1 else 3.0
+		shot_game_time = true
+		if args.has("shot_cam"):   # --shot_cam=chase,cockpit: the camera for each later picture
+			var cams: Array = Array(str(args["shot_cam"]).split(","))
+			cam_mode = str(cams.pop_front())
+			args["shot_cam"] = ",".join(cams)
+			_apply_view()
+			cam_init = false
 	get_tree().quit()
 
 
@@ -1174,7 +1228,15 @@ func _update_hands(dt: float) -> void:
 			t = free.interpolate_with(grip, k * k * (3.0 - 2.0 * k))
 		h.place(t)
 		var press := maxf(c.get_float("grip"), c.get_float("trigger"))
+		# v1.16.0: the spaceship's buttons: over the console the hand points a finger, and the fingertip presses
+		var touch := 0
+		if mode != null and k < 0.3 and state == "fly" and not paused:
+			touch = mode.touch(side, h.fingertip())
+			if touch == 2:
+				c.trigger_haptic_pulse("haptic", 0.0, 0.8, 0.07, 0.0)
+		point_k[side] = move_toward(float(point_k[side]), 1.0 if touch > 0 else 0.0, dt * 8.0)
 		h.set_curl(lerpf(0.3 + 0.7 * press, 1.0, k))
+		h.set_point(float(point_k[side]) * (1.0 - k))
 
 
 ## Keeps VR smooth on any graphics card: if a frame takes the graphics card more than 85% of the time the
@@ -1397,6 +1459,9 @@ func _process_mode(dt: float, delta: float) -> void:
 		var t0 := Time.get_ticks_usec()
 		mode.step(dt, mi)
 		perf["fm"] += Time.get_ticks_usec() - t0
+		if mode.thr_set >= 0.0:
+			space_thr = mode.thr_set   # the game set the throttle (autopilot, landing)
+			mode.thr_set = -1.0
 		tel.push_frame(mode.tel_frame, run_time)
 	if state == "fly":
 		mode.hud(ui)
@@ -1426,6 +1491,7 @@ func _process_mode(dt: float, delta: float) -> void:
 		world.focus = Vector2(cp.x, cp.z)
 		world.focus_agl = 500.0   # no building crash checks
 		world.update_world(dt, cp)
+	_set_fade(mode.fade_color() if state != "menu" else Color(0, 0, 0, 0))
 	var snd: Array = mode.sound()
 	synth.set_state(float(snd[0]), float(snd[2]), false, state == "fly" and not paused and bool(Settings.get_value("sound")))
 	var f: Dictionary = mode.tel_frame
@@ -1484,6 +1550,29 @@ func _read_mode_input(dt: float) -> Dictionary:
 		out["throttle"] = clampf(thr, 0.0, 1.0)
 		out["brake"] = clampf(brk, 0.0, 1.0)
 		return out
+	# the spaceship's buttons (v1.16.0): keyboard, gamepad and VR controller buttons do the same as the console
+	var press: Array = []
+	for e in [["kH", KEY_H, "hyper"], ["kG", KEY_G, "x10"], ["kN", KEY_N, "next"], ["kPer", KEY_PERIOD, "next"], ["kCom", KEY_COMMA, "prev"],
+			["kL", KEY_L, "land"], ["kU", KEY_U, "auto"], ["kK", KEY_K, "lights"], ["kJ", KEY_J, "assist"]]:
+		if _edge(e[0], _k(e[1]) > 0.0):
+			press.append(e[2])
+	if pad >= 0:
+		if _edge("pY", Input.is_joy_button_pressed(pad, JOY_BUTTON_Y)):
+			press.append("hyper")
+		if _edge("pX", Input.is_joy_button_pressed(pad, JOY_BUTTON_X)):
+			press.append("next")
+		if _edge("pA", Input.is_joy_button_pressed(pad, JOY_BUTTON_A)):
+			press.append("x10")
+		if _edge("pBk", Input.is_joy_button_pressed(pad, JOY_BUTTON_BACK)):
+			press.append("auto")
+	if vrr != null:
+		if _edge("vA", vrr.is_button_pressed("ax_button")):
+			press.append("x10")
+		if _edge("vRS", vrr.is_button_pressed("primary_click")):
+			press.append("hyper")
+	if vl != null and _edge("vLS", vl.is_button_pressed("primary_click")):
+		press.append("next")
+	out["press"] = press
 	# space: like the aircraft (W/S nose, A/D roll, Q/E yaw), plus guns and boost
 	var tp := clampf(-(_k(KEY_UP) + _k(KEY_W)) + (_k(KEY_DOWN) + _k(KEY_S)), -1.0, 1.0)
 	var tr := clampf((_k(KEY_RIGHT) + _k(KEY_D)) - (_k(KEY_LEFT) + _k(KEY_A)), -1.0, 1.0)
@@ -1531,6 +1620,8 @@ func _read_mode_input(dt: float) -> Dictionary:
 	var mf := _mapped("fire")
 	if not is_nan(mf) and mf > 0.5:
 		fire = true
+	if mode != null and mode.thr_set >= 0.0:
+		space_thr = mode.thr_set
 	out["pitch"] = clampf(kb["pitch"] + pitch * inv, -1.0, 1.0)
 	out["roll"] = clampf(kb["roll"] + roll, -1.0, 1.0)
 	out["yaw"] = clampf(kb["yaw"] + yaw, -1.0, 1.0)
@@ -1538,6 +1629,46 @@ func _read_mode_input(dt: float) -> Dictionary:
 	out["fire"] = fire or args.has("autopilot")
 	out["boost"] = boost
 	return out
+
+
+## Fades the whole view to a colour (alpha 0 = clear): a small sphere round the camera (and the headset).
+func _set_fade(c: Color) -> void:
+	if c.a <= 0.003:
+		if fader != null:
+			fader.visible = false
+		if fader_vr != null and is_instance_valid(fader_vr):
+			fader_vr.visible = false
+		return
+	if fader == null:
+		fader = _fade_sphere()
+		cam.add_child(fader)
+	if vr_active and xr_cam != null and (fader_vr == null or not is_instance_valid(fader_vr)):
+		fader_vr = _fade_sphere()
+		xr_cam.add_child(fader_vr)
+	for f in [fader, fader_vr]:
+		if f != null and is_instance_valid(f):
+			(f as MeshInstance3D).visible = true
+			((f as MeshInstance3D).material_override as StandardMaterial3D).albedo_color = c
+
+
+func _fade_sphere() -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.3
+	sm.height = 0.6
+	sm.radial_segments = 16
+	sm.rings = 8
+	mi.mesh = sm
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.no_depth_test = true
+	m.render_priority = 120
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 10.0
+	return mi
 
 
 ## Test option --switch_test: goes between the games and back several times (the way a person would, through

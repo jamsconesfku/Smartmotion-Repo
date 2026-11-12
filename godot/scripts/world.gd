@@ -59,6 +59,7 @@ var _sun_dir := Vector3.UP
 var _cloud_img: Image       # the cloud map, read on the CPU to dim the sun under a cloud
 var _cloud_dim := 0.0
 var _sky_alt := -1.0
+var _fog_base := 0.0
 var grass: MultiMeshInstance3D
 var grass_mat: ShaderMaterial
 var grass_on := true
@@ -250,7 +251,8 @@ func _apply_light() -> void:
 	sky_mat.set_shader_parameter("cirrus", w["cirrus"])
 	sky_mat.set_shader_parameter("overcast", oc)
 	env.fog_light_color = hor
-	env.fog_density = float(t["fog"]) * float(w["fog"])
+	_fog_base = float(t["fog"]) * float(w["fog"])
+	env.fog_density = _fog_base * clampf(exp(-(_sky_alt - 2.5) / 6.0), 0.06, 1.0)
 	env.fog_sun_scatter = 0.18 * (1.0 - 0.8 * oc)   # no bright patch in the haze when the sun is behind cloud
 	env.ambient_light_energy = float(t["amb"]) * float(w["amb"]) / 0.9 * 0.95
 	var shade: Color = hor * 0.62 + top * 0.22
@@ -1221,10 +1223,13 @@ func update_world(dt: float, cam_pos: Vector3) -> void:
 	if sun != null:
 		_update_cloud_dim(dt, cam_pos)
 	# the sky depends a little on the camera's height: update it in 150 m steps (each step redraws its reflections)
+	# (bigger steps high up: the spaceship climbs to 20 km, v1.16.0)
 	var alt := maxf(cam_pos.y, 0.0) / 1000.0 + 0.01
-	if absf(alt - _sky_alt) > 0.15:
+	if absf(alt - _sky_alt) > maxf(0.15, alt * 0.05):
 		_sky_alt = alt
 		sky_mat.set_shader_parameter("cam_alt_km", alt)
+		# the haze is in the lowest few km of air: from high up you see the ground through less of it
+		env.fog_density = _fog_base * clampf(exp(-(alt - 2.5) / 6.0), 0.06, 1.0)
 	_update_grass(cam_pos)
 	cloud_off += CLOUD_WIND * dt
 	if vol_mi != null:

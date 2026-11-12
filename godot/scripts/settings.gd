@@ -8,7 +8,7 @@ var data := {
 	"clouds3d": true, "view": "normal",
 	"aa": "taa", "weather": "scattered", "brightness": "normal", "grass": true, "show_fps": false, "vsync": true,
 	"flypt": true, "flypt_port": 49000, "flypt_out": 49001,
-	"vr_hz": 72.0, "game": "flight", "race": "race", "rig": "all", "rig_map": {},
+	"vr_hz": 72.0, "game": "flight", "race": "race", "space_start": "earth", "space_game": "explore", "rig": "all", "rig_map": {},
 }
 
 func _ready() -> void:

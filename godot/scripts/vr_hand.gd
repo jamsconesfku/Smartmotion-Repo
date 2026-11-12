@@ -15,6 +15,7 @@ const TUBE_C := Vector3(0.0, -0.028, -0.026)   # centre of the closed fist, in t
 
 var left := false
 var curl := 0.4
+var point := 0.0                    # 0..1: the index finger straightens to point (pressing buttons)
 var _fingers: Array = []            # [[joint, joint, joint], fist angles (radians)]
 var _geo: Node3D                    # mirrored for the left hand
 var _glove_m: StandardMaterial3D
@@ -132,11 +133,31 @@ func _build() -> void:
 ## 0 = open hand, 1 = fist.
 func set_curl(c: float) -> void:
 	curl = clampf(c, 0.0, 1.0)
-	for f in _fingers:
+	_pose()
+
+
+## 0 = as set_curl says, 1 = pointing: index finger straight, the other fingers and the thumb curled in.
+func set_point(k: float) -> void:
+	k = clampf(k, 0.0, 1.0)
+	if absf(k - point) > 0.001:
+		point = k
+		_pose()
+
+
+func _pose() -> void:
+	for n in _fingers.size():
+		var f: Array = _fingers[n]
 		var joints: Array = f[0]
 		var ang: Array = f[1]
+		var c := lerpf(curl, 0.02 if n == 0 else 0.95, point)
 		for i in joints.size():
-			(joints[i] as Node3D).rotation.x = -float(ang[i]) * (0.08 + 0.92 * curl)
+			(joints[i] as Node3D).rotation.x = -float(ang[i]) * (0.08 + 0.92 * c)
+
+
+## The tip of the index finger (global).
+func fingertip() -> Vector3:
+	var j: Node3D = _fingers[0][0][2]
+	return j.global_transform * Vector3(0, 0, -0.03)
 
 
 ## Building frame -> grip frame (tube along Z, index at -Z, right palm facing -X, forearm towards +Y).
