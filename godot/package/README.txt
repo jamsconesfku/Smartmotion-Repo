@@ -64,8 +64,9 @@ VR ON A META QUEST 3
   The pause menu also has "Recentre my view", the headset refresh rate and "Leave VR".
   Racing in VR: right trigger = accelerate, left trigger = brake, either stick = steer. Your gloves take
   the steering wheel when you bring the controllers to it.
-  Space in VR: right stick = pitch and roll, left stick = speed and yaw, right trigger = fire, left trigger
-  = boost. The gloves take the flight stick (right) and throttle (left). THE BUTTONS: lean forward and press
+  Space in VR: HOLD THE RIGHT GRIP AND POINT WHERE YOU WANT TO FLY: the ship turns towards where your right
+  hand points and banks into the turn by itself (let go of the grip to fly straight on). The right stick also
+  does pitch and roll, left stick = speed and yaw, right trigger = fire, left trigger = boost. The gloves take the flight stick (right) and throttle (left). THE BUTTONS: lean forward and press
   the lit buttons on the console below the screens with a fingertip (the hand points its finger over them):
   HYPERSPEED, x10 SPEED, < PLANET, PLANET >, LAND, TO SPACE / TO EARTH, EASY / PRO and LIGHTS.
   Also A = x10, right stick click = hyperspeed, left stick click = next planet.
@@ -176,8 +177,8 @@ MAP DATA AND TEXTURES (credits)
   Contains Environment Agency information (c) Environment Agency and/or database right 2026 (LIDAR ground
   heights and tree heights round the airfield), Open Government Licence v3.0
   Contains OS data (c) Crown copyright and database right 2026 (OS OpenMap Local roads, water and building
-  outlines), Open Government Licence v3.0
+  outlines) and OS Open Built Up Areas (towns and villages), Open Government Licence v3.0
   (the game's buildings file is available under the ODbL on request).
-  Ground and building textures: ambientCG (CC0).
+  Ground, building and vehicle textures (carbon fibre, metals, rubber, leather, paint): ambientCG (CC0).
 
 Your settings and best times are saved in your Windows user folder (%APPDATA%\Godot\app_userdata\SmartMotion Flight).

@@ -38,6 +38,23 @@ A 32.8 km square centred on the middle of Duxford's hard runway (real heading 05
 ## Performance (RTX 4060 target)
 High: about 1 M triangles of nearby trees, about 2 M of far trees, 16,000 buildings within 7 km, 72 cloud steps a pixel. If it drops below 60 fps, use Medium (fewer trees, shorter range, 44 cloud steps). In VR the 3D clouds, SSAO and SSIL are switched off. Load with `--stats` (after `--`) to log triangles, draw calls and fps every two seconds in the diagnostics log.
 
+## Smoother VR, real-looking vehicles, towns and roads, point-to-fly spaceship (v1.17.0)
+Sam, 12 Nov 2026: make the VR frame rate smoother; a big visual update to all the vehicles ("ultra realistic", free materials allowed); better roads; towns that look built up instead of grassy fields; in the spaceship, the right controller does all the aiming.
+- **Smoother VR** (the game draws every pixel twice in the headset):
+  - The ground's shading in the detail square now reads one baked slope map (`assets/world/detail_n.png`, 2 m, made by `python3 scripts/build_uk_detail.py --normals-only`) instead of about 20 height lookups a pixel (`d_normal` in `shaders/detail.gdshaderinc`). This helps on the laptop screen too.
+  - In VR: no screen-space reflections (Ultra), the two widest glow levels off, the shadow map at 4K, and about half the 3D grass blades (`World.set_vr_mode`, `_grass_size`).
+  - The VR menu panel (1,920 x 1,080) is redrawn every third frame while it is hidden; it is only needed then for the copy on the laptop screen (`VRPanel._process`).
+  - Not measured on a real headset (the build machine has no graphics card): Sam to check the frame rate and judder in the Quest.
+- **Vehicles** (`scripts/vehicle_look.gd`, run on the Bulldog, the WW2 fighter, the parked aircraft, the racing cars, the spaceship and the coaster train after they are built):
+  - Paint: lacquer with a sharp highlight and small changes in gloss; on the aircraft and the ship, panel seams and rows of rivets (`assets/textures/veh_panels_nrm.png`, 1,024 px = 2.4 m).
+  - Metal: brushed or scratched metal. Carbon fibre (the racing car's dark gloss parts) under lacquer. Tyre and seal rubber. Leather seats and padding. Clearer glass.
+  - Textures: CC0 (public domain) from ambientCG (Fabric004, Metal009, Metal038, Rubber004, Leather026, PaintedMetal004), 512 x 512, in `assets/textures/veh_*`, made by `scripts/make_vehicle_textures.py`. Materials are changed once and shared, so nothing more is done each frame. Lights, screens, logos and the instrument panels are left as they were. The shapes of the vehicles are unchanged.
+- **Towns and roads over the whole 32 km map** (`scripts/build_urban.py` -> `assets/world/urban.png`, 8 m: built-up area, road surface, how built up, main roads; from OS Open Built Up Areas and OS OpenMap Local, Open Government Licence; LIC-16):
+  - Inside towns and among houses (not the airfield or parks, which have few buildings) the ground is streets, pavements, gardens, hedges and small trees, without the open-field patches, tractor tramlines, grass texture or 3D grass (`town` in `shaders/ground.gdshader`, `shaders/grass.gdshader`).
+  - Every OS road is drawn at its real width as tarmac (main roads darker), with a pale pavement strip beside the roads in towns.
+  - In the 1 m detail square, roads now have white markings: dashed centre lines on A, B and minor roads, solid edge lines on A roads and the M11, and lane lines on dual carriageways (`dashes` in `build_uk_detail.py`).
+- **Spaceship in VR: point to fly**: hold the right grip and point where you want to go. The ship turns towards where the right hand points and banks into the turn by itself. The direction you point when you squeeze is straight ahead; full turn rate at 22 degrees, nothing within 3 degrees (`main.gd` `_ship_aim`). Let go of the grip to fly straight on. The right stick still works too, the trigger fires and the left stick is the power. A message explains it the first time.
+
 ## Space: the spaceship on Earth, hyperspeed and the planets (v1.16.0)
 Sam, 12 Nov 2026: add a mode with the spaceship on Earth, like a ship from the space films, with cockpit buttons you press with the VR controllers by leaning forward and touching them; hyperspeed with a smooth fast animation; an extra-speed setting that goes 10 times faster; easy settings; all the useful information on the cockpit screens; fly up out of the Earth into the space game and back down again; and more planets than Saturn, with hyperspeed between them.
 

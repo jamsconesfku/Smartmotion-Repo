@@ -33,7 +33,8 @@
   "ESA WorldCover 2021 (c) ESA, CC BY 4.0",
   "Buildings and runway: Overture Maps Foundation, including (c) OpenStreetMap contributors (ODbL)",
   "Contains Environment Agency information \u00a9 Environment Agency and/or database right 2026 (LIDAR, Open Government Licence v3.0)",
-  "Contains OS data \u00a9 Crown copyright and database right 2026 (OS OpenMap Local, Open Government Licence v3.0)"
+  "Contains OS data \u00a9 Crown copyright and database right 2026 (OS OpenMap Local, Open Government Licence v3.0)",
+  "Contains OS data \u00a9 Crown copyright and database right 2026 (OS Open Built Up Areas, Open Government Licence v3.0)"
  ],
  "detail": {
   "half": 4096.0,

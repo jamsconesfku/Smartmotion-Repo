@@ -248,5 +248,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-12",
+    "summary": "Version 1.17.0: smoother VR (the ground's shading is much cheaper, and reflections, wide glow, the big shadow map and half the 3D grass are off in the headset), real-looking vehicles (lacquered paint with panel seams and rivets, carbon fibre, brushed metal, tyre rubber, leather seats and clearer glass, using free public-domain ambientCG textures), towns that look built up instead of grassy fields and every road drawn at its real width with pavements in towns and white road markings round Duxford (Ordnance Survey open data), and in VR the spaceship now flies where you point the right controller while holding the grip. VR frame rate to check on Sam's Quest.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

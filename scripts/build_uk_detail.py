@@ -135,6 +135,20 @@ def raster(geoms, n, half, all_touched=False):
     return r.astype(np.float32) / (255.0 if r.max() > 1 else 1.0)
 
 
+def dashes(line, on, gap):
+    """Pieces of a line: `on` metres of paint every `on + gap` metres."""
+    from shapely.ops import substring
+    out = []
+    geoms = getattr(line, "geoms", [line])
+    for ln in geoms:
+        L = ln.length
+        d = gap * 0.5
+        while d < L:
+            out.append(substring(ln, d, min(d + on, L)))
+            d += on + gap
+    return out
+
+
 def grade_runway(h2):
     """The runway is level at the game's runway height (Terrain.RW_ELEV, as in earlier versions): the real one
     falls about 4 m from the 06 end, and the ground rises 5 m just before it, which made landings float a long
@@ -165,6 +179,23 @@ def grade_runway(h2):
     return h2 * (1 - w) + hp * w
 
 
+def write_normals(h2):
+    """detail_n.png (v1.17.0): the ground's slope every 2 m, so the ground shader reads one filtered texture
+    for its shading instead of about 20 height lookups a pixel (much quicker in VR, where every pixel is drawn
+    twice). R, G = the normal's x and z (east, south) as 0.5 + n / 2; with mipmaps it smooths itself far away."""
+    gz, gx = np.gradient(h2.astype(np.float64), 2.0)       # rows run south (game +z), columns east (+x)
+    n = np.dstack([-gx, np.ones_like(gx), -gz])
+    n /= np.linalg.norm(n, axis=2, keepdims=True)
+    rg = np.dstack([n[..., 0] * 0.5 + 0.5, n[..., 2] * 0.5 + 0.5, np.zeros_like(gx)])
+    Image.fromarray((np.clip(rg, 0, 1) * 255 + 0.5).astype(np.uint8), "RGB").save(os.path.join(WORLD, "detail_n.png"), optimize=True)
+    print("detail_n.png: ground slopes for the shader")
+
+
+def normals_only():
+    a = np.asarray(Image.open(os.path.join(WORLD, "detail_h.png"))).astype(np.int32)
+    write_normals((a[..., 0] * 256 + a[..., 1]) / 100.0 - 100.0)
+
+
 def main():
     fetch_uk_detail()
     xs, ys = [], []
@@ -185,6 +216,7 @@ def main():
     v = np.clip(np.round((h2 + 100.0) * 100.0), 0, 65535).astype(np.uint16)
     rg = np.dstack([(v >> 8).astype(np.uint8), (v & 255).astype(np.uint8), np.zeros_like(v, np.uint8)])
     Image.fromarray(rg, "RGB").save(os.path.join(WORLD, "detail_h.png"), optimize=True)
+    write_normals(h2)
 
     # the 32 km map: LIDAR ground where it exists (averaged into the 32 m cells), Copernicus elsewhere, blended
     old = np.frombuffer(open(os.path.join(WORLD, "height.bin"), "rb").read(), "<u2").reshape(1024, 1024).astype(np.float32) / 100.0 - 100.0
@@ -213,7 +245,7 @@ def main():
     # ------------------------------------------------------------ OS OpenMap Local
     road_w = {"Motorway": 24.0, "Primary Road": 11.0, "A Road": 9.5, "B Road": 7.5, "Minor Road": 6.0, "Local Road": 5.5,
               "Local Access Road": 4.0, "Restricted Local Access Road": 3.5, "Shared Use Carriageway": 4.0}
-    rd = []
+    rd, marks, edge = [], [], []
     for g, p in shapes("Road", bounds):
         c = str(p.get("CLASSIFICA") or "")
         wdt = road_w.get(c.split(",")[0], 4.0)
@@ -221,12 +253,32 @@ def main():
             wdt *= 1.8
         # value: how dark the surface is (main roads fresh black tarmac, lanes and tracks paler and worn)
         tone = 255 if wdt >= 7.0 else (190 if wdt >= 5.0 else 120)
-        rd.append((to_local_geom(g).buffer(wdt / 2.0, cap_style=1), tone))
+        lg = to_local_geom(g)
+        rd.append((lg.buffer(wdt / 2.0, cap_style=1), tone))
+        # road markings (v1.17.0), drawn 1 m wide and faint so at 1 m a pixel they read as the real thin lines:
+        # dashed white centre lines on A, B and minor roads, solid edge lines on A roads and motorways
+        kind = c.split(",")[0]
+        if kind in ("A Road", "B Road", "Minor Road", "Primary Road") and "Collapsed Dual" not in c:
+            marks.extend(dashes(lg, 4.0 if kind != "Minor Road" else 2.0, 5.0 if kind != "Minor Road" else 7.0))
+        if kind in ("A Road", "Primary Road", "Motorway"):
+            for side in (-1, 1):
+                try:
+                    edge.append(lg.parallel_offset(side * (wdt / 2.0 - 0.6), "left", join_style=2))
+                except Exception:
+                    pass
+        if kind == "Motorway" or "Collapsed Dual" in c:
+            for off in (-wdt / 4.0, wdt / 4.0):
+                try:
+                    marks.extend(dashes(lg.parallel_offset(off, "left", join_style=2), 2.0, 7.0))
+                except Exception:
+                    pass
     wa = [(to_local_geom(g), 1) for g, _ in shapes("SurfaceWater_Area", bounds)]
     wa += [(to_local_geom(g).buffer(1.6), 1) for g, _ in shapes("SurfaceWater_Line", bounds)]
     bl = [(to_local_geom(g), 1) for g, _ in shapes("Building", bounds)]
     print("OS OpenMap Local: %d roads, %d water, %d buildings" % (len(rd), len(wa), len(bl)))
     road = raster(rd, NP, ZH)
+    mk = raster([(m.buffer(0.5, cap_style=2), 1) for m in marks + edge if not m.is_empty], NP, ZH)
+    print("road markings: %d dashes, %d edge lines" % (len(marks), len(edge)))
     water = raster(wa, NP, ZH)
     bldg = raster(bl, NP, ZH)
 
@@ -275,6 +327,7 @@ def main():
         tone = ndimage.maximum_filter(rs, size=3)[..., None]
         road_col = lin * 0.75 * (1 - tone) + tar * (0.9 + 0.2 * t[..., None]) * tone
         lin = lin * (1 - cov) + road_col * cov
+        lin = lin * (1 - mk[sl][..., None] * 0.32) + np.float32(0.55) * mk[sl][..., None] * 0.32   # the white lines
         rs = (rs > 0).astype(np.float32)
         water_s = ndimage.gaussian_filter(ws, 0.7)
         lin = lin * (1 - water_s[..., None]) + wcol * water_s[..., None]
@@ -322,4 +375,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if "--normals-only" in sys.argv:
+        normals_only()
+    else:
+        main()

@@ -157,7 +157,7 @@
   },
   {
     "id": "LIC-14",
-    "software": "ambientCG textures (grass, soil, tarmac, concrete, brick, render, roof tiles, metal)",
+    "software": "ambientCG textures (grass, soil, tarmac, concrete, brick, render, roof tiles, metal; v1.17.0 vehicles: carbon fibre, brushed and scratched metal, rubber, leather, painted metal)",
     "use": "SmartMotion Flight native game graphics",
     "commercial_route": "CC0 public domain: free for any use including commercial, no credit needed (we credit them anyway).",
     "cost": "Free",
@@ -165,7 +165,7 @@
     "allowed_for_paid_use": "yes, with the credit shown",
     "task": "",
     "notes": "Credits are shown in the game's Help screen and in the download's README.txt. Source: scripts/build_world_data.py (data) and godot/assets/textures (textures).",
-    "updated": "2026-11-09"
+    "updated": "2026-11-12"
   },
   {
     "id": "LIC-15",
@@ -181,8 +181,8 @@
   },
   {
     "id": "LIC-16",
-    "software": "Ordnance Survey OS OpenMap Local (roads, water, building outlines)",
-    "use": "SmartMotion Flight native game graphics (the 8 km detail square round Duxford, v1.15.0)",
+    "software": "Ordnance Survey OS OpenMap Local (roads, water, building outlines) and OS Open Built Up Areas (towns and villages)",
+    "use": "SmartMotion Flight native game graphics (the 8 km detail square round Duxford, v1.15.0; towns and roads over the whole 32 km map, v1.17.0)",
     "commercial_route": "Open Government Licence v3.0: free for any use including commercial, no sign-up; only the credit \"Contains OS data © Crown copyright and database right 2026\" must be shown.",
     "cost": "Free",
     "status": "available",

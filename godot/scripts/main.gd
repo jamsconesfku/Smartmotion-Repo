@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.16.0"
+const APP_VERSION := "1.17.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -548,6 +548,7 @@ func _mount_plane() -> void:
 	if not planes.has(key):
 		var p := AircraftModel.new()
 		p.build(key, world.logo if key == "trainer" else world.logo_dark)
+		VehicleLook.apply(p, "aircraft")   # v1.17.0: panel seams and rivets, real metal, leather seats, clearer canopy
 		add_child(p)
 		planes[key] = p
 	for k in planes:
@@ -1598,6 +1599,10 @@ func _read_mode_input(dt: float) -> Dictionary:
 		roll += _dz(r2.x)
 		pitch += -_dz(r2.y)
 		fire = fire or vrr.get_float("trigger") > 0.5
+		var aim := _ship_aim(vrr)
+		pitch += aim.x
+		yaw += aim.y
+		roll += aim.z
 	if vl != null:
 		var l2 := vl.get_vector2("primary")
 		yaw += _dz(l2.x)
@@ -1629,6 +1634,39 @@ func _read_mode_input(dt: float) -> Dictionary:
 	out["fire"] = fire or args.has("autopilot")
 	out["boost"] = boost
 	return out
+
+
+## Spaceship in VR (v1.17.0): hold the right grip and point the controller where you want to fly. The ship turns
+## towards it and banks into the turn by itself, so one hand does all the aiming (the trigger still fires, the left
+## stick is the power). The direction you point when you squeeze is "straight ahead"; move the hand from there
+## (up/down: nose up/down, left/right: turn). Full turn rate at 22 degrees; nothing within 3 degrees of the middle.
+## Returns (pitch, yaw, roll) inputs, -1..1.
+var aim_ref := Vector3.ZERO
+func _ship_aim(c: XRController3D) -> Vector3:
+	var held := c.get_float("grip") > 0.55
+	if not held or mode == null or mode.vehicle == null:
+		aim_ref = Vector3.ZERO
+		return Vector3.ZERO
+	var vb := mode.vehicle.global_transform.basis.orthonormalized()
+	var d := vb.inverse() * (-c.global_transform.basis.z).normalized()   # where the hand points, in the ship's frame
+	if aim_ref == Vector3.ZERO:
+		aim_ref = d
+		if not aim_hint_shown:
+			aim_hint_shown = true
+			_toast("Pointing to fly: move your right hand where you want to go. Let go of the grip to fly straight on", 5.0)
+		return Vector3.ZERO
+	var dz := deg_to_rad(3.0)
+	var full := deg_to_rad(22.0)
+	var up_now := asin(clampf(d.y, -1.0, 1.0)) - asin(clampf(aim_ref.y, -1.0, 1.0))
+	var right_now := wrapf(atan2(d.x, -d.z) - atan2(aim_ref.x, -aim_ref.z), -PI, PI)
+	var shape := func(a: float) -> float: return signf(a) * clampf((absf(a) - dz) / (full - dz), 0.0, 1.0)
+	var p_in: float = shape.call(up_now)
+	var turn: float = shape.call(right_now)
+	# bank into the turn: up to 60 degrees at full turn, rolled there smoothly
+	var bank := atan2(-vb.x.y, vb.y.y)
+	var r_in := clampf((turn * deg_to_rad(60.0) - bank) / 0.6, -1.0, 1.0)
+	return Vector3(p_in + absf(turn) * 0.25, turn * 0.55, r_in)
+var aim_hint_shown := false
 
 
 ## Fades the whole view to a colour (alpha 0 = clear): a small sphere round the camera (and the headset).

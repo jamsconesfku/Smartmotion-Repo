@@ -41,6 +41,7 @@ var sign_cache := {}
 var _vp_counter := 0
 var scenery: RealScenery
 var ortho_tex: Texture2D
+var urban_tex: Texture2D = null   # towns, roads and how built up (v1.17.0, OS open data)
 var detail_tex := {}          # the LIDAR detail square's textures (empty when the files are missing)
 var focus := Vector2.ZERO
 var focus_agl := 0.0   ## the aircraft's height above the ground (no building checks when far above the roofs)
@@ -387,6 +388,14 @@ func _roof_fade() -> void:
 func set_vr_mode(on: bool) -> void:
 	vr_mode = on
 	_grass_size()
+	# v1.17.0, smoother VR: things that cost a lot per pixel (every pixel is drawn twice in the headset) and
+	# show little there: screen-space reflections (Ultra; they also look wrong between the two eyes), the
+	# widest glow levels and the 8K shadow map
+	if env != null:
+		env.ssr_enabled = ultra and not on
+		for lv in [5, 6]:
+			env.set_glow_level(lv, 0.0 if on else {5: 0.6, 6: 0.4}[lv])
+	RenderingServer.directional_shadow_atlas_set_size(4096 if on or not ultra else 8192, true)
 	if scenery != null:
 		scenery.set_vr(on)
 		_roof_fade()
@@ -572,6 +581,8 @@ func _ground() -> void:
 		biases.push_front(0.0)
 		detail_tex = {"detail_h": load("res://assets/world/detail_h.png"), "detail_photo": load("res://assets/world/detail_photo.jpg"),
 			"detail_mask": load("res://assets/world/detail_mask.png")}
+		if ResourceLoader.exists("res://assets/world/detail_n.png"):
+			detail_tex["detail_n"] = load("res://assets/world/detail_n.png")
 	var n := 128
 	for k in cells.size():
 		var cell: float = cells[k]
@@ -607,9 +618,15 @@ func _ground() -> void:
 		rings.append({"node": mi, "snap": cell * 2.0})
 
 
-## The detail square's textures on a ground or grass material (v1.15.0).
+## The detail square's textures on a ground or grass material (v1.15.0), and the towns map (v1.17.0).
 func _set_detail(mat: ShaderMaterial) -> void:
+	if urban_tex == null and ResourceLoader.exists("res://assets/world/urban.png"):
+		urban_tex = load("res://assets/world/urban.png")
+	mat.set_shader_parameter("has_urban", urban_tex != null)
+	if urban_tex != null:
+		mat.set_shader_parameter("urban", urban_tex)
 	mat.set_shader_parameter("has_detail", not detail_tex.is_empty())
+	mat.set_shader_parameter("has_detail_n", detail_tex.has("detail_n"))
 	for k in detail_tex:
 		mat.set_shader_parameter(k, detail_tex[k])
 	mat.set_shader_parameter("d_half", Terrain.D_HALF)
@@ -696,8 +713,8 @@ func _grass_size() -> void:
 		spacing = 0.6
 		radius = 28.0
 	if vr_mode:
-		spacing *= 1.15
-		radius *= 0.75
+		spacing *= 1.35   # v1.17.0: about half the blades of before in VR (each is drawn for both eyes)
+		radius *= 0.7
 	var n := int(ceil(radius * 2.0 / spacing))
 	grass.multimesh.instance_count = n * n
 	for i in n * n:
@@ -953,6 +970,7 @@ func _airfield() -> void:
 	for r in rows:
 		var a := AircraftModel.new()
 		a.build(r[0], logo if r[0] == "trainer" else logo_dark, false)
+		VehicleLook.apply(a, "aircraft")
 		a.set_cockpit_view(false)
 		var piv := Node3D.new()
 		piv.add_child(a)

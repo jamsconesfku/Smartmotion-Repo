@@ -16,7 +16,11 @@ uniform sampler2D asphalt_nrm : hint_normal, filter_linear_mipmap_anisotropic, r
 uniform sampler2D concrete_col : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D concrete_nrm : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D cloud_map : filter_linear, repeat_enable;           // cloud cover, for cloud shadows
-uniform sampler2D roofmask : filter_linear_mipmap, repeat_disable;     // where the real buildings stand (8 m pixels)
+uniform sampler2D roofmask : filter_linear_mipmap, repeat_disable;
+// v1.17.0 (scripts/build_urban.py, OS open data, 8 m over the whole square): r built-up area, g road surface,
+// b how built up (share under roofs), a main road
+uniform sampler2D urban : filter_linear_mipmap, repeat_disable;
+uniform bool has_urban = false;     // where the real buildings stand (8 m pixels)
 uniform float roof_fade = 7000.0;
 uniform int debug_view = 0;         // test option --ground_debug: 1 shows the fine detail, the fades and built-up land   // the 3D buildings are drawn this far: beyond it the photo's roofs stay
 uniform float cell = 32.0;
@@ -110,10 +114,17 @@ void fragment() {
 	// triangles) used to light whole hillsides flat; now every valley and ridge is shaded as on the map
 	{
 		float e = cell;
-		if (d_weight(p) > 0.0) e = clamp(dist * 0.0035, 2.0, max(cell, 2.0));
-		float hl = hgt(p - vec2(e, 0.0)); float hr = hgt(p + vec2(e, 0.0));
-		float hu = hgt(p - vec2(0.0, e)); float hd = hgt(p + vec2(0.0, e));
-		vec3 nw = normalize(vec3(hl - hr, 2.0 * e, hu - hd));
+		float dwn = d_weight(p);
+		vec3 nw;
+		if (has_detail_n && dwn >= 0.999) {
+			nw = d_normal(p);   // the baked slope map: one read instead of about 20 (v1.17.0, smoother VR)
+		} else {
+			if (dwn > 0.0) e = clamp(dist * 0.0035, 2.0, max(cell, 2.0));
+			float hl = hgt(p - vec2(e, 0.0)); float hr = hgt(p + vec2(e, 0.0));
+			float hu = hgt(p - vec2(0.0, e)); float hd = hgt(p + vec2(0.0, e));
+			nw = normalize(vec3(hl - hr, 2.0 * e, hu - hd));
+			if (has_detail_n && dwn > 0.0) nw = normalize(mix(nw, d_normal(p), dwn));
+		}
 		vec3 tw = normalize(vec3(1.0, 0.0, 0.0) - nw * nw.x);
 		vec3 bw = normalize(vec3(0.0, 0.0, 1.0) - nw * nw.z);
 		NORMAL = normalize((VIEW_MATRIX * vec4(nw, 0.0)).xyz);
@@ -161,6 +172,26 @@ void fragment() {
 	lc.r = mix(lc.r, dm.r, dw);
 	lc.b = mix(lc.b, dm.b, dw);
 	float road = dm.g * dw;
+	// towns (v1.17.0): streets, pavements, roofs and gardens instead of open grass; sharp roads everywhere
+	float town = 0.0;
+	float pave = 0.0;
+	if (has_urban) {
+		vec4 ub = texture(urban, ouv) * inside;
+		town = ub.r * smoothstep(0.04, 0.3, ub.b);   // inside a town and among houses (not the airfield or parks)
+		float road8 = ub.g * (1.0 - dw);             // outside the 1 m square: OS roads at 8 m
+		float near_road = textureLod(urban, ouv, 2.0).g * inside;
+		vec4 dm_soft = dw > 0.0 ? textureLod(detail_mask, d_uv(p), 2.5) : vec4(0.0);
+		// pavements: a pale strip beside the roads in towns
+		pave = clamp((max(near_road * (1.0 - dw), dm_soft.g * dw) - max(road8, road)) * 3.0, 0.0, 1.0) * town;
+		vec3 tar = mix(vec3(0.085, 0.087, 0.092), vec3(0.055, 0.056, 0.06), ub.a);
+		col = mix(col, tar * (0.9 + 0.2 * vnoise(p / 9.0)), clamp(road8 * 1.4, 0.0, 1.0));
+		road = max(road, clamp(road8 * 1.4, 0.0, 1.0));
+		col = mix(col, vec3(0.30, 0.29, 0.27) * (0.85 + 0.3 * vnoise(p / 3.0)), pave * 0.65);
+		// gardens, hedges and small trees between the houses: darker and broken up, not a smooth lawn
+		float g2 = vnoise(p / 7.0) * 0.6 + vnoise(p / 2.6 + 4.0) * 0.4;
+		vec3 garden = mix(col * vec3(0.72, 0.8, 0.66), vec3(0.16, 0.15, 0.13), smoothstep(0.55, 0.8, g2) * 0.6);
+		col = mix(col, garden, town * 0.55 * (1.0 - road));
+	}
 
 	// runway: real tarmac colour, cleaner than the 10 m photo
 	vec2 rd = rw.xy; vec2 rp = vec2(-rd.y, rd.x);
@@ -173,6 +204,7 @@ void fragment() {
 	float green = clamp((col.g - max(col.r, col.b)) * 9.0 + 0.3, 0.0, 1.0);
 	// built-up land that looks green in the photo is grass (the airfield, parks, playing fields)
 	float built = clamp(lc.g, 0.0, 1.0) * (1.0 - runway) * (1.0 - 0.6 * rm) * (1.0 - 0.85 * green);
+	built = max(built, max(town * (1.0 - 0.3 * green), pave) * (1.0 - runway));   // towns: no grass texture between the houses
 	float wgrass = (1.0 - built) * (1.0 - runway) * max(green, lc.a);
 	float wsoil = (1.0 - built) * (1.0 - runway) * (1.0 - max(green, lc.a));
 
@@ -181,7 +213,7 @@ void fragment() {
 	float mfade = 1.0 - smoothstep(1500.0, 6000.0, dist);
 	if (mfade > 0.001) {
 		float m = vnoise(p / 23.0) * 0.6 + vnoise(p / 71.0 + 5.0) * 0.4;
-		col *= mix(1.0, 0.9 + 0.2 * m, mfade * (1.0 - runway) * (1.0 - 0.5 * built));
+		col *= mix(1.0, 0.9 + 0.2 * m, mfade * (1.0 - runway) * (1.0 - 0.5 * built) * (1.0 - town));
 		// detail between the photo's 10 m and the textures' few metres: tufts, patches and worn ground,
 		// drawn here (not from a texture) so it stays sharp when seen at a low angle from the air
 		float dfade = (1.0 - smoothstep(200.0, 1600.0, dist)) * (1.0 - runway) * (1.0 - 0.5 * built);
@@ -194,7 +226,7 @@ void fragment() {
 		}
 	}
 	// arable fields: the pairs of tractor tracks ("tramlines", 24 m apart) that show from the air
-	float arable = clamp(1.0 - (lc.r + lc.g + lc.b + lc.a) * 1.5, 0.0, 1.0) * (1.0 - runway) * (1.0 - rm);
+	float arable = clamp(1.0 - (lc.r + lc.g + lc.b + lc.a) * 1.5, 0.0, 1.0) * (1.0 - runway) * (1.0 - rm) * (1.0 - town);
 	if (arable > 0.01 && dist < 4000.0) {
 		float ang = vnoise(p / 1100.0 + 2.0) * 6.2832;
 		float u = dot(p, vec2(cos(ang), sin(ang)));

@@ -30,6 +30,7 @@ func _init(col := Color("#02022f"), acc := Color("#ff4c00"), num := 7) -> void:
 	accent = acc
 	number = num
 	_build()
+	VehicleLook.apply(self, "car")   # v1.17.0: carbon fibre, tyre rubber, lacquer, brushed metal
 
 
 func _paint_mat() -> StandardMaterial3D:

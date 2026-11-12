@@ -10,6 +10,8 @@ uniform sampler2D heightmap : filter_linear, repeat_enable;
 uniform sampler2D ortho : source_color, filter_linear_mipmap, repeat_disable;
 uniform sampler2D landcover : filter_linear_mipmap, repeat_disable;
 uniform sampler2D roofmask : filter_linear_mipmap, repeat_disable;
+uniform sampler2D urban : filter_linear_mipmap, repeat_disable;   // v1.17.0: no 3D grass in towns or on roads
+uniform bool has_urban = false;
 uniform float cell = 32.0;
 uniform float size_cells = 1024.0;
 uniform float half_size = 16384.0;
@@ -59,6 +61,11 @@ void vertex() {
 		lc.b = max(lc.b, dm.b * dw);
 		built = max(built, dm.g * dw);
 		photo = mix(photo, textureLod(detail_photo, d_uv(base), 0.0).rgb, dw);
+	}
+	if (has_urban) {
+		vec4 ub = textureLod(urban, ouv, 0.0);
+		built = max(built, ub.r * smoothstep(0.04, 0.3, ub.b));
+		lc.b = max(lc.b, ub.g);   // (roads: treated like water here, no grass)
 	}
 	float grow = max(green, lc.a) * (1.0 - built) * (1.0 - runway) * clamp(1.0 - rm * 2.5, 0.0, 1.0) * clamp(1.0 - lc.b * 2.0, 0.0, 1.0);
 	grow = smoothstep(0.35, 0.8, grow) * (1.0 - smoothstep(radius * 0.55, radius, r));

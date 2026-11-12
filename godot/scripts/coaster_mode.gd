@@ -72,6 +72,7 @@ func build(w: World, q: String) -> void:
 	_meshes(w)
 	await _station(w)
 	_train()
+	VehicleLook.apply(train, "coaster")   # v1.17.0
 	vehicle = cars[0]
 	eye = RIDER
 

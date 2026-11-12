@@ -112,6 +112,20 @@ func teardown() -> void:
 
 
 ## Shows the panel 0.95 m in front of where the head is (in the vehicle's frame), turned to face it.
+## v1.17.0, smoother VR: while the panel is hidden (flying), its 1920 x 1080 picture is only needed for the copy
+## on the laptop screen (the HUD), so it is redrawn every third frame instead of every frame.
+var _skip := 0
+func _process(_dt: float) -> void:
+	if sub == null:
+		return
+	if shown:
+		if sub.render_target_update_mode != SubViewport.UPDATE_ALWAYS:
+			sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		return
+	_skip = (_skip + 1) % 3
+	sub.render_target_update_mode = SubViewport.UPDATE_ONCE if _skip == 0 else SubViewport.UPDATE_DISABLED
+
+
 func show_panel(on: bool, head: Transform3D) -> void:
 	shown = on
 	visible = on   # the laptop screen keeps showing the menus and the HUD (mirror) either way

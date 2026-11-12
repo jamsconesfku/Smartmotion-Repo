@@ -24,6 +24,7 @@ var fx_shader: Shader
 func _init() -> void:
 	fx_shader = load("res://shaders/space_fx.gdshader")
 	_build()
+	VehicleLook.apply(self, "ship")   # v1.17.0: panel seams, brushed metal, leather, clearer glass
 
 
 func _paint() -> StandardMaterial3D:
