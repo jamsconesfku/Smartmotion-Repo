@@ -315,7 +315,10 @@ func update_visuals(surf: Dictionary, engine: float, dt: float, ias: float) -> v
 	rudder.rotation.y = k * float(surf["r"])
 	prop.rotation.z += (8.0 + engine * 95.0) * dt
 	var blur := clampf((engine - 0.2) / 0.5, 0.0, 1.0)
-	(disc.material_override as StandardMaterial3D).albedo_color.a = 0.17 * blur
+	if disc.material_override is ShaderMaterial:
+		(disc.material_override as ShaderMaterial).set_shader_parameter("strength", blur)   # the Bulldog's round disc
+	else:
+		(disc.material_override as StandardMaterial3D).albedo_color.a = 0.17 * blur
 	for b in blades:
 		# from the cockpit a running prop is only the faint disc (a still blade would stand in the middle of the view)
 		(b as Node3D).visible = blur < 0.8 and not (in_cockpit and bulldog == null and engine > 0.12)

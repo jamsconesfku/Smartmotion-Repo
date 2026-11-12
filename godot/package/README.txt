@@ -55,6 +55,10 @@ VR ON A META QUEST 3
   Your hands show as small balls where the controllers are (they shrink a little when you squeeze).
   Controls: right stick = pitch and roll, right trigger / grip = more / less power,
   left stick = power and rudder, left trigger = brakes, A = flaps, B = recentre, X = menu, Y = restart.
+  Trim: hold the left grip and push the left stick forward / back (nose down / up).
+  YOU STAY IN THE SEAT: you can lean and look round, but your head can't go through the canopy, the panel
+  or the seat: at the edge of the seat's space the view stops with you. If you ever sit in the wrong place,
+  sit upright and press B.
   THE MENU IN VR: the game's own menu floats in front of you in the headset (the main menu, pause menu and
   results). Point at it with either controller (an orange beam) and pull the trigger (index finger) to click: it clicks the moment the
   trigger goes down, with a short buzz in the controller; stick up/down
@@ -76,10 +80,24 @@ VR ON A META QUEST 3
   set Graphics quality to Medium in Settings. Plug the laptop in to mains power: on battery the graphics card slows down.
 
 CONTROLS (keyboard)
+  SEE THEM IN THE GAME: "Controls" on the menu shows a picture of the keyboard with every key that does
+  something lit up and labelled, for Flight, Racing and the Spaceship, plus the gamepad and VR controllers.
+  While playing, F1 shows or hides a short list of the controls at the side of the screen (or Settings >
+  "Show the controls on screen while playing").
+  CHANGE ANY KEY: Settings > "Change keys and buttons" (also on the Controls screen). Each control can have
+  two keys and one gamepad or joystick button. Click a box and press the key or button you want; Esc leaves
+  it, Backspace empties it, "Back to the standard keys" undoes everything. The keys below are the standard ones.
   FLIGHT
   W/S nose down/up, A/D bank to turn (arrow keys also work), Shift/Ctrl power (or keys 1-0), Q/E rudder, Space brakes,
   F flaps, V camera, P or Esc pause, R restart, T telemetry panel, M sound, F11 full screen.
-  Gamepads work too (right stick, left stick, triggers).
+  TRIM: hold ] (or Num 1) to trim nose up, [ (or Num 7) to trim nose down, \ (or Num 5) puts it back to the
+  middle. Hold the key and it winds on steadily; the screen shows how much. In Easy mode trim sets a steady
+  climb or descent so you can let go; in Pro it moves the elevator like the real trim wheel (the wheel beside
+  the centre console turns). To trim from a joystick, give "Trim nose up / down" a button or the hat switch
+  in "Change keys and buttons".
+  Gamepad: right stick nose and bank, left stick power and rudder, left trigger brakes, LB/RB rudder,
+  D-pad up/down trim nose down/up, A flaps, B camera, Start pause.
+  VR controllers: hold the LEFT GRIP and push the left stick forward/back to trim nose down/up.
   Easy mode (the default) sets full power on the runway for you: hold S at take-off speed to lift off.
   ONE WORLD: the racing circuit (2.5 km west of the runway) and the roller coaster (just south-east of the
   runway) are in the Duxford world. Fly over them in Flight; they're parked there when you're not using them.

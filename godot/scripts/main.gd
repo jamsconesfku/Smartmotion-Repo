@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.18.0"
+const APP_VERSION := "1.19.0"
 ## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
 ## ground stopped at an edge that moved as you climbed)
 const VIEW_FAR := 600000.0
@@ -99,6 +99,8 @@ func _ready() -> void:
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	Diag.start(not args.has("xr"))
 	Diag.write("SmartMotion Flight native v%s started" % APP_VERSION)
+	var saved_keys = Settings.get_value("binds")
+	Keys.over = saved_keys if saved_keys is Dictionary else {}
 	# v1.18.0: the game always opens on Flight (the Flight tab), unless the simulator's set-up has no Flight (a
 	# steering wheel or the hands-free ride), or the game restarted itself in VR from the menu ("--go": it keeps
 	# the chosen game then)
@@ -150,6 +152,9 @@ func _ready() -> void:
 	ui.restart_pressed.connect(start_game)
 	ui.vr_action.connect(_on_vr_action)
 	ui.learn_pressed.connect(_learn)
+	ui.binds_changed.connect(func():
+		Settings.set_value("binds", Keys.over)
+		_refresh_help())
 	_refresh_controls_sheet()
 	ui.menu_pressed.connect(to_menu)
 	ui.setting_changed.connect(_on_setting)
@@ -194,6 +199,8 @@ func _ready() -> void:
 	if args.has("sheet"):
 		await get_tree().create_timer(0.5).timeout
 		ui.open_sheet({"settings": ui.settings_sheet, "help": ui.help_sheet, "pause": ui.pause_sheet}[str(args["sheet"])])
+	if args.has("key_test"):
+		_key_test()
 	if args.has("switch_test"):
 		_switch_test()
 	if args.has("orbit_dist"):
@@ -309,6 +316,10 @@ func _on_setting(key: String, value) -> void:
 			world.set_grass(bool(value))
 		"show_fps":
 			ui.show_fps(bool(value))
+		"help_overlay":
+			_refresh_help()
+			if state == "fly" and not paused:
+				_toast("Controls shown" if bool(value) else "Controls hidden (%s shows them)" % Keys.first("help"))
 
 
 func _on_fly(vr: bool) -> void:
@@ -550,6 +561,7 @@ func start_mode() -> void:
 	_vr_menu_show(false, "")
 	_vr_text("")
 	ui.show_hud()
+	_refresh_help()
 	ui.show_pause(false)
 	ui.adi.visible = false
 	ui.set_corner_boxes(true)
@@ -677,13 +689,15 @@ func start_flight() -> void:
 	paused = false
 	_vr_menu_show(false, "")
 	ui.show_hud()
+	_refresh_help()
 	ui.show_pause(false)
 	ui.adi.visible = cam_mode != "cockpit" and not vr_active
 	ui.set_message("", false)
 	if fm.i["on_ground"] and fm.assist:
-		_toast("Full power is on. At %d knots hold S to lift off. W/S nose, A/D turn, Shift/Ctrl power" % int(fm.spec["vr"] * 1.12 * KT), 6.0)
+		_toast("Full power is on. At %d knots hold %s to lift off. %s/%s nose, %s/%s turn, %s/%s power, %s/%s trim" % [int(fm.spec["vr"] * 1.12 * KT), Keys.first("pitch_up"),
+			Keys.first("pitch_down"), Keys.first("pitch_up"), Keys.first("roll_left"), Keys.first("roll_right"), Keys.first("thr_up"), Keys.first("thr_down"), Keys.first("trim_down"), Keys.first("trim_up")], 6.0)
 	elif fm.i["on_ground"]:
-		_toast("Hold Shift for full power, then hold S at about %d knots" % int(fm.spec["vr"] * 1.12 * KT), 5.0)
+		_toast("Hold %s for full power, then hold %s at about %d knots" % [Keys.first("thr_up"), Keys.first("pitch_up"), int(fm.spec["vr"] * 1.12 * KT)], 5.0)
 	elif gate["active"]:
 		_toast("Fly through the orange gates as fast as you can", 4.0)
 
@@ -699,60 +713,27 @@ func end_flight(title: String, label: String, text: String, big: String) -> void
 
 
 # ------------------------------------------------------------ input
-func _k(code: Key) -> float:
-	return 1.0 if Input.is_physical_key_pressed(code) else 0.0
-
-
 static func _dz(v: float) -> float:
 	return 0.0 if absf(v) < 0.12 else (v - signf(v) * 0.12) / 0.88
 
 
 func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventKey and e.pressed and not e.echo:
-		match e.physical_keycode:
-			KEY_F:
-				if mode != null:
-					return
-				flaps_idx = (flaps_idx + 1) % 3
-				_toast("Flaps " + ["up", "half", "full"][flaps_idx])
-			KEY_V, KEY_C:
-				_cycle_camera()
-			KEY_P, KEY_ESCAPE:
-				if ui.help_sheet.visible:
-					ui.close_sheet(ui.help_sheet)
-				elif ui.settings_sheet.visible:
-					ui.close_sheet(ui.settings_sheet)
-				elif state == "fly":
-					_pause(not paused)
-			KEY_R:
-				if state == "fly" or state == "ended":
-					start_game()
-			KEY_T:
-				ui.tel_panel.visible = not ui.tel_panel.visible
-				if ui.tel_panel.visible:
-					_toast("Data panel ON (top right)\nFlyPT Mover: " + tel.xp.status, 4.0)
-				else:
-					_toast("Data panel OFF (press T to show it)", 2.0)
-			KEY_M:
-				Settings.set_value("sound", not Settings.get_value("sound"))
-				ui.set_seg("sound", Settings.get_value("sound"))
-				_toast("Sound on" if Settings.get_value("sound") else "Sound off")
-			KEY_F11:
-				Settings.set_value("fullscreen", not Settings.get_value("fullscreen"))
-				ui.set_seg("fullscreen", Settings.get_value("fullscreen"))
-				_apply_window()
-			KEY_HOME:
-				throttle = 1.0
-			KEY_END:
-				throttle = 0.0
-			KEY_BRACKETLEFT:
-				trim = clampf(trim - 0.03, -0.5, 0.5)
-			KEY_BRACKETRIGHT:
-				trim = clampf(trim + 0.03, -0.5, 0.5)
-			_:
-				if e.physical_keycode >= KEY_0 and e.physical_keycode <= KEY_9:
-					var d: int = e.physical_keycode - KEY_0
-					throttle = 1.0 if d == 0 else d / 10.0
+		var code: int = e.physical_keycode
+		if code == KEY_ESCAPE:
+			if ui.close_top_sheet():
+				pass
+			elif state == "fly":
+				_pause(not paused)
+			return
+		# v1.19.0: every key can be changed (Settings > Change keys), so look up what this key does in this game
+		var ctx := _key_game()
+		var acts: Array = Keys.actions_for_key(code, ctx)
+		for id in acts:
+			_do_action(id)
+		if acts.is_empty() and mode == null and code >= KEY_0 and code <= KEY_9:
+			var d: int = code - KEY_0
+			throttle = 1.0 if d == 0 else d / 10.0
 	elif e is InputEventMouseButton:
 		if e.button_index == MOUSE_BUTTON_RIGHT:
 			rmb = e.pressed
@@ -767,6 +748,122 @@ func _unhandled_input(e: InputEvent) -> void:
 		else:
 			orbit_yaw -= e.relative.x * 0.005
 			orbit_pitch = clampf(orbit_pitch + e.relative.y * 0.004, -0.2, 1.3)
+
+
+## The controls shown while playing (Settings, or the Help key): a list at the side of the screen, and in VR a
+## small card fixed in the cockpit down to the left, where it doesn't cover the view ahead.
+var vr_help: Label3D
+func _refresh_help() -> void:
+	var on := bool(Settings.get_value("help_overlay"))
+	var ctx := _key_game()
+	ui.set_overlay_game(ctx)
+	ui.show_overlay(on)
+	if vr_active and xr_origin != null:
+		if vr_help == null or not is_instance_valid(vr_help):
+			vr_help = Label3D.new()
+			vr_help.font = load("res://assets/fonts/Barlow-SemiBold.ttf")
+			vr_help.font_size = 34
+			vr_help.pixel_size = 0.00045
+			vr_help.outline_size = 10
+			vr_help.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			vr_help.no_depth_test = true
+			vr_help.render_priority = 9
+			vr_help.modulate = Color(1, 1, 1, 0.92)
+		var veh: Node3D = mode.vehicle if mode != null else plane
+		if veh != null and vr_help.get_parent() != veh:
+			if vr_help.get_parent() != null:
+				vr_help.get_parent().remove_child(vr_help)
+			veh.add_child(vr_help)
+		# fixed in the cockpit, low down to the left of where you look, turned to face you
+		vr_help.position = _eye() + Vector3(-0.34, -0.22, -0.5)
+		vr_help.rotation = Vector3(-0.3, 0.6, 0.0)
+		var lines: Array = ["CONTROLS (VR)"]
+		for e in GameUI.VR_HELP.get(ctx, []):
+			lines.append("%s:  %s" % [e[0], e[1]])
+		vr_help.text = "\n".join(lines)
+		vr_help.visible = on and state == "fly"
+	elif vr_help != null and is_instance_valid(vr_help):
+		vr_help.visible = false
+
+
+## Which game's keys are in use: "flight", "race", "space" (both spaceship games) or "coaster".
+func _key_game() -> String:
+	if mode == null:
+		return "flight"
+	if game == "race" or game == "coaster":
+		return game
+	return "space"
+
+
+## The press-once controls, from a key or a controller button. (The spaceship's own buttons are read in
+## _read_mode_input.)
+func _do_action(id: String) -> void:
+	match id:
+		"flaps":
+			if mode == null and state == "fly":
+				flaps_idx = (flaps_idx + 1) % 3
+				_toast("Flaps " + ["up", "half", "full"][flaps_idx])
+		"camera":
+			_cycle_camera()
+		"pause":
+			if ui.close_top_sheet():
+				pass
+			elif state == "fly":
+				_pause(not paused)
+		"restart":
+			if state == "fly" or state == "ended":
+				start_game()
+		"help":
+			var on := not bool(Settings.get_value("help_overlay"))
+			ui.set_seg("help_overlay", on)
+			_on_setting("help_overlay", on)
+		"data":
+			ui.tel_panel.visible = not ui.tel_panel.visible
+			if ui.tel_panel.visible:
+				_toast("Data panel ON (top right)\nFlyPT Mover: " + tel.xp.status, 4.0)
+			else:
+				_toast("Data panel OFF (press %s to show it)" % Keys.first("data"), 2.0)
+		"sound":
+			Settings.set_value("sound", not Settings.get_value("sound"))
+			ui.set_seg("sound", Settings.get_value("sound"))
+			_toast("Sound on" if Settings.get_value("sound") else "Sound off")
+		"fullscreen":
+			Settings.set_value("fullscreen", not Settings.get_value("fullscreen"))
+			ui.set_seg("fullscreen", Settings.get_value("fullscreen"))
+			_apply_window()
+		"thr_full":
+			if mode == null:
+				throttle = 1.0
+		"thr_idle":
+			if mode == null:
+				throttle = 0.0
+		"trim_reset":
+			if mode == null and state == "fly":
+				trim = 0.0
+				_show_trim()
+
+
+## Controller buttons for the press-once controls (keys arrive as events; buttons are checked every frame).
+const BUTTON_ACTIONS := ["flaps", "camera", "pause", "restart", "help", "data", "sound", "fullscreen", "thr_full", "thr_idle", "trim_reset"]
+func _poll_buttons() -> void:
+	if ui.capturing():
+		return
+	var ctx := _key_game()
+	var hm := _has_map()
+	for id in BUTTON_ACTIONS:
+		if _edge("b_" + id, Keys.uses(id, ctx) and Keys.button_down(id, hm)):
+			_do_action(id)
+
+
+## Trim: shown as a short message while it changes (and in the headset), and on the HUD's TRIM tag.
+var trim_msg_t := 0.0
+func _show_trim() -> void:
+	var pc := roundi(absf(trim) / 0.5 * 100.0)
+	var t := "Trim: middle" if pc == 0 else "Trim: nose %s %d%%" % ["up" if trim > 0.0 else "down", pc]
+	ui.toast(t, 1.6)
+	if vr_active:
+		_vr_text(t)
+		trim_msg_t = 1.6
 
 
 func _cycle_camera() -> void:
@@ -796,10 +893,10 @@ func _approach(cur: float, tgt: float, rate: float, dt: float) -> float:
 
 
 func _read_input(dt: float) -> void:
-	var tp := -(_k(KEY_UP) + _k(KEY_W)) + (_k(KEY_DOWN) + _k(KEY_S))
-	tp = clampf(tp, -1.0, 1.0)
-	var tr := clampf((_k(KEY_RIGHT) + _k(KEY_D)) - (_k(KEY_LEFT) + _k(KEY_A)), -1.0, 1.0)
-	var ty := _k(KEY_E) - _k(KEY_Q)
+	var hm := _has_map()
+	var tp := Keys.val("pitch_up", hm) - Keys.val("pitch_down", hm)
+	var tr := Keys.val("roll_right", hm) - Keys.val("roll_left", hm)
+	var ty := Keys.val("yaw_right", hm) - Keys.val("yaw_left", hm)
 	kb["pitch"] = _approach(kb["pitch"], tp, 2.6 if tp != 0.0 else 4.0, dt)
 	kb["roll"] = _approach(kb["roll"], tr, 3.0 if tr != 0.0 else 4.5, dt)
 	kb["yaw"] = _approach(kb["yaw"], ty, 4.0 if ty != 0.0 else 6.0, dt)
@@ -816,18 +913,8 @@ func _read_input(dt: float) -> void:
 		yaw = _dz(Input.get_joy_axis(id, JOY_AXIS_LEFT_X)) * _inv("invert_yaw")
 		thr_axis = -_dz(Input.get_joy_axis(id, JOY_AXIS_LEFT_Y))
 		brake = Input.get_joy_axis(id, JOY_AXIS_TRIGGER_LEFT)
-		if Input.is_joy_button_pressed(id, JOY_BUTTON_LEFT_SHOULDER):
-			yaw = -1.0
-		if Input.is_joy_button_pressed(id, JOY_BUTTON_RIGHT_SHOULDER):
-			yaw = 1.0
-		thr_axis += float(Input.is_joy_button_pressed(id, JOY_BUTTON_DPAD_UP)) - float(Input.is_joy_button_pressed(id, JOY_BUTTON_DPAD_DOWN))
-		if _edge("pa", Input.is_joy_button_pressed(id, JOY_BUTTON_A)):
-			flaps_idx = (flaps_idx + 1) % 3
-			_toast("Flaps " + ["up", "half", "full"][flaps_idx])
-		if _edge("pb", Input.is_joy_button_pressed(id, JOY_BUTTON_B)):
-			_cycle_camera()
-		if _edge("ps", Input.is_joy_button_pressed(id, JOY_BUTTON_START)):
-			_pause(not paused)
+		# the gamepad's buttons (flaps, camera, pause, rudder on the shoulders, trim on the D-pad) are in Keys
+	var trim_in := Keys.val("trim_up", hm) - Keys.val("trim_down", hm)
 	if vr_active:
 		var v := _read_vr()
 		roll += v["roll"]
@@ -835,11 +922,20 @@ func _read_input(dt: float) -> void:
 		yaw += v["yaw"]
 		thr_axis += v["thr"]
 		brake = maxf(brake, v["brake"])
+		trim_in += v["trim"]
+	# trim (v1.19.0): hold the key and it winds on steadily, like turning the trim wheel (full travel in about 4 s)
+	if trim_in != 0.0:
+		trim = clampf(trim + clampf(trim_in, -1.0, 1.0) * 0.13 * dt, -0.5, 0.5)
+		_show_trim()
+	if trim_msg_t > 0.0:
+		trim_msg_t -= dt
+		if trim_msg_t <= 0.0 and vr_active and not vr_warn:
+			_vr_text("")
 	var inv := -1.0 if Settings.get_value("invert") else 1.0
 	inp["pitch"] = clampf(kb["pitch"] + pitch * inv, -1.0, 1.0)
 	inp["roll"] = clampf(kb["roll"] + roll, -1.0, 1.0)
 	inp["yaw"] = clampf(kb["yaw"] + yaw, -1.0, 1.0)
-	thr_axis += (_k(KEY_SHIFT) + _k(KEY_PAGEUP) + _k(KEY_X)) - (_k(KEY_CTRL) + _k(KEY_PAGEDOWN) + _k(KEY_Z))
+	thr_axis += Keys.val("thr_up", hm) - Keys.val("thr_down", hm)
 	throttle = clampf(throttle + thr_axis * 0.9 * dt, 0.0, 1.0)   # 0 to full power in about a second
 	# the simulator's own joystick, throttle and pedals (Set up controls)
 	var mr := _mapped("roll")
@@ -855,7 +951,7 @@ func _read_input(dt: float) -> void:
 	if not is_nan(mt) and thr_axis == 0.0:
 		throttle = mt
 	inp["throttle"] = throttle
-	inp["brake"] = maxf(maxf(_k(KEY_SPACE), _k(KEY_B)), brake)
+	inp["brake"] = maxf(Keys.val("brake", hm), brake)
 	inp["flaps"] = flaps_idx / 2.0
 	inp["trim"] = trim
 
@@ -951,7 +1047,7 @@ func _start_vr() -> bool:
 	_apply_view()
 	DisplayServer.window_move_to_foreground()
 	Diag.write("VR started; window focused for the keyboard: %s" % str(DisplayServer.window_is_focused()))
-	ui.toast("VR started. Sit upright, then press B (or V) to recentre the view.", 5.0)
+	ui.toast("VR started. Sit upright, then press B (or %s) to recentre the view." % Keys.first("camera"), 5.0)
 	return true
 
 
@@ -986,7 +1082,7 @@ func _stop_vr() -> void:
 
 
 func _read_vr() -> Dictionary:
-	var out := {"roll": 0.0, "pitch": 0.0, "yaw": 0.0, "thr": 0.0, "brake": 0.0}
+	var out := {"roll": 0.0, "pitch": 0.0, "yaw": 0.0, "thr": 0.0, "brake": 0.0, "trim": 0.0}
 	if xr_right == null or not xr_right.get_is_active():
 		return out
 	var r := xr_right.get_vector2("primary")
@@ -1001,7 +1097,10 @@ func _read_vr() -> Dictionary:
 	if xr_left != null and xr_left.get_is_active():
 		var l := xr_left.get_vector2("primary")
 		out["yaw"] = _dz(l.x)
-		out["thr"] += _dz(l.y)
+		if xr_left.get_float("grip") > 0.55:
+			out["trim"] = -_dz(l.y)   # v1.19.0: hold the left grip and the left stick trims (forward: nose down)
+		else:
+			out["thr"] += _dz(l.y)
 		out["brake"] = xr_left.get_float("trigger")
 		if _edge("vX", xr_left.is_button_pressed("ax_button")):
 			_pause(not paused)
@@ -1010,9 +1109,44 @@ func _read_vr() -> Dictionary:
 	return out
 
 
+## Puts you in the seat by itself a moment after VR starts or you change vehicle. v1.19.0: it waits until the
+## headset is really being tracked (it reports exactly 0,0,0 until then, which used to seat you in the wrong
+## place when tracking came up late).
+func _auto_recentre() -> void:
+	if vr_frames < 0:
+		return
+	vr_frames += 1
+	if vr_frames >= 12 and (xr_cam.position != Vector3.ZERO or vr_frames > 600):
+		vr_frames = -1
+		_recentre_vr()
+
+
+## How far your head may move from the seat's eye point before the view is held back (metres, seat axes:
+## x right, y up, z back). The Bulldog's limits keep your head inside the canopy and out of the instructor.
+const SEAT_BOX := {"x0": -0.20, "x1": 0.20, "y0": -0.22, "y1": 0.14, "z0": -0.28, "z1": 0.16}
+const SEAT_BOX_BULLDOG := {"x0": -0.13, "x1": 0.22, "y0": -0.22, "y1": 0.12, "z0": -0.30, "z1": 0.14}
+
+## v1.19.0: you can never leave the seat. You can still lean and look round naturally, but once your head
+## reaches the edge of the seat's space the view stops there (the cockpit comes with you), so you can't put
+## your head through the canopy, the panel or the seat back, or end up outside after the headset loses
+## tracking for a moment. Returns true if it had to hold the view back.
+func _keep_in_seat() -> bool:
+	if xr_cam == null or vr_frames >= 0 or xr_cam.position == Vector3.ZERO:
+		return false   # not seated yet (the automatic recentre comes first)
+	var box: Dictionary = SEAT_BOX_BULLDOG if mode == null and plane != null and plane.bulldog != null else SEAT_BOX
+	var head := (Transform3D(Basis(), vr_base) * mcomp.correction(vr_pivot)) * xr_cam.position
+	var d := head - _eye()
+	var c := Vector3(clampf(d.x, box["x0"], box["x1"]), clampf(d.y, box["y0"], box["y1"]), clampf(d.z, box["z0"], box["z1"]))
+	if c.is_equal_approx(d):
+		return false
+	vr_base += c - d
+	return true
+
+
 func _recentre_vr() -> void:
 	if xr_origin == null or (plane == null and mode == null):
 		return
+	vr_frames = -1
 	# work in the seat's middle position, so recentring while the rig is tilted still lines up
 	var head := mcomp.correction(vr_pivot) * xr_cam.position
 	vr_pivot = head + Vector3(0, -MotionComp.PIVOT_BELOW_EYE, 0)
@@ -1062,6 +1196,13 @@ func _vr_panel_tick(dt: float) -> void:
 
 
 func _input(e: InputEvent) -> void:
+	# Change keys: a box is waiting for a key (here, not in the menu's own code, so it also works in VR where
+	# the menus are drawn on the headset panel and don't see the keyboard themselves)
+	if ui != null and ui.capturing() and e is InputEventKey:
+		if e.pressed and not e.echo:
+			ui.capture_key(e.physical_keycode)
+		get_viewport().set_input_as_handled()
+		return
 	# while VR is on the menus live on the headset panel: the laptop's mouse and arrow keys still work them
 	if vr_active and vr_panel != null and vr_panel.shown:
 		if e is InputEventMouse and vr_panel.desktop_mouse(e, get_viewport().get_visible_rect().size):
@@ -1113,6 +1254,7 @@ func _process(delta: float) -> void:
 	_vr_panel_tick(dt)
 	_controls_tick()
 	if state == "fly" or state == "ended":
+		_poll_buttons()
 		if not paused:
 			if state == "fly":
 				_read_input(dt)
@@ -1138,6 +1280,7 @@ func _process(delta: float) -> void:
 		# this script moves the aircraft, so it was always one frame behind: at 55 m/s that is ~0.75 m, and the
 		# cockpit wobbled around your head whenever speed or attitude changed. Set it now, after the move.
 		mcomp.poll()
+		_keep_in_seat()
 		xr_origin.transform = Transform3D(Basis(), vr_base) * mcomp.correction(vr_pivot)
 		XRServer.world_origin = xr_origin.global_transform
 		_update_hands(dt)
@@ -1211,12 +1354,18 @@ func _save_shot() -> void:
 		shot_still = -1
 		shot_timer = float(nxt[1]) if nxt.size() > 1 else 3.0
 		shot_game_time = true
+		if args.has("shot_look") and str(args["shot_look"]) != "":   # --shot_look=70:-10,0:-45: where the cockpit camera looks for each later picture (yaw:pitch, degrees)
+			var looks: Array = Array(str(args["shot_look"]).split(","))
+			var yp: PackedStringArray = str(looks.pop_front()).split(":")
+			look = Vector2(deg_to_rad(float(yp[0])), deg_to_rad(float(yp[1])))
+			args["shot_look"] = ",".join(looks)
 		if args.has("shot_cam"):   # --shot_cam=chase,cockpit: the camera for each later picture
 			var cams: Array = Array(str(args["shot_cam"]).split(","))
 			cam_mode = str(cams.pop_front())
 			args["shot_cam"] = ",".join(cams)
 			_apply_view()
 			cam_init = false
+		return
 	get_tree().quit()
 
 
@@ -1407,7 +1556,8 @@ func _update_hud() -> void:
 	ui.l_alt.text = str(int(round(float(i["alt_msl"]) * FT)))
 	ui.l_vs.text = "%d FT/MIN" % (int(round(float(i["vs"]) * FPM / 10.0)) * 10)
 	ui.thr_bar.value = throttle
-	ui.tag_flaps.text = "FLAPS %d%%" % int(round(float(i["flaps"]) * 100.0))
+	var tpc := roundi(absf(trim) / 0.5 * 100.0)
+	ui.tag_flaps.text = "FLAPS %d%%" % int(round(float(i["flaps"]) * 100.0)) + ("" if tpc == 0 else "  TRIM %s %d%%" % ["UP" if trim > 0.0 else "DOWN", tpc])
 	ui.tag_brake.add_theme_color_override("font_color", Color("#ff4c00") if inp["brake"] > 0.1 else GameUI.MUTED)
 	ui.adi.set_data({"pitch": i["pitch"], "roll": i["roll"], "ias": 0.0, "vmax": 200.0, "alt": 0.0, "vs": 0.0, "heading": 0.0, "throttle": 0.0, "rpm": 0.0, "rpm_max": 1.0, "flaps": 0.0, "stall": false})
 	if gate["active"]:
@@ -1457,9 +1607,7 @@ func _update_camera(dt: float) -> void:
 	var Q := plane.quaternion
 	var spec: Dictionary = fm.spec
 	if vr_active:
-		vr_frames += 1
-		if vr_frames == 12:
-			_recentre_vr()
+		_auto_recentre()
 		return
 	cam.current = true
 	cam.near = 0.1 if cam_mode == "cockpit" else 0.6
@@ -1503,6 +1651,8 @@ func _process_mode(dt: float, delta: float) -> void:
 		mode.idle(dt)
 		orbit_yaw += dt * 0.15
 	_controls_tick()
+	if state == "fly" or state == "ended":
+		_poll_buttons()
 	if mode is ShipMode:
 		var vc: Node3D = xr_cam if vr_active and xr_cam != null else cam
 		(mode as ShipMode).look_dir = -vc.global_transform.basis.z   # what you look at, for HYPERSPEED (v1.18.0)
@@ -1526,10 +1676,9 @@ func _process_mode(dt: float, delta: float) -> void:
 				_vr_text("")
 				vr_warn = false
 	if vr_active and xr_origin != null:
-		vr_frames += 1
-		if vr_frames == 12:
-			_recentre_vr()
+		_auto_recentre()
 		mcomp.poll()
+		_keep_in_seat()
 		xr_origin.transform = Transform3D(Basis(), vr_base) * mcomp.correction(vr_pivot)
 		XRServer.world_origin = xr_origin.global_transform   # same frame as the vehicle moved (no lag)
 		_update_hands(dt)
@@ -1567,18 +1716,15 @@ func _read_mode_input(dt: float) -> Dictionary:
 			_pause(true)
 		if _edge("vY", vl.is_button_pressed("by_button")):
 			start_game()
-	if pad >= 0 and _edge("ps", Input.is_joy_button_pressed(pad, JOY_BUTTON_START)):
-		_pause(true)
-	if pad >= 0 and _edge("pb", Input.is_joy_button_pressed(pad, JOY_BUTTON_B)):
-		_cycle_camera()
+	var hm := _has_map()
 	if args.has("autopilot") and mode is RaceMode:
 		return (mode as RaceMode).autopilot()   # test option: the car drives itself
 	if game == "race":
-		var ks := clampf((_k(KEY_D) + _k(KEY_RIGHT)) - (_k(KEY_A) + _k(KEY_LEFT)), -1.0, 1.0)
+		var ks := Keys.val("steer_right", hm) - Keys.val("steer_left", hm)
 		mkb["steer"] = _approach(mkb["steer"], ks, 3.2 if ks != 0.0 else 5.0, dt)
 		var steer: float = mkb["steer"]
-		var thr := maxf(_k(KEY_W), _k(KEY_UP))
-		var brk := maxf(maxf(_k(KEY_S), _k(KEY_DOWN)), _k(KEY_SPACE))
+		var thr := Keys.val("accel", hm)
+		var brk := Keys.val("race_brake", hm)
 		if pad >= 0:
 			steer += _dz(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X)) * _inv("invert_roll")
 			thr = maxf(thr, Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_RIGHT))
@@ -1604,19 +1750,9 @@ func _read_mode_input(dt: float) -> Dictionary:
 		return out
 	# the spaceship's buttons (v1.16.0): keyboard, gamepad and VR controller buttons do the same as the console
 	var press: Array = []
-	for e in [["kH", KEY_H, "hyper"], ["kG", KEY_G, "x10"], ["kN", KEY_N, "next"], ["kPer", KEY_PERIOD, "next"], ["kCom", KEY_COMMA, "prev"],
-			["kL", KEY_L, "land"], ["kU", KEY_U, "auto"], ["kK", KEY_K, "lights"], ["kJ", KEY_J, "assist"]]:
-		if _edge(e[0], _k(e[1]) > 0.0):
-			press.append(e[2])
-	if pad >= 0:
-		if _edge("pY", Input.is_joy_button_pressed(pad, JOY_BUTTON_Y)):
-			press.append("hyper")
-		if _edge("pX", Input.is_joy_button_pressed(pad, JOY_BUTTON_X)):
-			press.append("next")
-		if _edge("pA", Input.is_joy_button_pressed(pad, JOY_BUTTON_A)):
-			press.append("x10")
-		if _edge("pBk", Input.is_joy_button_pressed(pad, JOY_BUTTON_BACK)):
-			press.append("auto")
+	for id in ["hyper", "x10", "next", "prev", "land", "auto", "lights", "sp_assist"]:
+		if _edge("a_" + id, Keys.down(id, hm)):
+			press.append("assist" if id == "sp_assist" else id)
 	if vrr != null:
 		if _edge("vA", vrr.is_button_pressed("ax_button")):
 			press.append("x10")
@@ -1626,18 +1762,18 @@ func _read_mode_input(dt: float) -> Dictionary:
 		press.append("next")
 	out["press"] = press
 	# space: like the aircraft (W/S nose, A/D roll, Q/E yaw), plus guns and boost
-	var tp := clampf(-(_k(KEY_UP) + _k(KEY_W)) + (_k(KEY_DOWN) + _k(KEY_S)), -1.0, 1.0)
-	var tr := clampf((_k(KEY_RIGHT) + _k(KEY_D)) - (_k(KEY_LEFT) + _k(KEY_A)), -1.0, 1.0)
-	var ty := _k(KEY_E) - _k(KEY_Q)
+	var tp := Keys.val("pitch_up", hm) - Keys.val("pitch_down", hm)
+	var tr := Keys.val("roll_right", hm) - Keys.val("roll_left", hm)
+	var ty := Keys.val("yaw_right", hm) - Keys.val("yaw_left", hm)
 	kb["pitch"] = _approach(kb["pitch"], tp, 3.0 if tp != 0.0 else 5.0, dt)
 	kb["roll"] = _approach(kb["roll"], tr, 3.5 if tr != 0.0 else 5.0, dt)
 	kb["yaw"] = _approach(kb["yaw"], ty, 4.0 if ty != 0.0 else 6.0, dt)
 	var pitch: float = 0.0
 	var roll: float = 0.0
 	var yaw: float = 0.0
-	var thr_axis := (_k(KEY_SHIFT) + _k(KEY_PAGEUP) + _k(KEY_X)) - (_k(KEY_CTRL) + _k(KEY_PAGEDOWN) + _k(KEY_Z))
-	var fire := _k(KEY_SPACE) > 0.0 or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	var boost := _k(KEY_TAB) > 0.0 or _k(KEY_B) > 0.0
+	var thr_axis := Keys.val("thr_up", hm) - Keys.val("thr_down", hm)
+	var fire := Keys.down("fire", hm) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var boost := Keys.down("boost", hm)
 	if pad >= 0:
 		roll += _dz(Input.get_joy_axis(pad, JOY_AXIS_RIGHT_X)) * _inv("invert_roll")
 		pitch += _dz(Input.get_joy_axis(pad, JOY_AXIS_RIGHT_Y))
@@ -1803,8 +1939,126 @@ func _ui_shot(prefix: String) -> void:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(prefix + "-lobby.png")
+	ui.lobby.visible = false
+	# v1.19.0: the Controls picture for each game, Change keys, and the list shown while playing
+	for g in ["flight", "race", "space"]:
+		ui.help_game = g
+		ui.open_sheet(ui.help_sheet)
+		for i in 4:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(prefix + "-controls-" + g + ".png")
+	ui.open_sheet(ui.keys_sheet)
+	ui._cap_start("trim_up", 0)
+	for i in 4:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(prefix + "-keys.png")
+	ui._cap_end()
+	ui.show_hud()
+	ui.set_overlay_game("flight")
+	ui.show_overlay(true)
+	ui.toast("Trim: nose up 24%", 9.0)
+	for i in 4:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(prefix + "-overlay.png")
 	print("ui shots saved: ", prefix)
 	get_tree().quit()
+
+
+## Test option --key_test (with --auto, runs headless): presses real keys while flying and checks trim, a
+## changed key, the Change keys screen, the on-screen help and pause. Prints PASS/FAIL lines and quits.
+func _key_test() -> void:
+	var fails := 0
+	var chk := func(ok: bool, what: String) -> int:
+		print(("PASS " if ok else "FAIL ") + what)
+		return 0 if ok else 1
+	var key := func(code: Key, down: bool) -> void:
+		var ev := InputEventKey.new()
+		ev.physical_keycode = code
+		ev.keycode = code
+		ev.pressed = down
+		Input.parse_input_event(ev)
+	var frames := func(n: int) -> void:
+		for i in n:
+			await get_tree().process_frame
+	Keys.reset_all()
+	Settings.data["help_overlay"] = false
+	await frames.call(20)
+	fails += chk.call(state == "fly" and mode == null, "flying (state %s)" % state)
+	key.call(KEY_BRACKETRIGHT, true)
+	await frames.call(30)
+	key.call(KEY_BRACKETRIGHT, false)
+	await frames.call(2)
+	var up := trim
+	fails += chk.call(up > 0.01, "holding ] trims nose up (%.3f)" % up)
+	fails += chk.call(ui.toast_label.visible and ui.toast_label.text.begins_with("Trim: nose up"), "the screen shows it: " + ui.toast_label.text)
+	await frames.call(10)
+	fails += chk.call(is_equal_approx(trim, up), "trim stays where it was left")
+	key.call(KEY_BRACKETLEFT, true)
+	await frames.call(60)
+	key.call(KEY_BRACKETLEFT, false)
+	await frames.call(2)
+	fails += chk.call(trim < 0.0, "holding [ trims nose down (%.3f)" % trim)
+	key.call(KEY_BACKSLASH, true)
+	await frames.call(2)
+	key.call(KEY_BACKSLASH, false)
+	await frames.call(2)
+	fails += chk.call(trim == 0.0, "\\ puts the trim back to the middle")
+	# Change keys: click the "Flaps" box, press G; then G works the flaps and F doesn't
+	ui.open_sheet(ui.keys_sheet)
+	ui._cap_start("flaps", 0)
+	key.call(KEY_G, true)
+	await frames.call(2)
+	key.call(KEY_G, false)
+	await frames.call(2)
+	ui.close_sheet(ui.keys_sheet)
+	fails += chk.call(Keys.keys_of("flaps")[0] == KEY_G and not ui.capturing(), "Change keys: flaps set to G")
+	fails += chk.call(flaps_idx == 0, "the key pressed to set it didn't also work the flaps")
+	fails += chk.call(Settings.get_value("binds") == Keys.over and Keys.changed(), "the change is saved")
+	key.call(KEY_G, true)
+	await frames.call(2)
+	key.call(KEY_G, false)
+	await frames.call(2)
+	fails += chk.call(flaps_idx == 1, "G now works the flaps")
+	key.call(KEY_F, true)
+	await frames.call(2)
+	key.call(KEY_F, false)
+	await frames.call(2)
+	fails += chk.call(flaps_idx == 1, "F no longer does")
+	# the controls list
+	key.call(KEY_F1, true)
+	await frames.call(2)
+	key.call(KEY_F1, false)
+	await frames.call(2)
+	fails += chk.call(ui.overlay.visible and bool(Settings.get_value("help_overlay")), "F1 shows the controls list")
+	var has_g := false
+	for l in ui.overlay_lines("flight"):
+		if l[1] == "Flaps" and l[0] == ["G"]:
+			has_g = true
+	fails += chk.call(has_g, "the list shows the changed key")
+	key.call(KEY_F1, true)
+	await frames.call(2)
+	key.call(KEY_F1, false)
+	await frames.call(2)
+	fails += chk.call(not ui.overlay.visible, "F1 hides it again")
+	# pause and Esc
+	key.call(KEY_P, true)
+	await frames.call(2)
+	key.call(KEY_P, false)
+	await frames.call(2)
+	fails += chk.call(paused, "P pauses")
+	key.call(KEY_ESCAPE, true)
+	await frames.call(2)
+	key.call(KEY_ESCAPE, false)
+	await frames.call(2)
+	fails += chk.call(not paused, "Esc carries on")
+	Keys.reset_all()
+	Settings.data["help_overlay"] = false
+	Settings.set_value("binds", {})
+	print("FAILED: %d" % fails if fails > 0 else "ALL PASSED")
+	get_tree().quit(1 if fails > 0 else 0)
 
 
 ## Test option --test_panel (runs headless, before anything else): the VR menu panel passes clicks and

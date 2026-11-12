@@ -36,6 +36,13 @@ for (const key of ["trainer", "fighter"]) {
   const h0 = fm.pos[1];
   run(fm, 60, () => ({ pitch: 0, roll: 0, yaw: 0, throttle: fm.spec.cruiseThrottle, flaps: 0 }));
   check("holds altitude hands off (assist)", !fm.crashed && Math.abs(fm.pos[1] - h0) < 40, `altitude change ${fmt(fm.pos[1] - h0)} m, speed ${fmt(fm.i.ias * KT, 0)} kt`);
+  // v1.19.0: in Easy mode trim sets a hands-off climb or descent
+  for (const tv of [0.25, -0.25]) {
+    fm = start(key, { airborne: true, agl: 600, speed: fm.spec.cruise, heading: 62 });
+    const ht = fm.pos[1];
+    run(fm, 20, () => ({ pitch: 0, roll: 0, yaw: 0, throttle: fm.spec.cruiseThrottle, flaps: 0, trim: tv }));
+    check(`trim nose ${tv > 0 ? "up climbs" : "down descends"} hands off (assist)`, !fm.crashed && (fm.pos[1] - ht) * Math.sign(tv) > 25, `altitude change ${fmt(fm.pos[1] - ht)} m in 20 s`);
+  }
   // pro mode level flight should at least stay well behaved for 30 s
   fm = start(key, { airborne: true, agl: 800, speed: fm.spec.cruise, heading: 62 }); fm.assist = false;
   let maxRoll = 0; run(fm, 30, () => ({ pitch: 0, roll: 0, yaw: 0, throttle: fm.spec.cruiseThrottle }), (t, m) => { maxRoll = Math.max(maxRoll, Math.abs(m.i.roll)); });

@@ -229,6 +229,11 @@ for g, height, floors, cls, roof, sub in rows:
         c = np.array(lp.exterior.coords)[:-1]
         if len(c) < 3 or len(c) > 60:
             continue
+        # v1.19.0: nothing stands on the runway. The map data has four "buildings" on the centreline (parked
+        # aircraft or map mistakes); keep the strip and 300 m beyond each end clear
+        cu, cv = runway_uv(c[:, 0].mean(), c[:, 1].mean())
+        if abs(cu) < rw_len / 2 + 300 and abs(cv) < 60:
+            continue
         if height is None or not (2 < height < 120):
             height = (floors * 3.0 + 1.0) if floors else None
         a = lp.area

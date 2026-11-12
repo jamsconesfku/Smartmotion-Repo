@@ -215,6 +215,7 @@ func _controls(h: float, inp: Dictionary, v: float, alpha_: float, beta_: float,
 		gamma_int = 0.0
 	else:
 		var g_t: float = inp["pitch"] * 17.0 * D2R if inp["pitch"] >= 0.0 else inp["pitch"] * 12.0 * D2R
+		g_t += float(inp.get("trim", 0.0)) * 16.0 * D2R   # v1.19.0: in Easy mode the trim sets a hands-off climb or descent (full trim: 8 degrees)
 		var a_lim: float = 0.88 * spec["aStall"]
 		if alpha_ > a_lim:
 			g_t = minf(g_t, gamma - 4.0 * (alpha_ - a_lim))

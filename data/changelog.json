@@ -270,5 +270,12 @@
       "F-08",
       "DOC-07"
     ]
+  },
+  {
+    "date": "2026-11-12",
+    "summary": "Version 1.19.0 of the game: trim up and down while flying (hold ] or [; it now works in Easy mode too); the four stray buildings on the runway are gone; every key can be changed in Settings (two keys and one controller button per control, trim included); the Controls screen is now a picture of the keyboard with each key labelled; F1 shows the controls while playing; in VR you can no longer lean out of the seat; and the Bulldog's cockpit was rebuilt to fit (panel, glare shield, walls, seats and propeller no longer poke through the fuselage or canopy).",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

@@ -956,7 +956,7 @@ func start() -> void:
 	hints = {}
 	dest = DESTS.find("earth")
 	if battle:
-		toast.emit("Shoot the red drones before they get you. Space or right trigger: fire. W/S/A/D steer, Q/E yaw, Shift/Ctrl speed, Tab or left trigger: boost", 7.0)
+		toast.emit("Shoot the red drones before they get you. %s or right trigger: fire. %s or left trigger: boost. Steering, yaw and speed are as in Flight" % [Keys.first("fire"), Keys.first("boost")], 7.0)
 	else:
 		toast.emit("You're at the space station by Saturn. Pick a planet (< PLANET >, or N), then press HYPERSPEED (H). TO EARTH (U) flies you home to Duxford", 8.0)
 

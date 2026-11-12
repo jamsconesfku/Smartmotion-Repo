@@ -66,6 +66,12 @@ func _initialize() -> void:
 		var h0 := fm.pos.y
 		run(fm, 60.0, func(_t, _m): return {"pitch": 0.0, "roll": 0.0, "yaw": 0.0, "throttle": sp["cruiseThrottle"], "flaps": 0.0})
 		check("holds altitude hands off (assist)", not fm.crashed and absf(fm.pos.y - h0) < 40.0, "change %.1f m, %d kt" % [fm.pos.y - h0, fm.i["ias"] * KT])
+		# v1.19.0: in Easy mode trim sets a hands-off climb or descent (it used to do nothing in the air)
+		for tv: float in [0.25, -0.25]:
+			fm = start(key, {"airborne": true, "agl": 600.0, "speed": sp["cruise"], "heading": Terrain.RW_HEADING_DEG})
+			var ht := fm.pos.y
+			run(fm, 20.0, func(_t, _m): return {"pitch": 0.0, "roll": 0.0, "yaw": 0.0, "throttle": sp["cruiseThrottle"], "flaps": 0.0, "trim": tv})
+			check("trim nose %s %s hands off (assist)" % ["up" if tv > 0.0 else "down", "climbs" if tv > 0.0 else "descends"], not fm.crashed and (fm.pos.y - ht) * signf(tv) > 25.0, "change %.0f m in 20 s" % (fm.pos.y - ht))
 
 		fm = start(key, {"airborne": true, "agl": 800.0, "speed": sp["cruise"], "heading": 0.0})
 		var tr := {"bank": 0.0, "h10": 0.0, "h20": 0.0}

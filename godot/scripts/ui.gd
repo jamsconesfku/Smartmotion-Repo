@@ -10,6 +10,7 @@ signal setting_changed(key: String, value)
 signal diag_pressed
 signal vr_action(what: String)
 signal learn_pressed(action: String)
+signal binds_changed
 
 const NAVY := Color("#02022f")
 const ORANGE := Color("#ff4c00")
@@ -102,6 +103,20 @@ var controls_sheet: Control
 var ctl_rows: VBoxContainer
 var ctl_info: Label
 var ctl_widgets := {}       # action -> [status label, bar]
+# v1.19.0: change keys, the Controls picture and the controls shown while playing
+var keys_sheet: Control
+var keys_info: Label
+var bind_btns := {}         # action -> [key 1 button, key 2 button, controller button]
+var cap := {}               # the control waiting for a key or button: {"id", "slot" (0, 1 or "b"), "btn0": buttons already held}
+var help_game := "flight"
+var help_pic: KeyboardPic
+var help_tabs := {}
+var help_cards: HBoxContainer
+var help_tip: Label
+var overlay: PanelContainer
+var overlay_rows: VBoxContainer
+var overlay_game := "flight"
+var f1_hint: Label
 
 
 func _ready() -> void:
@@ -113,6 +128,7 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 	_build_hud()
+	_build_overlay()
 	_build_menu()
 	_build_sheets()
 	_build_lobby()
@@ -912,7 +928,7 @@ func _draw_arrow() -> void:
 
 
 # ------------------------------------------------------------ sheets
-func _sheet(title: String) -> Array:
+func _sheet(title: String, width := 520.0) -> Array:
 	var s := ColorRect.new()
 	s.color = Color(0.004, 0.004, 0.11, 0.62)
 	s.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -922,7 +938,10 @@ func _sheet(title: String) -> Array:
 	c.set_anchors_preset(Control.PRESET_FULL_RECT)
 	s.add_child(c)
 	var p := PanelContainer.new()
-	p.custom_minimum_size = Vector2(520, 0)
+	p.custom_minimum_size = Vector2(width, 0)
+	if width > 600.0:
+		# the wide screens (Controls, Change keys) cover most of the menu: nearly solid, so it doesn't show through
+		p.add_theme_stylebox_override("panel", _sb(Color(0.012, 0.012, 0.15, 0.97), 22, Color(1, 1, 1, 0.16), 1))
 	c.add_child(p)
 	var sc := ScrollContainer.new()
 	sc.custom_minimum_size = Vector2(0, 0)
@@ -933,7 +952,7 @@ func _sheet(title: String) -> Array:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sc.add_child(v)
 	v.add_child(_lbl(title, 34, Color.WHITE, true))
-	fit[s] = [sc, v]
+	fit[s] = [sc, v, width]
 	return [s, v]
 
 
@@ -986,20 +1005,28 @@ func _build_sheets() -> void:
 	mb.pressed.connect(func(): menu_pressed.emit())
 	v.add_child(mb)
 	end_title = (v.get_child(0) as Label)
-	r = _sheet("Controls")
+	r = _sheet("Controls", 1030.0)
 	help_sheet = r[0]
 	v = r[1]
-	var txt := _lbl("KEYBOARD (works in VR too)\nW / S: push the nose down / pull it up (or Up / Down)\nA / D: bank left / right to turn (or Left / Right)\nShift / Ctrl: more / less power, 0 to full in about a second (or keys 1 to 0)\nQ / E: rudder (steers on the ground)\nSpace: brakes   F: flaps   V: change camera\nRight mouse + drag: look around   Mouse wheel: zoom (orbit camera)\nP or Esc: pause   R: restart   T: telemetry   M: sound   F11: full screen\n\nGAMEPAD\nRight stick: pitch and roll   Left stick: power and rudder\nLeft trigger: brakes   A: flaps   B: camera   Start: pause\n\nVR (Meta Quest)\nRight stick: pitch and roll   Right trigger / grip: more / less power\nLeft stick: power and rudder   Left trigger: brakes\nA: flaps   B: recentre view   X: menu (pause)   Y: restart\nMenus in VR: point with a controller and pull the trigger to click (or stick up/down and A). X opens the menu\nKeyboard works in VR too (click the game window before putting the headset on); V recentres the view\n\nRACING\nW / Up or right trigger: accelerate   S / Down or left trigger: brake (hold when stopped to reverse)\nA / D or a stick: steer (gamepad: left stick, right trigger, left trigger)   V: camera   R: restart\nEasy: traction control, anti-lock brakes and stability control. Pro: none of them\n\nSPACE (the spaceship)\nW / S: nose down / up   A / D: roll   Q / E: yaw   Shift / Ctrl: speed (on the runway: push it up to lift off)   Space or left mouse: fire   Tab: boost\nH: HYPERSPEED to the planet you are looking at (or the chosen one)   G: x10 speed   N / , .: choose the planet   U: TO SPACE / TO EARTH (autopilot)   L: land / lift off   K: lights   J: Easy / Pro\nVR: hold the right grip and point where you want to fly (the ship turns and banks there). Your hands show as small balls: touch the console buttons with them.\nRight stick pitch and roll too, left stick speed and yaw, right trigger fire, left trigger boost, A x10, right stick click hyperspeed, left stick click next planet\nGamepad: right stick pitch and roll, left stick speed and yaw, right trigger fire, left trigger boost, Y hyperspeed, X next planet, A x10, Back autopilot\nClimb above 20 km over Duxford to reach space; fly down to the Earth from space to come back\n\nEasy mode sets full power on the runway and levels the aircraft for you: just hold S to lift off. Pro mode is direct control, like the real thing.", 15, INK)
-	txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	txt.custom_minimum_size = Vector2(480, 0)
-	v.add_child(txt)
+	_build_help(v)
 	var cred := _lbl("MAP DATA: Contains modified Copernicus Sentinel data 2023. Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. ESA WorldCover 2021 © ESA (CC BY 4.0). Buildings © OpenStreetMap contributors, Overture Maps Foundation (ODbL). Contains Environment Agency information © Environment Agency and/or database right 2026 (LIDAR heights, trees). Contains OS data © Crown copyright and database right 2026 (roads, water, buildings, built-up areas). Both under the Open Government Licence v3.0. Textures (ground, buildings and vehicles): ambientCG (CC0).", 11, MUTED)
 	cred.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	cred.custom_minimum_size = Vector2(480, 0)
-	v.add_child(cred)
+	cred.custom_minimum_size = Vector2(990, 0)
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 8)
+	v.add_child(hb)
+	var ck := _big_button("Change keys", false)
+	ck.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ck.pressed.connect(func(): open_sheet(keys_sheet))
+	hb.add_child(ck)
 	var cl := _big_button("Got it", true)
+	cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cl.pressed.connect(func(): close_sheet(help_sheet))
-	v.add_child(cl)
+	hb.add_child(cl)
+	v.add_child(cred)
+	r = _sheet("Change keys", 860.0)
+	keys_sheet = r[0]
+	_build_keys(r[1])
 	r = _sheet("Set up controls")
 	controls_sheet = r[0]
 	v = r[1]
@@ -1042,6 +1069,15 @@ func _build_sheets() -> void:
 	_seg(v, "vsync", [[true, "On"], [false, "Off"]], Settings.get_value("vsync"))
 	_section(v, "Show frames per second")
 	_seg(v, "show_fps", [[false, "Off"], [true, "On"]], Settings.get_value("show_fps"))
+	_section(v, "Controls")
+	var kb := Button.new()
+	kb.text = "Change keys and buttons…"
+	kb.custom_minimum_size = Vector2(0, 42)
+	kb.pressed.connect(func(): open_sheet(keys_sheet))
+	v.add_child(kb)
+	_section(v, "Show the controls on screen while playing")
+	_seg(v, "help_overlay", [[false, "Off"], [true, "On"]], Settings.get_value("help_overlay"))
+	_note(v, "A small list of what each key does, at the side of the screen (in VR: beside the instrument panel). You can also switch it with the Help key while playing.")
 	_section(v, "Sound")
 	_seg(v, "sound", [[true, "On"], [false, "Off"]], Settings.get_value("sound"))
 	_section(v, "Pitch control")
@@ -1102,31 +1138,47 @@ func _fit_sheet(s: Control) -> void:
 	var sc: ScrollContainer = pair[0]
 	var v: VBoxContainer = pair[1]
 	var h := minf(v.get_combined_minimum_size().y + 44.0, maxf(get_viewport().get_visible_rect().size.y * 0.9, 300.0))
-	sc.custom_minimum_size = Vector2(540, h)
+	sc.custom_minimum_size = Vector2(float(pair[2]) + 20.0, h)
 
 
 func open_sheet(s: Control) -> void:
-	for x in [pause_sheet, help_sheet, settings_sheet, controls_sheet]:
+	for x in [pause_sheet, help_sheet, settings_sheet, controls_sheet, keys_sheet]:
 		if x != s:
 			(x as Control).visible = false
+	if s == help_sheet:
+		set_help_game(help_game)
+	elif s == keys_sheet:
+		refresh_binds()
 	_fit_sheet(s)
 	s.visible = true
 
 
 func close_sheet(s: Control) -> void:
 	s.visible = false
+	if s == keys_sheet:
+		_cap_end()
 	if paused_ui:
 		pause_sheet.visible = true
 
 var paused_ui := false
 
 func any_sheet() -> bool:
-	return help_sheet.visible or settings_sheet.visible or pause_sheet.visible or end_sheet.visible or controls_sheet.visible or lobby.visible
+	return help_sheet.visible or settings_sheet.visible or pause_sheet.visible or end_sheet.visible or controls_sheet.visible or lobby.visible or keys_sheet.visible
+
+
+## Esc (or the Pause key): closes the Controls, Settings or Change keys screen if one is open. True if it did.
+func close_top_sheet() -> bool:
+	for x in [keys_sheet, help_sheet, settings_sheet]:
+		if (x as Control).visible:
+			close_sheet(x)
+			return true
+	return false
 
 
 func hide_sheets() -> void:
-	for x in [pause_sheet, help_sheet, settings_sheet, end_sheet, controls_sheet]:
+	for x in [pause_sheet, help_sheet, settings_sheet, end_sheet, controls_sheet, keys_sheet]:
 		(x as Control).visible = false
+	_cap_end()
 
 
 # ------------------------------------------------------------ states
@@ -1159,6 +1211,8 @@ func show_pause(on: bool) -> void:
 	if not on:
 		help_sheet.visible = false
 		settings_sheet.visible = false
+		keys_sheet.visible = false
+		_cap_end()
 
 
 func show_end(title: String, label: String, text: String, big: String) -> void:
@@ -1182,6 +1236,7 @@ func _process(delta: float) -> void:
 		toast_t -= delta
 		if toast_t <= 0.0:
 			toast_label.visible = false
+	_cap_poll()
 	if fps_label != null and fps_label.visible:
 		fps_t -= delta
 		if fps_t <= 0.0:
@@ -1210,3 +1265,353 @@ func set_message(t: String, warn: bool) -> void:
 	msg_label.text = t
 	msg_label.add_theme_color_override("font_color", Color("#ff5a4f") if warn else Color.WHITE)
 	msg_label.visible = t != ""
+
+
+# ------------------------------------------------------------ controls: picture, change keys, on-screen list (v1.19.0)
+const HELP_GAMES := [["flight", "Flight"], ["race", "Racing"], ["space", "Spaceship"]]
+
+## What the gamepad and the VR controllers do in each game: [button or stick, what it does]. The gamepad's
+## buttons that can be changed are filled in from Keys.
+const PAD_FIXED := {
+	"flight": [["Right stick", "Nose up / down and bank"], ["Left stick", "Power (up / down) and rudder"], ["Left trigger", "Wheel brakes"]],
+	"race": [["Left stick", "Steer"], ["Right trigger", "Accelerate"], ["Left trigger", "Brake"]],
+	"space": [["Right stick", "Nose up / down and roll"], ["Left stick", "Speed and yaw"], ["Right trigger", "Fire"], ["Left trigger", "Boost"]],
+}
+const VR_HELP := {
+	"flight": [["Right stick", "Nose up / down and bank"], ["Right trigger / grip", "More / less power"], ["Left stick", "Power and rudder"],
+		["Left grip + left stick", "Trim nose down / up"], ["Left trigger", "Wheel brakes"], ["A", "Flaps"], ["B", "Recentre the view"], ["X", "Menu (pause)"], ["Y", "Restart"]],
+	"race": [["Either stick", "Steer"], ["Right trigger", "Accelerate"], ["Left trigger", "Brake"], ["B", "Recentre the view"], ["X", "Menu (pause)"], ["Y", "Restart"]],
+	"space": [["Right grip + point", "Fly where you point"], ["Right stick", "Nose up / down and roll"], ["Left stick", "Speed and yaw"], ["Right trigger", "Fire"], ["Left trigger", "Boost"],
+		["A", "x10 speed"], ["Right stick click", "Hyperspeed"], ["Left stick click", "Next planet"], ["B", "Recentre"], ["X", "Menu"], ["Y", "Restart"]],
+}
+const HELP_TIPS := {
+	"flight": "Easy mode sets full power on the runway and keeps the wings level for you: just pull the nose up at the speed shown. Trim saves you holding the stick: in Easy it sets a steady climb or descent, in Pro it moves the elevator like the real trim wheel (watch the wheel on the centre console turn). Right mouse + drag looks round the cockpit; the mouse wheel zooms the outside view.",
+	"race": "Easy has traction control, anti-lock brakes and stability control; Pro has none of them. Hold the brake when stopped to reverse.",
+	"space": "Look at a planet and press Hyperspeed to go there. On the runway, push the speed up to lift off; climb above 20 km to reach space, and fly down to the Earth to come back. In VR your hands show as small balls: touch the console buttons with them. The left mouse button also fires.",
+}
+## The list shown while playing: pairs of actions on one line
+const OVERLAY := {
+	"flight": [[["pitch_down", "pitch_up"], "Nose down / up"], [["roll_left", "roll_right"], "Bank left / right"], [["yaw_left", "yaw_right"], "Rudder left / right"],
+		[["thr_up", "thr_down"], "Power more / less"], [["trim_down", "trim_up"], "Trim nose down / up"], [["flaps"], "Flaps"], [["brake"], "Wheel brakes"],
+		[["camera"], "Change camera"], [["pause"], "Pause"], [["restart"], "Restart"]],
+	"race": [[["steer_left", "steer_right"], "Steer left / right"], [["accel"], "Accelerate"], [["race_brake"], "Brake / reverse"], [["camera"], "Change camera"], [["pause"], "Pause"], [["restart"], "Restart"]],
+	"space": [[["pitch_down", "pitch_up"], "Nose down / up"], [["roll_left", "roll_right"], "Roll left / right"], [["yaw_left", "yaw_right"], "Yaw left / right"],
+		[["thr_up", "thr_down"], "Speed more / less"], [["fire"], "Fire"], [["boost"], "Boost"], [["hyper"], "Hyperspeed"], [["x10"], "x10 speed"], [["prev", "next"], "Choose the planet"],
+		[["auto"], "To space / to Earth"], [["land"], "Land / lift off"], [["camera"], "Change camera"], [["pause"], "Pause"]],
+	"coaster": [[["camera"], "Change camera"], [["pause"], "Pause"], [["restart"], "Restart"]],
+}
+
+
+## A key cap: a small rounded box with the key's name on it.
+func _chip(text: String, col := Color(1, 1, 1, 0.14), size := 13) -> Label:
+	var l := _lbl(text, size, Color.WHITE)
+	l.add_theme_font_override("font", theme_res.get_font("font", "Button"))
+	var sb := _sb(col, 6, Color(1, 1, 1, 0.3), 1)
+	sb.content_margin_left = 7
+	sb.content_margin_right = 7
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 2
+	l.add_theme_stylebox_override("normal", sb)
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return l
+
+
+func _help_row(parent: Control, chips: Array, text: String, col := Color(1, 1, 1, 0.14), size := 13) -> void:
+	var r := HBoxContainer.new()
+	r.add_theme_constant_override("separation", 4)
+	for c in chips:
+		r.add_child(_chip(str(c), col, size))
+	var t := _lbl(text, size + 1, INK)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	r.add_child(_lbl(" ", size))
+	r.add_child(t)
+	parent.add_child(r)
+
+
+func _build_help(v: VBoxContainer) -> void:
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 6)
+	v.add_child(tabs)
+	var group := ButtonGroup.new()
+	for g in HELP_GAMES:
+		var b := Button.new()
+		b.text = g[1]
+		b.toggle_mode = true
+		b.button_group = group
+		b.custom_minimum_size = Vector2(150, 40)
+		var key: String = g[0]
+		b.pressed.connect(func(): set_help_game(key))
+		tabs.add_child(b)
+		help_tabs[key] = b
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tabs.add_child(sp)
+	for e in [[KeyboardPic.COL_MOVE, "Steering"], [KeyboardPic.COL_GAME, "This game"], [KeyboardPic.COL_ALL, "Every game"]]:
+		var sw := ColorRect.new()
+		sw.color = e[0]
+		sw.custom_minimum_size = Vector2(14, 14)
+		sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		tabs.add_child(sw)
+		tabs.add_child(_lbl(str(e[1]) + "   ", 13, MUTED))
+	help_pic = KeyboardPic.new()
+	v.add_child(help_pic)
+	help_cards = HBoxContainer.new()
+	help_cards.add_theme_constant_override("separation", 10)
+	v.add_child(help_cards)
+	help_tip = _lbl("", 14, MUTED)
+	help_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	help_tip.custom_minimum_size = Vector2(990, 0)
+	v.add_child(help_tip)
+
+
+## The Controls screen for one game: the keyboard picture, then the gamepad and VR controllers.
+func set_help_game(g: String) -> void:
+	if not help_tabs.has(g):
+		g = "flight"
+	help_game = g
+	for k in help_tabs.keys():
+		(help_tabs[k] as Button).set_pressed_no_signal(k == g)
+	help_pic.set_game(g)
+	for ch in help_cards.get_children():
+		help_cards.remove_child(ch)
+		ch.queue_free()
+	var pad: Array = PAD_FIXED[g].duplicate()
+	for a in Keys.ACTIONS:
+		var b := Keys.button_of(a[0])
+		if Keys.uses(a[0], g) and not b.is_empty():
+			pad.append([Keys.button_name(b), Keys.title(a[0]).split(" (")[0]])
+	for card in [["GAMEPAD", pad, Color("#2f9e44")], ["VR CONTROLLERS (META QUEST)", VR_HELP[g], Color("#7a4dd8")]]:
+		var p := _glass(help_cards)
+		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var cv := VBoxContainer.new()
+		cv.add_theme_constant_override("separation", 4)
+		p.add_child(cv)
+		cv.add_child(_lbl(card[0], 12, MUTED))
+		var grid := GridContainer.new()
+		grid.columns = 2
+		grid.add_theme_constant_override("h_separation", 14)
+		grid.add_theme_constant_override("v_separation", 4)
+		cv.add_child(grid)
+		for e in card[1]:
+			var cell := VBoxContainer.new()
+			cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			grid.add_child(cell)
+			_help_row(cell, [e[0]], str(e[1]), Color(card[2], 0.55))
+	help_tip.text = HELP_TIPS[g] + "  A simulator joystick, wheel or pedals: see Set up controls on the first screen."
+	if help_sheet.visible:
+		_fit_sheet(help_sheet)
+
+
+func _build_keys(v: VBoxContainer) -> void:
+	keys_info = _lbl("", 15, MUTED)
+	keys_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	keys_info.custom_minimum_size = Vector2(820, 0)
+	v.add_child(keys_info)
+	_keys_msg("")
+	var hd := HBoxContainer.new()
+	hd.add_theme_constant_override("separation", 6)
+	var h0 := _lbl("", 12, MUTED)
+	h0.custom_minimum_size = Vector2(330, 0)
+	hd.add_child(h0)
+	for t in ["KEY", "SECOND KEY", "GAMEPAD / JOYSTICK BUTTON"]:
+		var hl := _lbl(t, 12, MUTED, false, HORIZONTAL_ALIGNMENT_CENTER)
+		hl.custom_minimum_size = Vector2(150, 0)
+		hl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hd.add_child(hl)
+	v.add_child(hd)
+	for g in Keys.GROUP_ORDER:
+		_section(v, Keys.GROUP_TITLES[g])
+		for id in Keys.ids_in(g):
+			var r := HBoxContainer.new()
+			r.add_theme_constant_override("separation", 6)
+			var nm := _lbl(Keys.title(id), 15, INK)
+			nm.custom_minimum_size = Vector2(330, 0)
+			r.add_child(nm)
+			bind_btns[id] = []
+			for slot in [0, 1, "b"]:
+				var b := Button.new()
+				b.custom_minimum_size = Vector2(150, 34)
+				b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				b.clip_text = true
+				var act: String = id
+				var sl = slot
+				b.pressed.connect(func(): _cap_start(act, sl))
+				r.add_child(b)
+				bind_btns[id].append(b)
+			v.add_child(r)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	v.add_child(row)
+	var rs := _big_button("Back to the standard keys", false)
+	rs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rs.pressed.connect(func():
+		_cap_end()
+		Keys.reset_all()
+		_keys_msg("All keys and buttons are back to the standard ones.")
+		_binds_done())
+	row.add_child(rs)
+	var dn := _big_button("Done", true)
+	dn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dn.pressed.connect(func(): close_sheet(keys_sheet))
+	row.add_child(dn)
+	refresh_binds()
+
+
+func _keys_msg(t: String) -> void:
+	keys_info.text = (t + "\n" if t != "" else "") + "Each control can have two keys and one controller button (gamepad or joystick). Click a box, then press the key or button you want. Esc leaves it as it was; Backspace empties the box. Sticks, wheels and pedals are set in Set up controls on the first screen."
+
+
+func refresh_binds() -> void:
+	for id in bind_btns.keys():
+		var ks := Keys.keys_of(id)
+		for i in 2:
+			var b: Button = bind_btns[id][i]
+			b.text = Keys.key_name(ks[i]) if ks[i] != 0 else "—"
+		var bb: Button = bind_btns[id][2]
+		var bt := Keys.button_of(id)
+		bb.text = Keys.button_name(bt) if not bt.is_empty() else "—"
+	if not cap.is_empty():
+		var cb: Button = bind_btns[cap["id"]][2 if str(cap["slot"]) == "b" else int(cap["slot"])]
+		cb.text = "Press a button…" if str(cap["slot"]) == "b" else "Press a key…"
+
+
+func capturing() -> bool:
+	return not cap.is_empty()
+
+
+func _cap_start(id: String, slot) -> void:
+	var held := {}
+	for dev in Input.get_connected_joypads():
+		for b in 64:
+			if Input.is_joy_button_pressed(dev, b):
+				held[Vector2i(dev, b)] = true
+	cap = {"id": id, "slot": slot, "held": held}
+	if str(slot) == "b":
+		_keys_msg("%s: press the button you want on the gamepad or joystick (Esc: leave it, Backspace: no button)." % Keys.title(id))
+		if Input.get_connected_joypads().is_empty():
+			_keys_msg("No gamepad or joystick found. Plug it in (USB), wait a few seconds and click the box again.")
+	else:
+		_keys_msg("%s: press the key you want (Esc: leave it, Backspace: no key)." % Keys.title(id))
+	refresh_binds()
+
+
+func _cap_end() -> void:
+	if cap.is_empty():
+		return
+	cap = {}
+	refresh_binds()
+
+
+func _binds_done() -> void:
+	refresh_binds()
+	if help_pic != null:
+		help_pic.queue_redraw()
+	set_overlay_game(overlay_game)
+	binds_changed.emit()
+
+
+## A key pressed while a box in Change keys is waiting (sent here by main.gd, which sees the keyboard in VR too).
+func capture_key(code: int) -> void:
+	if cap.is_empty():
+		return
+	var id: String = cap["id"]
+	var slot = cap["slot"]
+	if code == KEY_ESCAPE:
+		_keys_msg("")
+		_cap_end()
+		return
+	var taken: Array = []
+	if code == KEY_BACKSPACE or code == KEY_DELETE:
+		if str(slot) == "b":
+			Keys.set_button(id, -1, "")
+		else:
+			Keys.set_key(id, int(slot), 0)
+		_keys_msg("%s: box emptied." % Keys.title(id))
+	elif str(slot) == "b":
+		return   # waiting for a controller button, not a key
+	elif code in Keys.RESERVED or code == 0:
+		_keys_msg("%s works the menus, so it can't be used. Press another key." % Keys.key_name(code))
+		return
+	else:
+		taken = Keys.set_key(id, int(slot), code)
+		_keys_msg("%s is now %s." % [Keys.title(id), Keys.key_name(code)] + ((" (It was taken away from: %s.)" % ", ".join(taken)) if not taken.is_empty() else ""))
+	cap = {}
+	_binds_done()
+
+
+## While a controller box is waiting: the first button newly pressed on any gamepad or joystick.
+func _cap_poll() -> void:
+	if cap.is_empty() or str(cap["slot"]) != "b":
+		return
+	var held: Dictionary = cap["held"]
+	for dev in Input.get_connected_joypads():
+		for b in 64:
+			var k := Vector2i(dev, b)
+			var dn := Input.is_joy_button_pressed(dev, b)
+			if not dn:
+				held.erase(k)
+			elif not held.has(k):
+				var id: String = cap["id"]
+				var taken: Array = Keys.set_button(id, b, Input.get_joy_name(dev))
+				_keys_msg("%s is now button %d on %s." % [Keys.title(id), b + 1, Input.get_joy_name(dev)] + ((" (It was taken away from: %s.)" % ", ".join(taken)) if not taken.is_empty() else ""))
+				cap = {}
+				_binds_done()
+				return
+
+
+## The lines of the on-screen list for a game: [[key names], what they do].
+func overlay_lines(g: String) -> Array:
+	var out: Array = []
+	for e in OVERLAY.get(g, OVERLAY["flight"]):
+		var chips: Array = []
+		for id in e[0]:
+			chips.append(Keys.first(id))
+		out.append([chips, e[1]])
+	return out
+
+
+func _build_overlay() -> void:
+	var side := VBoxContainer.new()   # keeps the list half way up the left edge whatever its size
+	side.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+	side.offset_left = 16
+	side.offset_right = 380
+	side.alignment = BoxContainer.ALIGNMENT_CENTER
+	side.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(side)
+	overlay = _glass(side)
+	overlay.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay_rows = VBoxContainer.new()
+	overlay_rows.add_theme_constant_override("separation", 3)
+	overlay_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(overlay_rows)
+	overlay.visible = false
+	f1_hint = _lbl("", 12, Color(1, 1, 1, 0.7))
+	f1_hint.position = Vector2(20, 66)
+	f1_hint.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	f1_hint.add_theme_constant_override("outline_size", 4)
+	hud.add_child(f1_hint)
+	set_overlay_game("flight")
+
+
+## Which game's controls the on-screen list shows (rebuilt when the game or a key changes).
+func set_overlay_game(g: String) -> void:
+	overlay_game = g
+	if overlay_rows == null:
+		return
+	for ch in overlay_rows.get_children():
+		overlay_rows.remove_child(ch)
+		ch.queue_free()
+	overlay_rows.add_child(_lbl("CONTROLS", 12, MUTED))
+	for e in overlay_lines(g):
+		_help_row(overlay_rows, e[0], str(e[1]), Color(1, 1, 1, 0.14), 12)
+	if g != "coaster":
+		_help_row(overlay_rows, ["Right mouse"], "Hold and drag: look round", Color(1, 1, 1, 0.14), 12)
+	overlay_rows.add_child(_lbl("%s hides this list" % Keys.first("help"), 11, MUTED))
+	f1_hint.text = "%s: show the controls" % Keys.first("help")
+
+
+func show_overlay(on: bool) -> void:
+	if overlay != null:
+		overlay.visible = on
+		f1_hint.visible = not on

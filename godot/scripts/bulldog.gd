@@ -10,7 +10,11 @@ extends RefCounted
 const SILL := 0.22                      # top of the cockpit sides (the canopy sits on this)
 const CK0 := -0.62                      # cockpit opening, front (windscreen base)
 const CK1 := 1.0                        # cockpit opening, rear
-const SE_N := 2.6                       # cross-section "squareness" (2 = ellipse)
+const SE_N := 3.6                       # cross-section "squareness" (2 = ellipse). v1.19.0: 3.6 (was 2.6): the real Bulldog is slab-sided, and the cockpit is now wide enough at the sill for the full instrument panel
+const CAN_N := 3.0                      # the canopy's cross-section (was 2.2): a fuller bubble, with shoulder and head room at the sides
+## canopy profile: z, height of the top (sill to a roof that peaks at about 1.03 m)
+const CAN_PROF := [[CK0, 0.42], [-0.45, 0.70], [-0.25, 0.90], [0.05, 1.01], [0.45, 1.03], [0.85, 0.92], [1.05, 0.70], [1.22, 0.44]]
+const PANEL_SCALE := 0.95               # the instrument panel is drawn at 1.12 m wide and fitted at 95% of that
 ## fuselage stations: z, half width, top, bottom
 const ST := [
 	[-2.04, 0.20, 0.10, -0.25], [-1.88, 0.33, 0.19, -0.37], [-1.58, 0.44, 0.28, -0.46], [-1.12, 0.52, 0.35, -0.51],
@@ -238,6 +242,39 @@ func fus_x(z: float, y: float) -> float:
 	return float(f[0]) * pow(1.0 - pow(r, SE_N), 1.0 / SE_N)
 
 
+## The canopy's roof height at station z (0 outside the canopy).
+func can_top(z: float) -> float:
+	for k in range(CAN_PROF.size() - 1):
+		if z >= float(CAN_PROF[k][0]) and z <= float(CAN_PROF[k + 1][0]):
+			return lerpf(CAN_PROF[k][1], CAN_PROF[k + 1][1], (z - float(CAN_PROF[k][0])) / (float(CAN_PROF[k + 1][0]) - float(CAN_PROF[k][0])))
+	return 0.0
+
+
+## How far out from the centre line the inside of the cabin reaches at height y, station z: the fuselage side
+## below the sill, the canopy glass above it. Cockpit parts are cut to this so nothing pokes through (v1.19.0).
+func cabin_half(y: float, z: float) -> float:
+	if y <= SILL:
+		return fus_x(z, y)
+	var top := can_top(z)
+	if top <= y:
+		return 0.0
+	var sw := fus_x(minf(z, CK1), SILL) + 0.005
+	var sn := pow((y - SILL) / (top - SILL), CAN_N / 2.0)
+	return sw * pow(sqrt(1.0 - sn * sn), 2.0 / CAN_N)
+
+
+## A flat wall across the whole fuselage at station z (firewall, rear cabin wall), a little inside the skin.
+func _wall(parent: Node3D, z: float, col: Color, facing: float) -> void:
+	var f := fus_at(z)
+	var ring: Array = []
+	for i in 40:
+		var q := se(TAU * i / 40.0, float(f[0]) - 0.012, float(f[1]) - 0.012, float(f[2]) + 0.012)
+		ring.append(Vector3(q.x, q.y, z))
+	_begin()
+	_cap(ring, Vector3(0, 0, facing), col)
+	_end(interior_m, parent)
+
+
 func airfoil(f: float, t: float) -> Vector2:
 	# NACA-style section: (thickness half, camber line) as fractions of chord at chord fraction f
 	f = clampf(f, 0.0, 1.0)
@@ -365,9 +402,9 @@ func _fuselage() -> void:
 
 func _canopy() -> void:
 	# sliding bubble canopy: sill to a roof that peaks at about 1.03 m
-	var prof := [[CK0, 0.42], [-0.45, 0.70], [-0.25, 0.90], [0.05, 1.01], [0.45, 1.03], [0.85, 0.92], [1.05, 0.70], [1.22, 0.44]]
+	var prof := CAN_PROF
 	var P: Array = []
-	var nseg := 24
+	var nseg := 32
 	for k in range(prof.size()):
 		var z: float = prof[k][0]
 		var top: float = prof[k][1]
@@ -377,7 +414,7 @@ func _canopy() -> void:
 			var t := PI * i / nseg
 			var c := cos(t)
 			var s := sin(t)
-			ring.append(Vector3(sw * signf(c) * pow(absf(c), 2.0 / 2.2), SILL + (top - SILL) * pow(s, 2.0 / 2.2), z))
+			ring.append(Vector3(sw * signf(c) * pow(absf(c), 2.0 / CAN_N), SILL + (top - SILL) * pow(s, 2.0 / CAN_N), z))
 		P.append(ring)
 	var out := func(p: Vector3) -> Vector3: return Vector3(p.x, p.y - SILL, 0.0).normalized()
 	var col := func(_p: Vector3, _n: Vector3) -> Color: return Color.WHITE
@@ -393,10 +430,10 @@ func _canopy() -> void:
 				top = lerpf(prof[k][1], prof[k + 1][1], (zf - float(prof[k][0])) / (float(prof[k + 1][0]) - float(prof[k][0])))
 		var sw2 := fus_x(minf(zf, CK1), SILL) + 0.012
 		var prev := Vector3.ZERO
-		for i in 17:
-			var t2 := PI * i / 16.0
+		for i in 25:
+			var t2 := PI * i / 24.0
 			var c2 := cos(t2)
-			var p2 := Vector3(sw2 * signf(c2) * pow(absf(c2), 2.0 / 2.2), SILL + (top + 0.008 - SILL) * pow(sin(t2), 2.0 / 2.2), zf)
+			var p2 := Vector3(sw2 * signf(c2) * pow(absf(c2), 2.0 / CAN_N), SILL + (top + 0.008 - SILL) * pow(sin(t2), 2.0 / CAN_N), zf)
 			if i > 0:
 				_limb(am.outer, prev, p2, 0.011, frame, false)
 			prev = p2
@@ -663,11 +700,22 @@ func _prop() -> void:
 		_grid(P, true, func(p: Vector3) -> Vector3: return Vector3(p.x, 0, p.z).normalized(), func(p: Vector3, _n): return WHITE if (p.y > 0.86 or (p.y > 0.32 and fposmod((p.y - 0.32) / 0.135, 2.0) >= 1.0)) else BLACK)   # v1.18.0: black and white bands, as on G-SMAT
 		_end(matte, piv)
 		am.blades.append(piv)
-	var dm := StandardMaterial3D.new()
-	dm.albedo_color = Color(0.1, 0.1, 0.12, 0.0)
-	dm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	dm.cull_mode = BaseMaterial3D.CULL_DISABLED
-	dm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# the spinning propeller (v1.19.0): a round, faint disc with the blades' black and white bands as soft
+	# rings, as a real propeller looks from the cockpit. (It was a dark square.)
+	var dsh := Shader.new()
+	dsh.code = """shader_type spatial;
+render_mode unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+uniform float strength = 0.0;
+void fragment() {
+	float r = length(UV * 2.0 - 1.0);
+	float m = r * 0.95;                                   // metres from the hub
+	float band = step(1.0, mod((m - 0.32) / 0.135, 2.0)) * step(0.32, m);
+	band = max(band, step(0.86, m));
+	ALBEDO = mix(vec3(0.05, 0.05, 0.055), vec3(0.6), band * 0.55);
+	ALPHA = strength * smoothstep(0.99, 0.95, r) * smoothstep(0.1, 0.2, r) * mix(0.09, 0.17, band);
+}"""
+	var dm := ShaderMaterial.new()
+	dm.shader = dsh
 	var dq := QuadMesh.new()
 	dq.size = Vector2(1.9, 1.9)
 	var disc := MeshInstance3D.new()
@@ -810,8 +858,8 @@ func _figure(x: float, parent: Node3D, is_instructor: bool) -> Node3D:
 		_limb(root, hip, knee, 0.075, suit)
 		_limb(root, knee, foot, 0.06, suit)
 		_box(root, Vector3(0.1, 0.08, 0.26), foot + Vector3(0, -0.02, -0.08), glove)
-		var sh := Vector3(x + s * 0.2, 0.36, 0.58)
-		var el := Vector3(x + s * 0.22, 0.06, 0.4)
+		var sh := Vector3(x + s * 0.17, 0.36, 0.58)   # v1.19.0: shoulders and elbows inside the cabin walls
+		var el := Vector3(x + s * 0.19, 0.06, 0.4)
 		var hand := Vector3(x + s * 0.12, 0.05, 0.12)
 		_limb(root, sh, el, 0.055, suit)
 		_limb(root, el, hand, 0.045, suit)
@@ -856,9 +904,11 @@ func _cockpit() -> void:
 		P.append(ring)
 	_grid(P, false, func(p: Vector3) -> Vector3: return Vector3(-p.x, 0.1 - p.y, 0).normalized(), func(p: Vector3, _n): return INTERIOR * (0.75 if p.y < -0.3 else 1.0))
 	_end(interior_m, ck)
-	_box(ck, Vector3(1.0, 0.02, 1.7), Vector3(0, -0.37, 0.15), _mat(Color("#1e1f22"), 0.9))       # floor
-	_box(ck, Vector3(1.05, 0.62, 0.03), Vector3(0, -0.08, 1.02), dgrey)                              # rear bulkhead
-	_box(ck, Vector3(1.0, 0.35, 0.03), Vector3(0, 0.25, 1.15), black, Vector3(-0.35, 0, 0))           # parcel shelf
+	_box(ck, Vector3(0.86, 0.02, 1.62), Vector3(0, -0.37, 0.18), _mat(Color("#1e1f22"), 0.9))      # floor
+	# v1.19.0: the cabin is closed at both ends by walls cut to the fuselage's own shape (the old flat boxes
+	# stuck out through the skin and the rear glass, and there was no firewall: you could see out past the pedals)
+	_wall(ck, CK1, INTERIOR * 1.15, -1.0)                                                            # rear cabin wall
+	_wall(ck, CK0 - 0.03, INTERIOR * 0.8, 1.0)                                                       # firewall
 	# instrument panel: textured with the live gauges, tilted 12 degrees, with bezels and glass
 	var pw := BulldogPanel.PW
 	var ph := BulldogPanel.PH
@@ -887,13 +937,23 @@ func _cockpit() -> void:
 	pm.emission_energy_multiplier = 0.45      # readable in the shade, still lit by the sun
 	pm.roughness = 0.75
 	pm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
-	var q := QuadMesh.new()
-	q.size = Vector2(pw, ph)
+	# v1.19.0: the panel is cut to the cabin's shape (its top corners used to stick out through the windscreen)
+	pnode.scale = Vector3.ONE * PANEL_SCALE
+	var rows: Array = []          # [height on the panel, half width there], bottom to top
+	for j in 29:
+		var yl := lerpf(-ph / 2.0, ph / 2.0, j / 28.0)
+		var wp: Vector3 = pnode.transform * Vector3(0, yl, 0)
+		rows.append([yl, minf(pw / 2.0, (cabin_half(wp.y, wp.z) - 0.014) / PANEL_SCALE)])
 	var pmi := MeshInstance3D.new()
-	pmi.mesh = q
+	pmi.mesh = _plate(rows, 0.0, pw, ph)
 	pmi.material_override = pm
 	pnode.add_child(pmi)
-	_box(pnode, Vector3(pw + 0.04, ph + 0.03, 0.2), Vector3(0, 0, -0.105), black)                  # panel body
+	var back := MeshInstance3D.new()          # the back of the panel, seen through the windscreen from outside
+	back.mesh = _plate(rows, -0.012, pw, ph)
+	var back_m := _mat(Color("#141517"), 0.8)
+	back_m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	back.material_override = back_m
+	pnode.add_child(back)
 	var bezel := _mat(Color("#0e0f10"), 0.45, 0.3)
 	var gglass := StandardMaterial3D.new()
 	gglass.albedo_color = Color(0.9, 0.95, 1.0, 0.07)
@@ -935,11 +995,40 @@ func _cockpit() -> void:
 		var kx := 0.62 + 0.268 - pw / 2.0
 		var ky := ph / 2.0 - (0.03 + i * 0.075 + 0.031)
 		_limb(pnode, Vector3(kx, ky, 0.0), Vector3(kx, ky, 0.018), 0.011, black, false)
-	# glare shield over the panel, coaming lip and a compass on top
-	_box(ck, Vector3(pw + 0.06, 0.04, 0.32), Vector3(0, 0.47, -0.58), black, Vector3(0.06, 0, 0))
-	_limb(ck, Vector3(-pw / 2.0 - 0.02, 0.455, -0.43), Vector3(pw / 2.0 + 0.02, 0.455, -0.43), 0.018, _mat(Color("#101010"), 0.95), false)
-	_sph(ck, 0.03, Vector3(0.0, 0.515, -0.53), black, Vector3(1, 0.8, 1))
-	var cw := _sph(ck, 0.02, Vector3(0.0, 0.518, -0.505), _mat(Color("#d9d3b8"), 0.4), Vector3(1, 0.7, 0.35))
+	# glare shield (v1.19.0): from the panel's top edge, with a small lip towards you, forward and down to the
+	# foot of the windscreen (the top of the nose), following the panel's outline so it fits under the glass. A compass sits on top.
+	var outline: Array = []       # panel-space points round the top of the panel, left sill to right sill
+	for j in range(14, 29):
+		outline.append(Vector3(-float(rows[j][1]), float(rows[j][0]), 0.0))
+	var wt: float = rows[28][1]
+	for k in range(1, 16):
+		outline.append(Vector3(lerpf(-wt, wt, k / 16.0), ph / 2.0, 0.0))
+	for j in range(28, 13, -1):
+		outline.append(Vector3(float(rows[j][1]), float(rows[j][0]), 0.0))
+	var zf := CK0
+	var xf := fus_x(zf, SILL) - 0.012
+	var fd := fus_at(zf)
+	var deck := func(x: float) -> float:      # the top of the nose at the foot of the windscreen, just inside the skin
+		var yc := (float(fd[1]) + float(fd[2])) / 2.0
+		var hh := (float(fd[1]) - float(fd[2])) / 2.0
+		return maxf(SILL, yc + hh * pow(maxf(1.0 - pow(absf(x) / float(fd[0]), SE_N), 0.0), 1.0 / SE_N) - 0.008)
+	_begin()
+	var shade := Color("#0c0c0d").srgb_to_linear()
+	for i in range(outline.size() - 1):
+		var r0: Vector3 = pnode.transform * (outline[i] + Vector3(0, 0, 0.035))
+		var r1: Vector3 = pnode.transform * (outline[i + 1] + Vector3(0, 0, 0.035))
+		var f0 := Vector3(clampf(r0.x, -xf, xf), deck.call(clampf(r0.x, -xf, xf)), zf)
+		var f1 := Vector3(clampf(r1.x, -xf, xf), deck.call(clampf(r1.x, -xf, xf)), zf)
+		_q(r0, r1, f1, f0, Vector3.UP, shade)
+		# the lip's rolled edge, down to the panel face
+		var e0: Vector3 = pnode.transform * (outline[i] * 0.985)
+		var e1: Vector3 = pnode.transform * (outline[i + 1] * 0.985)
+		_q(r0, r1, e1, e0, Vector3(0, -0.3, 1.0).normalized(), shade)
+	var shield_m := _mat(Color("#0c0c0d"), 0.95)   # matt black, so it doesn't reflect in the windscreen
+	shield_m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_end(shield_m, ck)
+	_sph(ck, 0.03, Vector3(0.0, 0.445, -0.53), black, Vector3(1, 0.8, 1))
+	var cw := _sph(ck, 0.02, Vector3(0.0, 0.448, -0.505), _mat(Color("#d9d3b8"), 0.4), Vector3(1, 0.7, 0.35))
 	cw.name = "compass_card"
 	# centre console with throttle quadrant (throttle black, propeller blue, mixture red), trim wheel, flap lever
 	_box(ck, Vector3(0.16, 0.3, 0.9), Vector3(0, -0.22, 0.02), dgrey)
@@ -984,7 +1073,7 @@ func _cockpit() -> void:
 		var x := s * 0.3
 		_box(ck, Vector3(0.42, 0.1, 0.48), Vector3(x, -0.21, 0.42), seat)
 		_box(ck, Vector3(0.38, 0.06, 0.42), Vector3(x, -0.14, 0.42), cushion)
-		_box(ck, Vector3(0.42, 0.7, 0.08), Vector3(x, 0.15, 0.72), seat, Vector3(-0.22, 0, 0))
+		_box(ck, Vector3(0.40, 0.7, 0.08), Vector3(x * 0.97, 0.15, 0.72), seat, Vector3(-0.22, 0, 0))   # v1.19.0: 2 cm narrower and inboard, clear of the canopy
 		_box(ck, Vector3(0.36, 0.5, 0.05), Vector3(x, 0.15, 0.67), cushion, Vector3(-0.22, 0, 0))
 	var strap := _mat(Color("#3b3d42"), 0.85)
 	for s2: float in [-1.0, 1.0]:
@@ -1023,11 +1112,37 @@ func _cockpit() -> void:
 			stick_r = piv
 		for p: float in [-1.0, 1.0]:
 			var pd := Node3D.new()
-			pd.position = Vector3(s * 0.3 + p * 0.1, -0.28, -0.62)
+			pd.position = Vector3(s * 0.3 + p * 0.1, -0.28, -0.56)   # v1.19.0: clear of the firewall
 			ck.add_child(pd)
 			_box(pd, Vector3(0.07, 0.13, 0.02), Vector3.ZERO, steel, Vector3(-0.5, 0, 0))
 			_limb(pd, Vector3(0, -0.04, 0.03), Vector3(0, -0.1, 0.12), 0.01, steel, false)
 			pedals.append([pd, p, pd.position.z])
+
+
+## A flat plate in the panel's own space, cut to the rows' widths: the instrument panel's face (with the
+## gauge picture stretched over it as if it were the full rectangle) or its back.
+func _plate(rows: Array, zl: float, pw: float, ph: float) -> ArrayMesh:
+	var vv := PackedVector3Array()
+	var nn := PackedVector3Array()
+	var uv := PackedVector2Array()
+	for j in range(rows.size() - 1):
+		var y0: float = rows[j][0]
+		var y1: float = rows[j + 1][0]
+		var w0: float = rows[j][1]
+		var w1: float = rows[j + 1][1]
+		# clockwise seen from the front (+z): bottom-left, top-left, top-right / bottom-left, top-right, bottom-right
+		for pt in [Vector2(-w0, y0), Vector2(-w1, y1), Vector2(w1, y1), Vector2(-w0, y0), Vector2(w1, y1), Vector2(w0, y0)]:
+			vv.append(Vector3(pt.x, pt.y, zl))
+			nn.append(Vector3(0, 0, 1))
+			uv.append(Vector2(0.5 + pt.x / pw, 0.5 - pt.y / ph))
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vv
+	arrays[Mesh.ARRAY_NORMAL] = nn
+	arrays[Mesh.ARRAY_TEX_UV] = uv
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return m
 
 
 ## Where a VR hand holds the pilot's (left seat) control stick: a grip frame as VRHand expects

@@ -154,6 +154,7 @@ class FlightModel {
     } else {
       // pitch: stick commands flight path angle; roll: stick commands bank angle; rudder is coordinated
       let gT = inp.pitch >= 0 ? inp.pitch * 17 * D2R : inp.pitch * 12 * D2R;
+      gT += (inp.trim || 0) * 16 * D2R;   // Easy mode: the trim sets a hands-off climb or descent (full trim: 8 degrees)
       const aLim = 0.88 * sp.aStall;
       if (alpha > aLim) gT = Math.min(gT, gamma - 4 * (alpha - aLim));
       const gErr = gT - gamma;
