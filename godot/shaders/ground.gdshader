@@ -63,9 +63,9 @@ float hgt_coarse(vec2 xz) {
 }
 // in the vertex shader: the far rings (big triangles) read the smoothed heights, so distant hills don't pop
 // when the rings move on with you
-float hgt_v(vec2 xz, float ring_cell) {
+float hgt_v(vec2 xz, float rc) {
 	vec2 uv = (xz / cell + size_cells * 0.5 + 0.5) / size_cells;
-	float lod = max(log2(ring_cell / cell), 0.0);
+	float lod = max(log2(rc / cell), 0.0);
 	float h = flatten_out(xz, textureLod(heightmap, uv, lod).r);
 	float w = d_weight(xz);
 	return w > 0.0 ? mix(h, d_height(xz), w) : h;
