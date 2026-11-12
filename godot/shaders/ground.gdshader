@@ -188,6 +188,8 @@ void fragment() {
 	photo = mix(vec3(l), photo, saturation) * exposure;
 	photo.g *= 1.03;
 	vec3 farc = texture(far_map, p / far_size + 0.5).rgb;
+	// (v1.17.1) the painted countryside beyond the real map, calmer: its blotches read as a pattern from high up
+	farc = mix(farc, textureLod(far_map, p / far_size + 0.5, 9.0).rgb, 0.55);
 	vec3 col = mix(farc, photo, inside);
 	vec4 lc = texture(landcover, ouv) * inside;
 	lc.r = mix(lc.r, dm.r, dw);
@@ -289,11 +291,11 @@ void fragment() {
 	}
 	// far away (v1.17.1): fields are too small to see, so the land's pattern evens out, and the air in between turns
 	// it to haze towards the horizon (strongest from high up, where the fog itself is thin)
-	float far_k = smoothstep(20000.0, 160000.0, dist);
+	float far_k = smoothstep(8000.0, 80000.0, dist);
 	if (far_k > 0.0) {
-		vec3 avg = textureLod(far_map, p / far_size + 0.5, 9.0).rgb;
+		vec3 avg = mix(textureLod(far_map, p / far_size + 0.5, 9.0).rgb, textureLod(ortho, ouv, 6.0).rgb * exposure, inside);
 		col = mix(col, mix(col, avg, 0.85), far_k);
-		col = mix(col, haze_col, smoothstep(40000.0, 420000.0, dist) * 0.85);
+		col = mix(col, haze_col, smoothstep(25000.0, 350000.0, dist) * 0.9);
 	}
 	ALBEDO = col;
 	if (debug_view == 1) {
