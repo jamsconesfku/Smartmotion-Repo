@@ -70,6 +70,11 @@ func mode_name() -> String:
 	return "racing"
 
 
+## The HUD boxes say KM/H, GEAR and LAP (v1.17.0 fix: since 1.16.0 they said KNOTS, FEET and HEADING).
+func hud_kind() -> String:
+	return "race"
+
+
 func build(w: World, q: String) -> void:
 	super.build(w, q)
 	RaceTrack.terr = w.terrain if w != null else null
