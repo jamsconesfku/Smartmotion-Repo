@@ -2,7 +2,7 @@ extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 ## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.14.1"
+const APP_VERSION := "1.15.0"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -128,6 +128,9 @@ func _ready() -> void:
 	await get_tree().process_frame
 	if args.has("test_panel"):
 		await _test_panel()
+		return
+	if args.has("ui_shot"):
+		await _ui_shot(str(args["ui_shot"]))
 		return
 	ui.fly_pressed.connect(_on_fly)
 	ui.resume_pressed.connect(func(): _pause(false))
@@ -1554,6 +1557,33 @@ func _switch_test() -> void:
 		await start_game()
 		Diag.write("switch test: %s running" % g)
 	Diag.write("switch test: done")
+	get_tree().quit()
+
+
+## Test option --ui_shot=/path/prefix: saves pictures of the loading screen and the main menu (no world) and quits.
+func _ui_shot(prefix: String) -> void:
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	DisplayServer.window_set_size(Vector2i(1600, 900))
+	cam.environment = Environment.new()
+	cam.environment.background_mode = Environment.BG_COLOR
+	cam.environment.background_color = Color("#86a9cf")
+	ui.set_progress(0.62, "Planting the woods")
+	for i in 4:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(prefix + "-loading.png")
+	ui.show_menu()
+	ui.set_gpu_text("Graphics: NVIDIA GeForce RTX 4060 Laptop GPU  ·  forward_plus  ·  F11 for full screen.")
+	for i in 4:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(prefix + "-menu.png")
+	ui.show_lobby()
+	for i in 4:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(prefix + "-lobby.png")
+	print("ui shots saved: ", prefix)
 	get_tree().quit()
 
 

@@ -31,6 +31,15 @@
   "Contains modified Copernicus Sentinel data 2023",
   "Produced using Copernicus WorldDEM-30 (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
   "ESA WorldCover 2021 (c) ESA, CC BY 4.0",
-  "Buildings and runway: Overture Maps Foundation, including (c) OpenStreetMap contributors (ODbL)"
- ]
+  "Buildings and runway: Overture Maps Foundation, including (c) OpenStreetMap contributors (ODbL)",
+  "Contains Environment Agency information \u00a9 Environment Agency and/or database right 2026 (LIDAR, Open Government Licence v3.0)",
+  "Contains OS data \u00a9 Crown copyright and database right 2026 (OS OpenMap Local, Open Government Licence v3.0)"
+ ],
+ "detail": {
+  "half": 4096.0,
+  "photo_px": 8192,
+  "height_px": 4096,
+  "height_encoding": "detail_h.png R*256+G, metres = value / 100 - 100, sample i at -half + i*2",
+  "trees": "trees.bin: uint32 count, then per tree int16 x*4, int16 z*4, uint8 height*5, uint8 crown radius*20"
+ }
 }

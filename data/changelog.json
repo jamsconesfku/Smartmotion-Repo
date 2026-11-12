@@ -234,5 +234,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-12",
+    "summary": "Version 1.15.0: real UK detail round Duxford, from free government data (Open Government Licence, credit only). An 8 km square round the airfield now has the Environment Agency's laser-scanned ground heights every 2 m, 44,000 real trees and hedgerow trees where they really stand at their real height, Ordnance Survey roads, water and building outlines drawn sharp, and a 1 m ground picture. The game now opens full screen with a new full-screen loading screen, and the menu has a new layout: the games along the top, options on the left, and a launch panel that says what you've picked. Frame rates and the look need checking on Sam's PC.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

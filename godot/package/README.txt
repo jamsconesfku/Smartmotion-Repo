@@ -158,6 +158,10 @@ MAP DATA AND TEXTURES (credits)
   provided under COPERNICUS by the European Union and ESA; all rights reserved.
   ESA WorldCover 2021 (c) ESA, CC BY 4.0.
   Buildings and runway (c) OpenStreetMap contributors, Overture Maps Foundation, ODbL
+  Contains Environment Agency information (c) Environment Agency and/or database right 2026 (LIDAR ground
+  heights and tree heights round the airfield), Open Government Licence v3.0
+  Contains OS data (c) Crown copyright and database right 2026 (OS OpenMap Local roads, water and building
+  outlines), Open Government Licence v3.0
   (the game's buildings file is available under the ODbL on request).
   Ground and building textures: ambientCG (CC0).
 

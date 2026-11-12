@@ -166,5 +166,29 @@
     "task": "",
     "notes": "Credits are shown in the game's Help screen and in the download's README.txt. Source: scripts/build_world_data.py (data) and godot/assets/textures (textures).",
     "updated": "2026-11-09"
+  },
+  {
+    "id": "LIC-15",
+    "software": "Environment Agency LIDAR (Composite DTM 1 m 2022, National LIDAR Programme vegetation heights and intensity 1 m)",
+    "use": "SmartMotion Flight native game graphics (the 8 km detail square round Duxford, v1.15.0)",
+    "commercial_route": "Open Government Licence v3.0: free for any use including commercial, no sign-up; only the credit \"Contains Environment Agency information © Environment Agency and/or database right 2026\" must be shown.",
+    "cost": "Free",
+    "status": "available",
+    "allowed_for_paid_use": "yes, with the credit shown",
+    "task": "",
+    "notes": "Credits are shown in the game's Controls screen and in the download's README.txt. Source: scripts/build_uk_detail.py.",
+    "updated": "2026-11-12"
+  },
+  {
+    "id": "LIC-16",
+    "software": "Ordnance Survey OS OpenMap Local (roads, water, building outlines)",
+    "use": "SmartMotion Flight native game graphics (the 8 km detail square round Duxford, v1.15.0)",
+    "commercial_route": "Open Government Licence v3.0: free for any use including commercial, no sign-up; only the credit \"Contains OS data © Crown copyright and database right 2026\" must be shown.",
+    "cost": "Free",
+    "status": "available",
+    "allowed_for_paid_use": "yes, with the credit shown",
+    "task": "",
+    "notes": "Credits are shown in the game's Controls screen and in the download's README.txt. Source: scripts/build_uk_detail.py.",
+    "updated": "2026-11-12"
   }
 ]

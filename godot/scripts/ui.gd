@@ -21,6 +21,9 @@ var root := Control.new()
 var loading: Control
 var load_bar: ProgressBar
 var load_msg: Label
+var load_pct: Label
+var load_tip: Label
+var tip_t := 0
 var menu: Control
 var hud: Control
 var pause_sheet: Control
@@ -76,6 +79,8 @@ var cap_speed: Label
 var cap_alt: Label
 var cap_hdg: Label
 var adi_slot: Control
+var launch_title: Label
+var launch_sum: Label
 const GAMES := {
 	"flight": ["Flight", "Fly the skies around Duxford in Skysmart's Bulldog or a WW2 fighter.", "Fly"],
 	"race": ["Racing", "Drive an open-wheel racing car round a 4 km circuit: race seven rivals or set a fast lap.", "Race"],
@@ -221,41 +226,86 @@ func set_seg(key: String, value) -> void:
 
 
 # ------------------------------------------------------------ loading
+const TIPS := [
+	"The ground is the real Duxford area: 1 m laser-scanned heights, real roads, woods and buildings.",
+	"Every tree and hedge near the airfield stands where the real one does, at its real height.",
+	"Pick the time of day and the weather in the menu: try Golden hour with Few clouds.",
+	"In VR, press B to recentre your view once you're sitting comfortably.",
+	"Easy mode sets full power for you. Pro mode is the real thing.",
+	"Fly over the racing circuit 2.5 km west of the runway, and the roller coaster beside the airfield.",
+]
+
+
+## Full-screen loading screen (v1.15.0): the whole window, with the logo, a wide progress bar and tips.
 func _build_loading() -> void:
-	loading = ColorRect.new()
-	(loading as ColorRect).color = NAVY
+	loading = TextureRect.new()
+	var gt := GradientTexture2D.new()
+	var gd := Gradient.new()
+	gd.set_color(0, Color("#0a0a52"))
+	gd.set_color(1, Color("#010118"))
+	gt.gradient = gd
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.42)
+	gt.fill_to = Vector2(1.15, 1.1)
+	(loading as TextureRect).texture = gt
+	(loading as TextureRect).expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	(loading as TextureRect).stretch_mode = TextureRect.STRETCH_SCALE
 	loading.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(loading)
+	# an orange band low across the screen, the brand accent
+	var band := ColorRect.new()
+	band.color = Color(1.0, 0.3, 0.0, 0.9)
+	band.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	band.offset_top = -6
+	loading.add_child(band)
 	var c := CenterContainer.new()
 	c.set_anchors_preset(Control.PRESET_FULL_RECT)
+	c.offset_bottom = -170
 	loading.add_child(c)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 14)
+	v.add_theme_constant_override("separation", 10)
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	c.add_child(v)
 	var lg := TextureRect.new()
 	lg.texture = logo_dark
-	lg.custom_minimum_size = Vector2(300, 120)
+	lg.custom_minimum_size = Vector2(640, 256)
 	lg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	lg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	v.add_child(lg)
-	var h := HBoxContainer.new()
-	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	h.add_child(_lbl("Smart", 60, Color.WHITE, true))
-	h.add_child(_lbl("Flight", 60, ORANGE, true))
-	v.add_child(h)
+	v.add_child(_lbl("FLY IT.  DRIVE IT.  FEEL IT.", 22, MUTED, true, HORIZONTAL_ALIGNMENT_CENTER))
+	# progress along the bottom, two-thirds of the width
+	var bottom := VBoxContainer.new()
+	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	bottom.anchor_left = 0.16
+	bottom.anchor_right = 0.84
+	bottom.offset_top = -150
+	bottom.offset_bottom = -50
+	bottom.add_theme_constant_override("separation", 12)
+	loading.add_child(bottom)
+	var row := HBoxContainer.new()
+	bottom.add_child(row)
+	load_msg = _lbl("Starting up…", 20, INK)
+	load_msg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(load_msg)
+	load_pct = _lbl("0%", 20, ORANGE, true)
+	row.add_child(load_pct)
 	load_bar = ProgressBar.new()
-	load_bar.custom_minimum_size = Vector2(360, 10)
+	load_bar.custom_minimum_size = Vector2(0, 12)
 	load_bar.show_percentage = false
 	load_bar.max_value = 1.0
-	v.add_child(load_bar)
-	load_msg = _lbl("Starting up…", 15, MUTED, false, HORIZONTAL_ALIGNMENT_CENTER)
-	v.add_child(load_msg)
+	bottom.add_child(load_bar)
+	load_tip = _lbl(TIPS[randi() % TIPS.size()], 16, MUTED, false, HORIZONTAL_ALIGNMENT_CENTER)
+	load_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	bottom.add_child(load_tip)
 
 
 func set_progress(p: float, msg: String) -> void:
 	load_bar.value = p
 	load_msg.text = msg + "…"
+	load_pct.text = "%d%%" % int(round(p * 100.0))
+	if Time.get_ticks_msec() - tip_t > 6000:
+		tip_t = Time.get_ticks_msec()
+		load_tip.text = TIPS[randi() % TIPS.size()]
 
 
 func show_loading() -> void:
@@ -267,43 +317,55 @@ func show_loading() -> void:
 
 # ------------------------------------------------------------ menu
 func _build_menu() -> void:
+	# v1.15.0 layout: a top bar (logo, the games, Controls / Settings / Quit), the chosen game's options on the
+	# left, and a launch panel at the bottom right (what you picked, Fly, VR). The 3D world shows in between.
 	menu = Control.new()
 	menu.set_anchors_preset(Control.PRESET_FULL_RECT)
 	menu.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(menu)
-	var m := MarginContainer.new()
-	m.set_anchors_preset(Control.PRESET_LEFT_WIDE)
-	m.add_theme_constant_override("margin_left", 24)
-	m.add_theme_constant_override("margin_top", 20)
-	m.add_theme_constant_override("margin_bottom", 20)
-	m.custom_minimum_size = Vector2(560, 0)
-	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	menu.add_child(m)
-	var panel := PanelContainer.new()
-	m.add_child(panel)
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	panel.add_child(scroll)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 7)
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(v)
+	# soft dark edges so the white text reads over any sky
+	for side in [0, 1]:
+		var shade := TextureRect.new()
+		var gt := GradientTexture2D.new()
+		var gd := Gradient.new()
+		gd.set_color(0, Color(0.004, 0.004, 0.12, 0.72))
+		gd.set_color(1, Color(0.004, 0.004, 0.12, 0.0))
+		gt.gradient = gd
+		gt.fill_to = Vector2(1, 0) if side == 0 else Vector2(0, 1)
+		shade.texture = gt
+		shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		shade.stretch_mode = TextureRect.STRETCH_SCALE
+		shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if side == 0:
+			shade.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+			shade.offset_right = 760
+		else:
+			shade.set_anchors_preset(Control.PRESET_TOP_WIDE)
+			shade.offset_bottom = 170
+		menu.add_child(shade)
+	# ---- top bar
+	var top := MarginContainer.new()
+	top.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	for k in ["margin_left", "margin_right"]:
+		top.add_theme_constant_override(k, 30)
+	top.add_theme_constant_override("margin_top", 20)
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	menu.add_child(top)
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 18)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.add_child(bar)
 	var lg := TextureRect.new()
 	lg.texture = logo_dark
-	lg.custom_minimum_size = Vector2(190, 64)
+	lg.custom_minimum_size = Vector2(170, 58)
 	lg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	lg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
-	v.add_child(lg)
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 0)
-	h.add_child(_lbl("Smart", 54, Color.WHITE, true))
-	title_b = _lbl("Flight", 54, ORANGE, true)
-	h.add_child(title_b)
-	v.add_child(h)
-	# the three games
+	lg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	bar.add_child(lg)
 	var gr := HBoxContainer.new()
-	gr.add_theme_constant_override("separation", 6)
-	v.add_child(gr)
+	gr.add_theme_constant_override("separation", 8)
+	gr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gr.alignment = BoxContainer.ALIGNMENT_CENTER
+	bar.add_child(gr)
 	var gg := ButtonGroup.new()
 	seg_buttons["game"] = []
 	for g in ["flight", "race", "space", "coaster"]:
@@ -311,50 +373,70 @@ func _build_menu() -> void:
 		b.text = GAMES[g][0]
 		b.toggle_mode = true
 		b.button_group = gg
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 50)
+		b.custom_minimum_size = Vector2(170, 56)
 		b.add_theme_font_override("font", ital)
-		b.add_theme_font_size_override("font_size", 24)
-		b.add_theme_stylebox_override("pressed", _sb(ORANGE, 12))
-		b.add_theme_stylebox_override("hover_pressed", _sb(ORANGE, 12))
+		b.add_theme_font_size_override("font_size", 27)
+		b.add_theme_stylebox_override("normal", _sb(Color(0.01, 0.01, 0.2, 0.55), 14, Color(1, 1, 1, 0.14), 1))
+		b.add_theme_stylebox_override("hover", _sb(Color(0.05, 0.05, 0.3, 0.75), 14, Color(1, 1, 1, 0.4), 1))
+		b.add_theme_stylebox_override("pressed", _sb(ORANGE, 14))
+		b.add_theme_stylebox_override("hover_pressed", _sb(Color("#ff6a24"), 14))
+		b.add_theme_color_override("font_color", INK)
 		b.add_theme_color_override("font_pressed_color", Color.WHITE)
 		b.add_theme_color_override("font_hover_pressed_color", Color.WHITE)
 		b.button_pressed = Settings.get_value("game") == g
 		b.pressed.connect(func(): setting_changed.emit("game", g))
 		gr.add_child(b)
 		seg_buttons["game"].append([g, b])
-	var rr := HBoxContainer.new()
-	rr.add_theme_constant_override("separation", 8)
-	v.add_child(rr)
-	rig_label = _lbl("", 14, INK)
-	rig_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rr.add_child(rig_label)
-	var chg := Button.new()
-	chg.text = "Change setup"
-	chg.add_theme_font_size_override("font_size", 14)
-	chg.pressed.connect(func(): show_lobby())
-	rr.add_child(chg)
-	setup_ctl_btn = Button.new()
-	setup_ctl_btn.text = "Set up controls"
-	setup_ctl_btn.add_theme_font_size_override("font_size", 14)
-	setup_ctl_btn.pressed.connect(func(): open_sheet(controls_sheet))
-	rr.add_child(setup_ctl_btn)
+	var tools := HBoxContainer.new()
+	tools.add_theme_constant_override("separation", 6)
+	bar.add_child(tools)
+	for spec in [["Controls", func(): open_sheet(help_sheet)], ["Settings", func(): open_sheet(settings_sheet)], ["Quit", func(): get_tree().quit()]]:
+		var tb := Button.new()
+		tb.text = spec[0]
+		tb.custom_minimum_size = Vector2(104, 46)
+		tb.add_theme_stylebox_override("normal", _sb(Color(0.01, 0.01, 0.2, 0.55), 12, Color(1, 1, 1, 0.14), 1))
+		tb.add_theme_color_override("font_color", INK)
+		tb.pressed.connect(spec[1])
+		tools.add_child(tb)
+	# ---- left: the chosen game's options
+	var lm := MarginContainer.new()
+	lm.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+	lm.add_theme_constant_override("margin_left", 30)
+	lm.add_theme_constant_override("margin_top", 104)
+	lm.add_theme_constant_override("margin_bottom", 92)
+	lm.custom_minimum_size = Vector2(590, 0)
+	lm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	menu.add_child(lm)
+	var panel := PanelContainer.new()
+	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	lm.add_child(panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 7)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_child(v)
+	title_b = _lbl("Flight", 48, Color.WHITE, true)
+	v.add_child(title_b)
 	subtitle = _lbl("", 15, MUTED)
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	subtitle.custom_minimum_size = Vector2(480, 0)
+	subtitle.custom_minimum_size = Vector2(500, 0)
 	v.add_child(subtitle)
+	v.add_child(_rule())
 	var fb := VBoxContainer.new()
 	fb.add_theme_constant_override("separation", 7)
 	v.add_child(fb)
 	mode_boxes["flight"] = fb
 	_section(fb, "Aircraft")
 	_seg(fb, "aircraft", [["bulldog", "Bulldog G-SMAT (trainer)"], ["fighter", "WW2 Fighter (fast)"]], Settings.get_value("aircraft"))
-	_section(fb, "Start")
-	_seg(fb, "start", [["runway", "On the runway"], ["air", "In the air"]], Settings.get_value("start"))
-	_section(fb, "Game")
-	_seg(fb, "mode", [["free", "Free flight"], ["gates", "Gate run"]], Settings.get_value("mode"))
-	_section(fb, "Wind")
-	_seg(fb, "wind", [["calm", "Calm"], ["breezy", "Breezy"]], Settings.get_value("wind"))
+	var fr := HBoxContainer.new()
+	fr.add_theme_constant_override("separation", 12)
+	fb.add_child(fr)
+	for spec in [["Start", "start", [["runway", "On the runway"], ["air", "In the air"]]], ["Game", "mode", [["free", "Free flight"], ["gates", "Gate run"]]]]:
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 7)
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		fr.add_child(col)
+		_section(col, spec[0])
+		_seg(col, spec[1], spec[2], Settings.get_value(spec[1]))
 	var rb := VBoxContainer.new()
 	rb.add_theme_constant_override("separation", 7)
 	v.add_child(rb)
@@ -369,13 +451,39 @@ func _build_menu() -> void:
 	tod_box = VBoxContainer.new()
 	tod_box.add_theme_constant_override("separation", 7)
 	v.add_child(tod_box)
+	tod_box.add_child(_rule())
 	_section(tod_box, "Time of day")
 	_seg(tod_box, "tod", [["morning", "Morning"], ["day", "Midday"], ["golden", "Golden hour"], ["sunset", "Sunset"]], Settings.get_value("tod"))
 	_section(tod_box, "Weather")
 	_seg(tod_box, "weather", [["clear", "Clear"], ["few", "Few clouds"], ["scattered", "Scattered"], ["broken", "Broken"], ["overcast", "Overcast"]], Settings.get_value("weather"))
+	var wb := VBoxContainer.new()
+	wb.add_theme_constant_override("separation", 7)
+	fb.add_child(wb)
+	_section(wb, "Wind")
+	_seg(wb, "wind", [["calm", "Calm"], ["breezy", "Breezy"]], Settings.get_value("wind"))
+	# ---- bottom right: launch panel
+	var go := PanelContainer.new()
+	go.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	go.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	go.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	go.offset_right = -30
+	go.offset_bottom = -30
+	go.custom_minimum_size = Vector2(470, 0)
+	menu.add_child(go)
+	var gv := VBoxContainer.new()
+	gv.add_theme_constant_override("separation", 10)
+	go.add_child(gv)
+	launch_title = _lbl("", 30, Color.WHITE, true)
+	gv.add_child(launch_title)
+	launch_sum = _lbl("", 15, MUTED)
+	launch_sum.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	launch_sum.custom_minimum_size = Vector2(430, 0)
+	gv.add_child(launch_sum)
 	var fly := _big_button("Fly", true)
+	fly.custom_minimum_size = Vector2(0, 64)
+	fly.add_theme_font_size_override("font_size", 32)
 	fly.pressed.connect(func(): fly_pressed.emit(false))
-	v.add_child(fly)
+	gv.add_child(fly)
 	fly_btn = fly
 	vr_btn = _big_button("Play in VR (Meta Quest)", false)
 	vr_btn.add_theme_font_size_override("font_size", 20)
@@ -385,41 +493,93 @@ func _build_menu() -> void:
 			vr_action.emit("exit")
 		else:
 			fly_pressed.emit(true))
-	v.add_child(vr_btn)
+	gv.add_child(vr_btn)
 	vr_note = _lbl("", 14, Color("#ffb347"))
 	vr_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vr_note.custom_minimum_size = Vector2(480, 0)
+	vr_note.custom_minimum_size = Vector2(430, 0)
 	vr_note.visible = false
-	v.add_child(vr_note)
+	gv.add_child(vr_note)
+	# ---- bottom left: how the simulator is set up, help, graphics card
+	var foot := VBoxContainer.new()
+	foot.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	foot.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	foot.offset_left = 30
+	foot.offset_bottom = -22
+	foot.add_theme_constant_override("separation", 6)
+	foot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	menu.add_child(foot)
+	var rr := HBoxContainer.new()
+	rr.add_theme_constant_override("separation", 8)
+	foot.add_child(rr)
+	rig_label = _lbl("", 14, INK)
+	rr.add_child(rig_label)
+	var chg := Button.new()
+	chg.text = "Change setup"
+	chg.add_theme_font_size_override("font_size", 14)
+	chg.pressed.connect(func(): show_lobby())
+	rr.add_child(chg)
+	setup_ctl_btn = Button.new()
+	setup_ctl_btn.text = "Set up controls"
+	setup_ctl_btn.add_theme_font_size_override("font_size", 14)
+	setup_ctl_btn.pressed.connect(func(): open_sheet(controls_sheet))
+	rr.add_child(setup_ctl_btn)
 	var diag_btn := Button.new()
-	diag_btn.text = "Copy diagnostics (paste to Claude if something doesn't work)"
+	diag_btn.text = "Copy diagnostics"
+	diag_btn.tooltip_text = "Copies a report to paste to Claude if something doesn't work"
 	diag_btn.add_theme_font_size_override("font_size", 14)
 	diag_btn.pressed.connect(func(): diag_pressed.emit())
-	v.add_child(diag_btn)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	var hb := Button.new()
-	hb.text = "Controls"
-	hb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hb.pressed.connect(func(): open_sheet(help_sheet))
-	row.add_child(hb)
-	var sb := Button.new()
-	sb.text = "Settings"
-	sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sb.pressed.connect(func(): open_sheet(settings_sheet))
-	row.add_child(sb)
-	var qb := Button.new()
-	qb.text = "Quit"
-	qb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	qb.pressed.connect(func(): get_tree().quit())
-	row.add_child(qb)
-	v.add_child(row)
-	gpu_label = _lbl("", 12, MUTED)
+	rr.add_child(diag_btn)
+	for fbtn in [chg, setup_ctl_btn, diag_btn]:
+		fbtn.add_theme_stylebox_override("normal", _sb(Color(0.01, 0.01, 0.2, 0.6), 10, Color(1, 1, 1, 0.14), 1))
+		fbtn.add_theme_color_override("font_color", INK)
+	gpu_label = _lbl("", 12, INK)
 	gpu_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	gpu_label.custom_minimum_size = Vector2(480, 0)
-	v.add_child(gpu_label)
+	gpu_label.custom_minimum_size = Vector2(700, 0)
+	gpu_label.add_theme_color_override("font_outline_color", Color(0, 0, 0.1, 0.8))
+	gpu_label.add_theme_constant_override("outline_size", 4)
+	rig_label.add_theme_color_override("font_outline_color", Color(0, 0, 0.1, 0.8))
+	rig_label.add_theme_constant_override("outline_size", 4)
+	foot.add_child(gpu_label)
+	setting_changed.connect(func(_k, _v): _refresh_summary.call_deferred())
 	set_game(str(Settings.get_value("game")))
 	set_rig(str(Settings.get_value("rig")))
+
+
+func _rule() -> Control:
+	var r := ColorRect.new()
+	r.color = Color(1, 1, 1, 0.12)
+	r.custom_minimum_size = Vector2(0, 1)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return r
+
+
+## The launch panel's line: what you've picked, in words ("Bulldog G-SMAT · on the runway · Midday, scattered cloud").
+func _refresh_summary() -> void:
+	if launch_sum == null:
+		return
+	var g := str(Settings.get_value("game"))
+	var pick := func(key: String) -> String:
+		for e in seg_buttons.get(key, []):
+			if str(e[0]) == str(Settings.get_value(key)):
+				return (e[1] as Button).text
+		return ""
+	var parts: Array = []
+	var more: Array = []
+	match g:
+		"flight":
+			parts = [pick.call("aircraft"), pick.call("start"), pick.call("mode"), pick.call("wind") + " wind"]
+		"race":
+			parts = [pick.call("race")]
+		"space":
+			parts = ["Waves of drones round the station"]
+		"coaster":
+			parts = ["1 km of track, 104 km/h, up to 3 g"]
+	if g != "coaster":
+		more.append(pick.call("assist"))
+	if g != "space":
+		more.append("%s, %s" % [pick.call("tod"), pick.call("weather").to_lower()])
+	launch_title.text = {"flight": "Ready to fly", "race": "Ready to race", "space": "Ready for launch", "coaster": "Ready to ride"}.get(g, "Ready")
+	launch_sum.text = "  ·  ".join(parts) + ("\n" + "  ·  ".join(more) if not more.is_empty() else "")
 
 
 ## Shows the options for the chosen game (Flight, Racing or Space).
@@ -427,7 +587,7 @@ func set_game(g: String) -> void:
 	if not GAMES.has(g):
 		g = "flight"
 	title_b.text = GAMES[g][0]
-	subtitle.text = GAMES[g][1] + " On your gaming laptop, and in VR on a Meta Quest."
+	subtitle.text = GAMES[g][1]
 	fly_btn.text = GAMES[g][2]
 	for k in mode_boxes.keys():
 		(mode_boxes[k] as Control).visible = k == g
@@ -440,6 +600,7 @@ func set_game(g: String) -> void:
 		again_btn.text = {"flight": "Fly again", "race": "Race again", "space": "Play again", "coaster": "Ride again"}[g]
 	if cap_speed != null:
 		set_hud_kind(g)
+	_refresh_summary()
 
 
 ## The speed, height and heading boxes show different things in each game.
@@ -477,7 +638,7 @@ func show_lobby() -> void:
 
 func _build_lobby() -> void:
 	lobby = ColorRect.new()
-	(lobby as ColorRect).color = Color(0.004, 0.004, 0.13, 0.94)
+	(lobby as ColorRect).color = Color(0.004, 0.004, 0.13, 0.985)
 	lobby.set_anchors_preset(Control.PRESET_FULL_RECT)
 	lobby.visible = false
 	root.add_child(lobby)
@@ -820,7 +981,7 @@ func _build_sheets() -> void:
 	txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	txt.custom_minimum_size = Vector2(480, 0)
 	v.add_child(txt)
-	var cred := _lbl("MAP DATA: Contains modified Copernicus Sentinel data 2023. Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. ESA WorldCover 2021 © ESA (CC BY 4.0). Buildings © OpenStreetMap contributors, Overture Maps Foundation (ODbL). Textures: ambientCG (CC0).", 11, MUTED)
+	var cred := _lbl("MAP DATA: Contains modified Copernicus Sentinel data 2023. Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. ESA WorldCover 2021 © ESA (CC BY 4.0). Buildings © OpenStreetMap contributors, Overture Maps Foundation (ODbL). Contains Environment Agency information © Environment Agency and/or database right 2026 (LIDAR heights, trees). Contains OS data © Crown copyright and database right 2026 (roads, water, buildings). Both under the Open Government Licence v3.0. Textures: ambientCG (CC0).", 11, MUTED)
 	cred.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	cred.custom_minimum_size = Vector2(480, 0)
 	v.add_child(cred)

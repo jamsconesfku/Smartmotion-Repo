@@ -21,12 +21,16 @@ uniform float blade_h = 0.32;
 uniform float wind = 1.0;
 uniform float exposure = 1.12;
 
+#include "res://shaders/detail.gdshaderinc"
+
 varying vec3 v_col;
 varying float v_t;
 
 float hgt(vec2 xz) {
 	vec2 uv = (xz / cell + size_cells * 0.5 + 0.5) / size_cells;
-	return texture(heightmap, uv).r;
+	float h = textureLod(heightmap, uv, 0.0).r;
+	float w = d_weight(xz);
+	return w > 0.0 ? mix(h, d_height(xz), w) : h;
 }
 float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
@@ -47,6 +51,15 @@ void vertex() {
 	float ru = dot(base, rd); float rv = dot(base, rp);
 	float runway = (1.0 - step(rw.z * 0.5 + 3.0, abs(ru))) * (1.0 - step(rw.w * 0.5 + 2.5, abs(rv)));
 	float rm = textureLod(roofmask, ouv, 0.0).r;
+	float dw = d_weight(base);
+	if (dw > 0.0) {
+		// in the detail square: no grass on the roads, in water, under buildings or under the trees
+		vec4 dm = textureLod(detail_mask, d_uv(base), 0.0);
+		rm = max(rm, dm.a * dw);
+		lc.b = max(lc.b, dm.b * dw);
+		built = max(built, dm.g * dw);
+		photo = mix(photo, textureLod(detail_photo, d_uv(base), 0.0).rgb, dw);
+	}
 	float grow = max(green, lc.a) * (1.0 - built) * (1.0 - runway) * clamp(1.0 - rm * 2.5, 0.0, 1.0) * clamp(1.0 - lc.b * 2.0, 0.0, 1.0);
 	grow = smoothstep(0.35, 0.8, grow) * (1.0 - smoothstep(radius * 0.55, radius, r));
 	float s = grow * (0.55 + 0.75 * h21(ci + 3.17));

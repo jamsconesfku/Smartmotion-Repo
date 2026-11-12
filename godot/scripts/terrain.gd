@@ -15,12 +15,21 @@ const RW_LEN := 1448.0
 const RW_WIDTH := 46.0
 const RW_ELEV := 33.5
 const HEIGHT_FILE := "res://assets/world/height.bin"
+## v1.15.0: an 8,192 m square round the airfield has the Environment Agency's LIDAR ground at 2 m
+## (assets/world/detail_h.png, made by scripts/build_uk_detail.py). It fades into the 32 m map over the last 400 m.
+const DETAIL_FILE := "res://assets/world/detail_h.png"
+const D_HALF := 4096.0
+const D_PX := 4096
+const D_CELL := 2.0
+const D_FADE := 400.0
 
 var dir := Vector2(sin(RW_HEADING), -cos(RW_HEADING))
 var perp := Vector2(cos(RW_HEADING), sin(RW_HEADING))   # to the right of the runway direction (south-east)
 var data := PackedFloat32Array()
 var colliders: Array = []   ## buildings near the aircraft (refreshed by the world as it moves)
 var real := false           ## true when the real height data loaded
+var detail := PackedByteArray()   ## detail heights, 3 bytes a sample (high byte, low byte, unused)
+var has_detail := false
 
 ## runway frame: u along 062, v to the right. kind: hangar | bighangar | tower
 const BUILDINGS := []   ## the real hangars and buildings now come from assets/world/buildings.bin
@@ -65,6 +74,40 @@ const SIGNS := [
 func _init() -> void:
 	if not _load_heightmap():
 		_build_heightmap()
+	elif ResourceLoader.exists(DETAIL_FILE):
+		var tex: Texture2D = load(DETAIL_FILE)
+		var img := tex.get_image() if tex != null else null
+		if img != null and img.get_width() == D_PX:
+			if img.get_format() != Image.FORMAT_RGB8:
+				img.convert(Image.FORMAT_RGB8)
+			detail = img.get_data()
+			has_detail = true
+
+
+## One detail sample (metres), clamped to the square.
+func _dh(i: int, j: int) -> float:
+	var o := (clampi(j, 0, D_PX - 1) * D_PX + clampi(i, 0, D_PX - 1)) * 3
+	return (detail[o] * 256 + detail[o + 1]) / 100.0 - 100.0
+
+
+## How much the detail heights count at (x, z): 1 inside, fading to 0 at the edge of the square.
+static func detail_weight(x: float, z: float) -> float:
+	var e := maxf(absf(x), absf(z))
+	return 1.0 - _sstep(D_HALF - D_FADE, D_HALF - D_CELL, e)
+
+
+func _detail_height(x: float, z: float) -> float:
+	var gx := (x + D_HALF) / D_CELL
+	var gz := (z + D_HALF) / D_CELL
+	var i0 := int(floor(gx))
+	var j0 := int(floor(gz))
+	var fx := gx - i0
+	var fz := gz - j0
+	var h00 := _dh(i0, j0)
+	var h10 := _dh(i0 + 1, j0)
+	var h01 := _dh(i0, j0 + 1)
+	var h11 := _dh(i0 + 1, j0 + 1)
+	return h00 + (h10 - h00) * fx + (h01 - h00) * fz + (h00 - h10 - h01 + h11) * fx * fz
 
 
 func to_runway(x: float, z: float) -> Vector2:
@@ -114,6 +157,16 @@ func _build_heightmap() -> void:
 
 
 func height(x: float, z: float) -> float:
+	if has_detail:
+		var w := detail_weight(x, z)
+		if w >= 1.0:
+			return _detail_height(x, z)
+		if w > 0.0:
+			return lerpf(coarse_height(x, z), _detail_height(x, z), w)
+	return coarse_height(x, z)
+
+
+func coarse_height(x: float, z: float) -> float:
 	var gx := x / CELL + SIZE / 2.0
 	var gz := z / CELL + SIZE / 2.0
 	var i0 := int(floor(gx))

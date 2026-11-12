@@ -41,6 +41,7 @@ var sign_cache := {}
 var _vp_counter := 0
 var scenery: RealScenery
 var ortho_tex: Texture2D
+var detail_tex := {}          # the LIDAR detail square's textures (empty when the files are missing)
 var focus := Vector2.ZERO
 var focus_agl := 0.0   ## the aircraft's height above the ground (no building checks when far above the roofs)
 var _coll_t := 0.0
@@ -563,6 +564,12 @@ func _ground() -> void:
 	var shader: Shader = load("res://shaders/ground.gdshader")
 	var cells := [8.0, 32.0, 128.0, 512.0, 2048.0]
 	var biases := [0.0, -0.6, -2.0, -4.0, -8.0]
+	if terrain.has_detail:
+		# a 2 m ring round the camera, so the LIDAR ditches, banks and field edges have real shape up close
+		cells.push_front(2.0)
+		biases.push_front(0.0)
+		detail_tex = {"detail_h": load("res://assets/world/detail_h.png"), "detail_photo": load("res://assets/world/detail_photo.jpg"),
+			"detail_mask": load("res://assets/world/detail_mask.png")}
 	var n := 128
 	for k in cells.size():
 		var cell: float = cells[k]
@@ -585,6 +592,7 @@ func _ground() -> void:
 		mat.set_shader_parameter("y_bias", biases[k])
 		mat.set_shader_parameter("rw", Vector4(terrain.dir.x, terrain.dir.y, Terrain.RW_LEN, Terrain.RW_WIDTH))
 		mat.set_shader_parameter("roofmask", roof_tex)
+		_set_detail(mat)
 		if "--ground_debug" in OS.get_cmdline_user_args():
 			mat.set_shader_parameter("debug_view", 1)
 		ground_mats.append(mat)
@@ -595,6 +603,14 @@ func _ground() -> void:
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if k > 1 else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		add_child(mi)
 		rings.append({"node": mi, "snap": cell * 2.0})
+
+
+## The detail square's textures on a ground or grass material (v1.15.0).
+func _set_detail(mat: ShaderMaterial) -> void:
+	mat.set_shader_parameter("has_detail", not detail_tex.is_empty())
+	for k in detail_tex:
+		mat.set_shader_parameter(k, detail_tex[k])
+	mat.set_shader_parameter("d_half", Terrain.D_HALF)
 
 
 func follow(cam_pos: Vector3) -> void:
@@ -647,6 +663,7 @@ func _grass() -> void:
 	grass_mat.set_shader_parameter("ortho", ortho_tex)
 	grass_mat.set_shader_parameter("landcover", load("res://assets/world/landcover.png"))
 	grass_mat.set_shader_parameter("roofmask", load("res://assets/world/roofmask.png"))
+	_set_detail(grass_mat)
 	grass_mat.set_shader_parameter("cell", Terrain.CELL)
 	grass_mat.set_shader_parameter("size_cells", float(Terrain.SIZE))
 	grass_mat.set_shader_parameter("half_size", Terrain.LEN / 2.0)
@@ -980,17 +997,28 @@ func _runway_decal() -> void:
 	m.alpha_scissor_threshold = 0.4
 	m.roughness = 0.9
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	# draped over the real ground (v1.15.0: the LIDAR runway isn't perfectly flat): a strip of quads every 6 m
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var nu := int(L / 6.0)
+	var nv := 6
+	var vert := func(iu: int, iv: int) -> void:
+		var du := -L / 2.0 + L * iu / nu
+		var dv := -wm / 2.0 + wm * iv / nv
+		var xz := terrain.from_runway(du, dv)
+		st.set_uv(Vector2((dv + wm / 2.0) / wm, (L / 2.0 - du) / L))
+		st.set_normal(Vector3.UP)
+		st.add_vertex(Vector3(xz.x, terrain.height(xz.x, xz.y) + 0.08, xz.y))
+	for iu in nu:
+		for iv in nv:
+			for q in [[0, 0], [1, 0], [1, 1], [0, 0], [1, 1], [0, 1]]:
+				vert.call(iu + q[0], iv + q[1])
 	var mi := MeshInstance3D.new()
-	var pl := PlaneMesh.new()
-	pl.size = Vector2(wm, L)   # x across, z along
-	mi.mesh = pl
+	mi.mesh = st.commit()
 	mi.material_override = m
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var g := Node3D.new()
-	g.add_child(mi)
-	mi.rotation.y = PI / 2.0   # plane z axis -> along the runway (local x of the placed node)
-	mi.scale = Vector3(1, 1, -1)
-	_place(g, 0.0, 0.0, 0.1)
+	add_child(mi)
 	for e in [[-1.0, "06"], [1.0, "24"]]:
 		var lb := Label3D.new()
 		lb.text = e[1]

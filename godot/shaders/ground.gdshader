@@ -33,6 +33,8 @@ uniform float cloud_scale = 1.0;
 uniform float cloud_cover = 0.5;
 uniform vec2 shadow_shift = vec2(0.0);   // where the cloud above a point is, along the sun direction
 
+#include "res://shaders/detail.gdshaderinc"
+
 varying vec3 v_world;
 
 float h21g(vec2 q) { return fract(sin(dot(q, vec2(127.1, 311.7))) * 43758.5453); }
@@ -41,9 +43,14 @@ float vnoise(vec2 q) {
 	return mix(mix(h21g(i), h21g(i + vec2(1.0, 0.0)), f.x), mix(h21g(i + vec2(0.0, 1.0)), h21g(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
-float hgt(vec2 xz) {
+float hgt_coarse(vec2 xz) {
 	vec2 uv = (xz / cell + size_cells * 0.5 + 0.5) / size_cells;
 	return texture(heightmap, uv).r;
+}
+float hgt(vec2 xz) {
+	float h = hgt_coarse(xz);
+	float w = d_weight(xz);
+	return w > 0.0 ? mix(h, d_height(xz), w) : h;
 }
 
 void vertex() {
@@ -103,6 +110,7 @@ void fragment() {
 	// triangles) used to light whole hillsides flat; now every valley and ridge is shaded as on the map
 	{
 		float e = cell;
+		if (d_weight(p) > 0.0) e = clamp(dist * 0.0035, 2.0, max(cell, 2.0));
 		float hl = hgt(p - vec2(e, 0.0)); float hr = hgt(p + vec2(e, 0.0));
 		float hu = hgt(p - vec2(0.0, e)); float hd = hgt(p + vec2(0.0, e));
 		vec3 nw = normalize(vec3(hl - hr, 2.0 * e, hu - hd));
@@ -117,15 +125,27 @@ void fragment() {
 	float inside = 1.0 - smoothstep(half_size - 1800.0, half_size - 150.0, edge);
 
 	vec3 photo = texture(ortho, ouv).rgb;
-	if (dist < 1800.0 && inside > 0.99) {
-		photo = mix(bicubic(ortho, ouv, 4096.0), photo, smoothstep(1200.0, 1800.0, dist));
+	float dw = d_weight(p);
+	vec4 dm = vec4(0.0);
+	if (dw < 1.0) {
+		if (dist < 1800.0 && inside > 0.99) {
+			photo = mix(bicubic(ortho, ouv, 4096.0), photo, smoothstep(1200.0, 1800.0, dist));
+		}
+		// close up: sharpen the 10 m photo a little (hedges, tracks and field edges read crisper)
+		float near = 1.0 - smoothstep(600.0, 2600.0, dist);
+		vec3 soft = textureLod(ortho, ouv, 2.0).rgb;
+		photo = max(photo + (photo - soft) * 0.45 * near, vec3(0.0));
 	}
-	// close up: sharpen the 10 m photo a little (hedges, tracks and field edges read crisper)
-	float near = 1.0 - smoothstep(600.0, 2600.0, dist);
-	vec3 soft = textureLod(ortho, ouv, 2.0).rgb;
-	photo = max(photo + (photo - soft) * 0.45 * near, vec3(0.0));
+	if (dw > 0.0) {
+		// the 1 m picture: real tree crowns, roads, water and field texture (EA LIDAR and OS OpenMap Local)
+		vec2 duv = d_uv(p);
+		photo = mix(photo, texture(detail_photo, duv).rgb, dw);
+		dm = texture(detail_mask, duv);
+	}
 	// the 3D buildings stand here: paint over the photo's blurry roofs with garden and street colours
-	float rm = texture(roofmask, ouv).r * inside * (1.0 - smoothstep(roof_fade * 0.8, roof_fade, dist));
+	// (in the detail square the sharp OS outline, where the 3D buildings' own map has a building too)
+	float rm0 = texture(roofmask, ouv).r;
+	float rm = mix(rm0, dm.a * smoothstep(0.1, 0.4, rm0), dw) * inside * (1.0 - smoothstep(roof_fade * 0.8, roof_fade, dist));
 	if (rm > 0.01) {
 		vec3 around = textureLod(ortho, ouv, 4.0).rgb;
 		vec3 yard = mix(around * vec3(0.78, 0.9, 0.72), vec3(0.11, 0.15, 0.08), 0.45);
@@ -138,12 +158,16 @@ void fragment() {
 	vec3 farc = texture(far_map, p / far_size + 0.5).rgb;
 	vec3 col = mix(farc, photo, inside);
 	vec4 lc = texture(landcover, ouv) * inside;
+	lc.r = mix(lc.r, dm.r, dw);
+	lc.b = mix(lc.b, dm.b, dw);
+	float road = dm.g * dw;
 
 	// runway: real tarmac colour, cleaner than the 10 m photo
 	vec2 rd = rw.xy; vec2 rp = vec2(-rd.y, rd.x);
 	float ru = dot(p, rd); float rv = dot(p, rp);
 	float runway = (1.0 - smoothstep(rw.z * 0.5 - 2.0, rw.z * 0.5 + 2.0, abs(ru))) * (1.0 - smoothstep(rw.w * 0.5 - 0.5, rw.w * 0.5 + 1.5, abs(rv)));
 	col = mix(col, vec3(0.20, 0.205, 0.21), runway * 0.85);
+	runway = max(runway, road);   // roads get the tarmac texture too (their colour is already in the picture)
 
 	// what kind of surface: green plants, bare/ripe fields, built-up, tarmac
 	float green = clamp((col.g - max(col.r, col.b)) * 9.0 + 0.3, 0.0, 1.0);
@@ -191,8 +215,8 @@ void fragment() {
 		NORMAL_MAP = n;
 		NORMAL_MAP_DEPTH = 1.2 * fade;
 	}
-	// woods read darker from above; the 3D trees stand on top of them nearby
-	col *= 1.0 - 0.12 * lc.r;
+	// woods read darker from above; the 3D trees stand on top of them nearby (the 1 m picture has them already)
+	col *= 1.0 - 0.12 * lc.r * (1.0 - dw);
 
 	// water: dark, glassy, rippling
 	float water = smoothstep(0.35, 0.7, lc.b);

@@ -41,6 +41,7 @@ func setup(terrain_: Terrain, quality_: String, ortho: Texture2D) -> void:
 	near_tree_range = {"low": 600.0, "medium": 900.0, "high": 1300.0}.get(quality, 900.0)
 	tree_density = {"low": 0.35, "medium": 0.6, "high": 1.0}.get(quality, 0.6)
 	_load_buildings()
+	_load_trees()
 	var lc: Texture2D = load("res://assets/world/landcover.png")
 	if lc != null:
 		var img := lc.get_image()
@@ -131,6 +132,41 @@ func _load_buildings() -> void:
 			bld[key] = []
 		bld[key].append([pts, h, kind])
 	total_buildings = n
+
+
+## v1.15.0: the real trees in the 8 km detail square round the airfield, found in the Environment Agency's LIDAR
+## vegetation heights (assets/world/trees.bin, scripts/build_uk_detail.py): every tree and hedgerow tree where
+## it really stands, at its real height. The detail square is exactly the 1 km squares 12-19 on each side.
+var real_trees := {}                  ## Vector2i square -> PackedFloat32Array [x, z, height, crown radius, ...]
+var total_real_trees := 0
+
+func _load_trees() -> void:
+	var f := FileAccess.open("res://assets/world/trees.bin", FileAccess.READ)
+	if f == null:
+		return
+	var buf := f.get_buffer(f.get_length())
+	var n := buf.decode_u32(0)
+	var o := 4
+	for i in n:
+		var x := buf.decode_s16(o) / 4.0
+		var z := buf.decode_s16(o + 2) / 4.0
+		var h := buf.decode_u8(o + 4) / 5.0
+		var r := buf.decode_u8(o + 5) / 20.0
+		o += 6
+		var key := _chunk_of(Vector2(x, z))
+		if not real_trees.has(key):
+			real_trees[key] = PackedFloat32Array()
+		var a: PackedFloat32Array = real_trees[key]
+		a.append_array([x, z, h, r])
+		real_trees[key] = a
+	total_real_trees = n
+
+
+## True for the 1 km squares that use the real LIDAR trees.
+func in_detail(c: Vector2i) -> bool:
+	var lo := int((HALF - Terrain.D_HALF) / CHUNK)
+	var hi := int((HALF + Terrain.D_HALF) / CHUNK)
+	return total_real_trees > 0 and c.x >= lo and c.x < hi and c.y >= lo and c.y < hi
 
 
 func _chunk_of(p: Vector2) -> Vector2i:
@@ -471,6 +507,13 @@ func _tree_data(c: Vector2i) -> PackedFloat32Array:
 	var buf := PackedFloat32Array()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = c.x * 7919 + c.y * 104729
+	if in_detail(c):
+		var a: PackedFloat32Array = real_trees.get(c, PackedFloat32Array())
+		for i in range(0, a.size(), 4):
+			if tree_density < 1.0 and rng.randf() > tree_density * 1.2:
+				continue
+			_real_tree(buf, rng, a[i], a[i + 1], a[i + 2], a[i + 3])
+		return buf
 	var px0 := c.x * int(CHUNK / 8.0)
 	var py0 := c.y * int(CHUNK / 8.0)
 	var span := int(CHUNK / 8.0)
@@ -496,6 +539,16 @@ func _one_tree(buf: PackedFloat32Array, rng: RandomNumberGenerator, x: int, y: i
 	var w := h * (0.55 + rng.randf() * 0.25)
 	var bs := Basis.from_euler(Vector3((rng.randf() - 0.5) * 0.08, rng.randf() * TAU, (rng.randf() - 0.5) * 0.08)).scaled(Vector3(w, h, w))
 	var org := Vector3(wx, terrain.height(wx, wz) - 0.4, wz)
+	var g := rng.randf()
+	var col := Color(0.16, 0.27, 0.10).lerp(Color(0.30, 0.40, 0.15), g).lerp(Color(0.36, 0.34, 0.16), rng.randf() * 0.25).srgb_to_linear()
+	buf.append_array([bs.x.x, bs.y.x, bs.z.x, org.x, bs.x.y, bs.y.y, bs.z.y, org.y, bs.x.z, bs.y.z, bs.z.z, org.z, col.r, col.g, col.b, col.a])
+
+
+## One real tree: its height from the LIDAR, its crown as wide as the LIDAR saw, a random lean and colour.
+func _real_tree(buf: PackedFloat32Array, rng: RandomNumberGenerator, wx: float, wz: float, h: float, r: float) -> void:
+	var w := clampf(r * 2.0, h * 0.45, h * 1.1)
+	var bs := Basis.from_euler(Vector3((rng.randf() - 0.5) * 0.08, rng.randf() * TAU, (rng.randf() - 0.5) * 0.08)).scaled(Vector3(w, h, w))
+	var org := Vector3(wx, terrain.height(wx, wz) - 0.3, wz)
 	var g := rng.randf()
 	var col := Color(0.16, 0.27, 0.10).lerp(Color(0.30, 0.40, 0.15), g).lerp(Color(0.36, 0.34, 0.16), rng.randf() * 0.25).srgb_to_linear()
 	buf.append_array([bs.x.x, bs.y.x, bs.z.x, org.x, bs.x.y, bs.y.y, bs.z.y, org.y, bs.x.z, bs.y.z, bs.z.z, org.z, col.r, col.g, col.b, col.a])

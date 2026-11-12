@@ -4,7 +4,7 @@ extends Node
 const PATH := "user://settings.cfg"
 var data := {
 	"aircraft": "bulldog", "start": "runway", "mode": "free", "assist": true, "tod": "day", "wind": "calm",
-	"invert": false, "invert_roll": false, "invert_yaw": false, "sound": true, "quality": "high", "tel": false, "tel_host": "127.0.0.1", "tel_port": 4123, "fullscreen": false,
+	"invert": false, "invert_roll": false, "invert_yaw": false, "sound": true, "quality": "high", "tel": false, "tel_host": "127.0.0.1", "tel_port": 4123, "fullscreen": true,
 	"clouds3d": true, "view": "normal",
 	"aa": "taa", "weather": "scattered", "brightness": "normal", "grass": true, "show_fps": false, "vsync": true,
 	"flypt": true, "flypt_port": 49000, "flypt_out": 49001,
@@ -17,6 +17,9 @@ func _ready() -> void:
 		for k in data.keys():
 			if cf.has_section_key("s", k):
 				data[k] = cf.get_value("s", k)
+	if not cf.has_section_key("s", "fs_default"):
+		data["fullscreen"] = true   # v1.15.0: the game now starts full screen (it used to open in a window in the middle)
+	data["fs_default"] = 1
 	if data["aircraft"] == "trainer":
 		data["aircraft"] = "bulldog"   # the Bulldog replaced the light trainer in v1.6.0
 

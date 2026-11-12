@@ -91,7 +91,10 @@ func _initialize() -> void:
 		run(fm, 22.0, func(t, _m): return {"pitch": -0.4 if t < 3.0 else 0.15, "roll": 0.0, "yaw": 0.0, "throttle": 1.0})
 		check("recovers with stick forward and power", not fm.crashed and not fm.i["stall"], "%d kt, %d m AGL" % [fm.i["ias"] * KT, fm.i["alt_agl"]])
 
-		var lxz := terrain.from_runway(-2900.0, 0.0)
+		# the fighter is faster and floats further: it starts its approach 1,000 m further back so it touches down
+		# on the runway, early enough to stop on it (it needs about 900 m: until v1.15.0 it landed past the far end and rolled on over flat ground that isn't there:
+		# the real M11 cutting is just beyond the 24 end)
+		var lxz := terrain.from_runway(-3900.0 if key == "fighter" else -2900.0, 0.0)
 		fm = start(key, {"x": lxz.x, "z": lxz.y, "airborne": true, "agl": 150.0, "speed": sp["vr"] * 1.5, "heading": Terrain.RW_HEADING_DEG})
 		var td := {}
 		var v_app: float = sp["vr"] * 1.4
@@ -114,6 +117,7 @@ func _initialize() -> void:
 					td["ias"] = m.i["ias"]
 					td["u"] = terrain.to_runway(m.pos.x, m.pos.z).x)
 		check("lands without crashing", not fm.crashed and not td.is_empty(), "touchdown at u=%d m, %d kt, sink %d fpm" % [td.get("u", 0), td.get("ias", 0) * KT, td.get("sink", 0) * 196.85])
+		check("touches down on the runway", not td.is_empty() and absf(float(td.get("u", 9999.0))) < Terrain.RW_LEN / 2.0, "u=%d m (runway ends at +-%d m)" % [td.get("u", 0), Terrain.RW_LEN / 2.0])
 		check("comes to a stop", not fm.crashed and fm.i["gs"] < 3.0, "ground speed %.1f kt" % [fm.i["gs"] * KT])
 	print("\n%s" % ("%d check(s) failed" % fails if fails > 0 else "All checks passed"))
 	quit(1 if fails > 0 else 0)
