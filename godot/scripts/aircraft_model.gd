@@ -325,6 +325,19 @@ func update_visuals(surf: Dictionary, engine: float, dt: float, ias: float) -> v
 		bulldog.animate(ctl, dt)
 
 
+## Shows or parks this aircraft (v1.14.1). Each aircraft is built once and kept: going between the games used
+## to throw the aircraft away and build a new one (twice per switch), and freeing its live instrument screen
+## (a SubViewport that redraws every frame) while the graphics card could still be drawing it is the likely
+## cause of the crashes when switching games. A parked aircraft is hidden and its screen stops redrawing.
+func set_active(on: bool) -> void:
+	visible = on
+	for vp in find_children("*", "SubViewport", true, false):
+		(vp as SubViewport).render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+	if on and bulldog != null and bulldog.panel_ui != null:
+		bulldog.panel_ui.g_max = 1.0   # the g-meter's max/min pointers start again for each flight
+		bulldog.panel_ui.g_min = 1.0
+
+
 func set_cockpit_view(on: bool) -> void:
 	if bulldog != null:
 		# the Bulldog's fuselage, canopy and prop arc stay in view: you sit inside the real cockpit

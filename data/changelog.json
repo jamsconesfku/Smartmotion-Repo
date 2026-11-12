@@ -227,5 +227,12 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-12",
+    "summary": "Version 1.14.1: fix for the game crashing when switching between games (for example from the roller coaster to Flight). The game used to throw the aircraft away and build a new one every time Flight came up, including its live instrument screen, and destroying that screen while the graphics card was still using it is the likely cause. Each aircraft is now built once and kept, so nothing is destroyed when you switch. Each switch is also written to the log in case it ever happens again. Needs checking on Sam's PC and in the headset.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

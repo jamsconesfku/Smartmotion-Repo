@@ -2,7 +2,7 @@ extends Node
 ## SmartMotion Flight (native): game controller. Input, cameras, flight, gate run, VR (OpenXR) and the rig link.
 ## Three games share it: Flight (Duxford, this file), Racing (race_mode.gd) and Space (space_mode.gd).
 
-const APP_VERSION := "1.14.0"
+const APP_VERSION := "1.14.1"
 const KT := 1.94384
 const FT := 3.28084
 const FPM := 196.85
@@ -11,6 +11,7 @@ var world: World
 var ui: GameUI
 var cam: Camera3D
 var plane: AircraftModel
+var planes := {}   # aircraft key -> AircraftModel, built once and kept (see _mount_plane)
 var fm: FlightModel
 var synth: Synth
 var tel := Telemetry.new()
@@ -351,6 +352,8 @@ func _activate(g: String) -> void:
 		await get_tree().process_frame   # already being built (e.g. chosen and started at once)
 	if g != "flight" and not modes.has(g):
 		await _build_mode(g)
+	if g != game:
+		Diag.write("switch: %s -> %s (vr %s)" % [game, g, str(vr_active)])   # if it ever crashes, the log shows where
 	game = g
 	world.grass_allowed = g == "flight"   # the racing car and the coaster station would have grass through them
 	if mode != null:
@@ -498,13 +501,20 @@ func to_menu() -> void:
 		_panel_show(true)   # in VR the menu floats in front of you; you stay in the headset
 
 
+## Puts the chosen aircraft on the runway. Each aircraft is built the first time it's chosen and then kept
+## (parked and hidden when not in use), never freed: see AircraftModel.set_active (v1.14.1, crash fix).
 func _mount_plane() -> void:
-	if plane != null:
-		plane.queue_free()
-	plane = AircraftModel.new()
 	var key := str(Settings.get_value("aircraft"))
-	plane.build(key, world.logo if key == "trainer" else world.logo_dark)
-	add_child(plane)
+	if not planes.has(key):
+		var p := AircraftModel.new()
+		p.build(key, world.logo if key == "trainer" else world.logo_dark)
+		add_child(p)
+		planes[key] = p
+	for k in planes:
+		if k != key:
+			(planes[k] as AircraftModel).set_active(false)
+	plane = planes[key]
+	plane.set_active(true)
 	_attach_rig()
 
 
