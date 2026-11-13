@@ -171,16 +171,28 @@ USE FLYPT MOVER WITH THE GAME (its 3D picture, or to drive the rig)
     source window (small square, top right of its tile), note the port it shows, and type that number in
     the game: Settings > FlyPT Mover > "DATA rows to port". If that port is 49000, first change
     "Answer on port" to 49010 so the game doesn't take 49000 itself. Then stop and start the source in Mover.
+  READY-MADE MOVER PROFILE: "SmartMotion-Games.Mover" is in this folder. In FlyPT Mover: File > Open and
+    pick it (keep your own profile file; this is a separate one). It is your MotionXP-PRIME_FLY profile
+    (same rig measurements, same M4S output) with new settings so every game moves the rig smoothly and
+    no actuator is asked to go past its 300 mm travel:
+      - The seat's limits are now pitch 7, roll 6.5, yaw 3 degrees and heave 22 mm, with rig gain 1.
+        These are the most it can move on all axes at once with every actuator still inside its travel.
+        DON'T raise the rig gain above 1 or the limits on the rig's tile: that brings the over-reach back.
+      - Every movement goes through two or three smoothing filters and a soft limit, so a sudden change
+        in the game (braking, a gear change, a kerb, the spaceship's autopilot) becomes a smooth lean.
+      - AIR pose (flying, the spaceship, the coaster): leans with the turn, pitch and yaw rates, tilts a
+        little with speeding up and slowing down, and rises and sinks with g.
+      - GROUND pose (the racing car, an aircraft on the runway): tilts back when accelerating, forward
+        when braking and sideways in corners, sized for the car's 1 to 3 g; bumps come through heave.
+        The GROUND pose now listens only to the game's GROUND values (it was ticked for AIR as well, so it
+        moved the rig in the air too, on top of the AIR pose).
+    FIRST RUN: nobody on the rig, a hand on the stop button. Watch Mover's 3D picture: no actuator should
+    turn red. If the seat leans the wrong way in a corner or under braking, open the GROUND (or AIR) pose
+    and put a minus sign in front of that "out gain" (Sway in roll, Surge in pitch, or the axis itself).
+    Mover is free for non-commercial use only: fine for testing, not for paid rides (use SmartMotion Motion).
   WHICH MOVER POSE EACH GAME USES: Mover splits the X-Plane source into AIR and GROUND by whether the
     vehicle is on the ground. Flying, Space and the Coaster ride are "air" (the AIR pose). Racing, and an
-    aircraft on the runway, are "ground" (the GROUND pose), so Mover switches to it by itself as soon as
-    the car game starts. To make the car move the rig: open the GROUND pose (top-right square of its tile),
-    tick "SOURCE :: XPLANE 11 (UDP) GROUND" on the right, and set it like AIR: Sway = Lateral acceleration,
-    Surge = Longitudinal acceleration, Heave = Vertical acceleration (kerb and gravel rumble come through
-    here), Yaw = Yaw speed; tick "Mix sway in roll" and "Mix surge in pitch" so cornering and braking
-    tilt the seat. Start with small Out gains and raise them bit by bit. The engine speed is sent as RPM.
-    The racing car pulls about 1 g accelerating and over 2 g braking and cornering (10-25 m/s2), so set
-    the Range for Sway and Surge to about 20-25 (the flying profile's 5 fills up straight away).
+    aircraft on the runway, are "ground" (the GROUND pose). The engine speed is sent as RPM.
   If a direction is the wrong way round in Mover, flip it in Mover's settings for that axis.
   Mover listens to the game; use FlyPT Mover OR SmartMotion Motion to drive the rig, not both at once.
   The game also sends X-Plane "DATA" rows to 127.0.0.1 port 49001, for Mover set-ups that expect those.

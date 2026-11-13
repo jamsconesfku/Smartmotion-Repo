@@ -23,6 +23,7 @@ var out_host := "127.0.0.1"
 var out_port := 49001
 var listening := false
 var status := "off"
+var dump: FileAccess        # test option --tel_dump=file.csv (see service)
 var clients := {}          # "ip:port" -> {ip, port, refs: {index: [path, hz]}, next: {hz: time}, rows: [], rpos_hz, rpos_next}
 var unknown := {}          # dataref names we were asked for but don't know (sent as 0)
 var requests := 0
@@ -159,6 +160,14 @@ func service(frame: Dictionary, now: float) -> void:
 		_next_becn = now + 1.0
 		becn.put_packet(beacon_packet(listen_port))
 	_vals = values(frame, now)
+	if dump != null and not frame.is_empty():
+		# test option --tel_dump: one line per frame of what Mover's X-Plane source reads (for tuning Mover profiles)
+		var fp := "sim/flightmodel/position/"
+		var ff := "sim/flightmodel/forces/"
+		dump.store_line("%.4f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.4f,%.4f,%.4f,%.3f,%.3f,%.3f,%.2f,%d,%d" % [float(frame.get("t", 0.0)),
+			_vals[fp + "theta"], _vals[fp + "phi"], _vals[fp + "psi"], _vals[fp + "P"], _vals[fp + "Q"], _vals[fp + "R"],
+			_vals[ff + "g_nrml"], _vals[ff + "g_axil"], _vals[ff + "g_side"], _vals[fp + "local_ax"], _vals[fp + "local_ay"], _vals[fp + "local_az"],
+			_vals[fp + "groundspeed"], int(_vals["sim/flightmodel/failures/onground_any"]), int(_vals["sim/time/paused"])])
 	if listening:
 		while listen.get_available_packet_count() > 0:
 			var pkt := listen.get_packet()

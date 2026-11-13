@@ -79,5 +79,18 @@
     "links": [],
     "notes": "Sam, 12 Nov 2026: two photos of G-SMAT at Duxford (front, side) and frames of the cockpit from his video (the videos themselves are not kept in the repo). Used for the v1.18.0 Bulldog: light grey panel, placards, sticks, livery and propeller.",
     "updated": "2026-11-12"
+  },
+  {
+    "id": "DOC-08",
+    "title": "Sam's FlyPT Mover profile for the rig (smart_motion_game.Mover)",
+    "format": "FlyPT Mover 3.5.3 profile (XML)",
+    "area": "Games",
+    "status": "in_repo",
+    "path": "docs/source/flypt-mover/smart_motion_game.Mover",
+    "links": [
+      "docs/games/flypt-mover-profile.md"
+    ],
+    "notes": "Sam, 13 Nov 2026. His MotionXP-PRIME_FLY profile: rig measurements, M4S serial output, AIR and GROUND poses. The smooth profile shipped with the game (godot/package/SmartMotion-Games.Mover) is made from it.",
+    "updated": "2026-11-13"
   }
 ]

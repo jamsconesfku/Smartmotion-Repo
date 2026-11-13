@@ -277,5 +277,13 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-13",
+    "summary": "New FlyPT Mover profile for the games (SmartMotion-Games.Mover, in the Windows download from version 1.19.1): made from Sam's own profile, with smooth filters on every movement and limits that keep every actuator inside its 300 mm travel. The old profile slammed heave between its limits, moved the rig twice over in the air and could ask actuators for nearly twice their travel. Checked by replaying each game's recorded data through a model of Mover; not yet tried on the rig.",
+    "ids": [
+      "F-08",
+      "DOC-08"
+    ]
   }
 ]

@@ -61,6 +61,10 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 - Bump `VERSION` for dashboard-visible changes; native releases are built from `main` automatically.
 - **Download link** (always the newest build): `https://github.com/jamsconesfku/Smartmotion-Repo/releases/download/native-latest/SmartMotionFlight-Windows.zip`. When Sam asks for the latest download, check the latest `build-native.yml` run has finished successfully and that the `native-latest` release body names the newest commit on `main` that touched `godot/`, then give the link and the steps (they're on the dashboard Games tile and in `godot/package/README.txt`).
 
+## FlyPT Mover profile (`godot/package/SmartMotion-Games.Mover`)
+- Made from Sam's own profile (`docs/source/flypt-mover/`, DOC-08) by `scripts/mover/build.py`; never edit the `.Mover` by hand. Notes, the rig's geometry and how it was checked: `docs/games/flypt-mover-profile.md`.
+- Before changing filters or limits, replay recorded game data through the model (`scripts/mover/replay.py`, data from the game's `--tel_dump` test option) and keep `rig.worst(limits)` under the 150 mm half stroke. It has not been tried in Mover or on the rig: say so.
+
 ## SmartMotion Motion (`motion/`, replaces FlyPT Mover)
 - Godot 4.6 project, exported as `SmartMotionMotion.exe` into the same Windows ZIP as the game (by `scripts/build-native.sh`, which also runs its checks). Notes and controller protocol: `docs/games/smartmotion-motion.md`.
 - Game data in on UDP 4123; seat position out to the Motion4Sim controller in Position mode (36-byte packets, ~500/s) over USB (PowerShell helper `motion/assets/serial_bridge.ps1`, 250,000 baud) or network (UDP 53241, Pro licence); seat position back to the game on UDP 4124 for VR motion compensation (`godot/scripts/motion_comp.gd`).

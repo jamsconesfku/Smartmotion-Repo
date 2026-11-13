@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.19.0"
+const APP_VERSION := "1.19.1"
 ## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
 ## ground stopped at an edge that moved as you climbed)
 const VIEW_FAR := 600000.0
@@ -199,6 +199,15 @@ func _ready() -> void:
 	if args.has("sheet"):
 		await get_tree().create_timer(0.5).timeout
 		ui.open_sheet({"settings": ui.settings_sheet, "help": ui.help_sheet, "pause": ui.pause_sheet}[str(args["sheet"])])
+	if args.has("tel_dump"):
+		# test option --tel_dump=file.csv [--quit_after=secs] [--stunt]: records what FlyPT Mover would read, every frame
+		tel.xp.dump = FileAccess.open(str(args["tel_dump"]), FileAccess.WRITE)
+		tel.xp.dump.store_line("t,theta,phi,psi,P,Q,R,g_nrml,g_axil,g_side,ax,ay,az,gs,on_ground,paused")
+	if args.has("quit_after"):
+		get_tree().create_timer(float(args["quit_after"]), true, false, true).timeout.connect(func():
+			if tel.xp.dump != null:
+				tel.xp.dump.close()
+			get_tree().quit())
 	if args.has("key_test"):
 		_key_test()
 	if args.has("switch_test"):
@@ -931,6 +940,18 @@ func _read_input(dt: float) -> void:
 		trim_msg_t -= dt
 		if trim_msg_t <= 0.0 and vr_active and not vr_warn:
 			_vr_text("")
+	if args.has("stunt"):
+		# test option: a take-off, climbing turns, steep banks, pull-ups and push-overs, flown by a script
+		var st := run_time
+		pitch = 0.0
+		roll = 0.0
+		if st > 11.0 and st < 16.0:
+			pitch = 0.6
+		elif st >= 16.0:
+			roll = 0.9 * sin((st - 16.0) * TAU / 9.0)
+			pitch = 0.7 * sin((st - 16.0) * TAU / 5.5) + (0.35 if fm.i["alt_agl"] < 250.0 else 0.0)
+			if fposmod(st, 20.0) < 1.2:
+				roll = 1.0   # a sharp stick movement every 20 s
 	var inv := -1.0 if Settings.get_value("invert") else 1.0
 	inp["pitch"] = clampf(kb["pitch"] + pitch * inv, -1.0, 1.0)
 	inp["roll"] = clampf(kb["roll"] + roll, -1.0, 1.0)
@@ -1760,6 +1781,8 @@ func _read_mode_input(dt: float) -> Dictionary:
 			press.append("hyper")
 	if vl != null and _edge("vLS", vl.is_button_pressed("primary_click")):
 		press.append("next")
+	if args.has("stunt") and _edge("stunt_auto", run_time > 3.0):
+		press.append("auto")   # test option: the spaceship's autopilot flies it up to space
 	out["press"] = press
 	# space: like the aircraft (W/S nose, A/D roll, Q/E yaw), plus guns and boost
 	var tp := Keys.val("pitch_up", hm) - Keys.val("pitch_down", hm)
