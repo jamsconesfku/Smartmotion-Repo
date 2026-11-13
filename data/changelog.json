@@ -285,5 +285,13 @@
       "F-08",
       "DOC-08"
     ]
+  },
+  {
+    "date": "2026-11-13",
+    "summary": "FlyPT Mover profile, version 2 (in the Windows download from version 1.19.2): Sam's own limits, ranges and rig gain are back exactly as they were; only the settings inside the AIR and GROUND poses changed. Movement is smooth and livelier (7 to 9 degrees of lean). In the replays no actuator went further than 100 mm from the middle of its 150 mm, but with these limits it is no longer impossible to over-reach. Not yet tried on the rig.",
+    "ids": [
+      "F-08",
+      "DOC-08"
+    ]
   }
 ]

@@ -174,12 +174,12 @@ USE FLYPT MOVER WITH THE GAME (its 3D picture, or to drive the rig)
   READY-MADE MOVER PROFILE: "SmartMotion-Games.Mover" is in this folder. In FlyPT Mover: File > Open and
     pick it (keep your own profile file; this is a separate one). It is your MotionXP-PRIME_FLY profile
     (same rig measurements, same M4S output) with new settings so every game moves the rig smoothly and
-    no actuator is asked to go past its 300 mm travel:
-      - The seat's limits are now pitch 7, roll 6.5, yaw 3 degrees and heave 22 mm, with rig gain 1.
-        These are the most it can move on all axes at once with every actuator still inside its travel.
-        DON'T raise the rig gain above 1 or the limits on the rig's tile: that brings the over-reach back.
+    the actuators stay inside their 300 mm travel in normal use:
+      - Your limits, ranges and rig gain (0.5) are exactly as in your own profile. Only the settings
+        inside the AIR and GROUND poses are new.
       - Every movement goes through two or three smoothing filters and a soft limit, so a sudden change
-        in the game (braking, a gear change, a kerb, the spaceship's autopilot) becomes a smooth lean.
+        in the game (braking, a gear change, a kerb, the spaceship's autopilot) becomes a smooth lean of
+        up to about 7 to 9 degrees.
       - AIR pose (flying, the spaceship, the coaster): leans with the turn, pitch and yaw rates, tilts a
         little with speeding up and slowing down, and rises and sinks with g.
       - GROUND pose (the racing car, an aircraft on the runway): tilts back when accelerating, forward
@@ -187,7 +187,8 @@ USE FLYPT MOVER WITH THE GAME (its 3D picture, or to drive the rig)
         The GROUND pose now listens only to the game's GROUND values (it was ticked for AIR as well, so it
         moved the rig in the air too, on top of the AIR pose).
     FIRST RUN: nobody on the rig, a hand on the stop button. Watch Mover's 3D picture: no actuator should
-    turn red. If the seat leans the wrong way in a corner or under braking, open the GROUND (or AIR) pose
+    turn red (with your limits it still can if pitch, roll and heave all peak together; say if it does).
+    If the seat leans the wrong way in a corner or under braking, open the GROUND (or AIR) pose
     and put a minus sign in front of that "out gain" (Sway in roll, Surge in pitch, or the axis itself).
     Mover is free for non-commercial use only: fine for testing, not for paid rides (use SmartMotion Motion).
   WHICH MOVER POSE EACH GAME USES: Mover splits the X-Plane source into AIR and GROUND by whether the

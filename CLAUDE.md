@@ -63,7 +63,7 @@ This repo is the **single source of truth**: Markdown knowledge base in `docs/`,
 
 ## FlyPT Mover profile (`godot/package/SmartMotion-Games.Mover`)
 - Made from Sam's own profile (`docs/source/flypt-mover/`, DOC-08) by `scripts/mover/build.py`; never edit the `.Mover` by hand. Notes, the rig's geometry and how it was checked: `docs/games/flypt-mover-profile.md`.
-- Before changing filters or limits, replay recorded game data through the model (`scripts/mover/replay.py`, data from the game's `--tel_dump` test option) and keep `rig.worst(limits)` under the 150 mm half stroke. It has not been tried in Mover or on the rig: say so.
+- Before changing filters or limits, replay recorded game data through the model (`scripts/mover/replay.py`, data from the game's `--tel_dump` test option) and report the furthest actuator travel (150 mm is the half stroke). Sam chose to keep his own limits and rig gain (v2, 13 Nov 2026): change only the pose filters unless he asks. It has not been tried in Mover or on the rig: say so.
 
 ## SmartMotion Motion (`motion/`, replaces FlyPT Mover)
 - Godot 4.6 project, exported as `SmartMotionMotion.exe` into the same Windows ZIP as the game (by `scripts/build-native.sh`, which also runs its checks). Notes and controller protocol: `docs/games/smartmotion-motion.md`.

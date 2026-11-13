@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.19.1"
+const APP_VERSION := "1.19.2"
 ## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
 ## ground stopped at an edge that moved as you climbed)
 const VIEW_FAR := 600000.0

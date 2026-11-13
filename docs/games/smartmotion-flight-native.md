@@ -38,7 +38,7 @@ A 32.8 km square centred on the middle of Duxford's hard runway (real heading 05
 ## Performance (RTX 4060 target)
 High: about 1 M triangles of nearby trees, about 2 M of far trees, 16,000 buildings within 7 km, 72 cloud steps a pixel. If it drops below 60 fps, use Medium (fewer trees, shorter range, 44 cloud steps). In VR the 3D clouds, SSAO and SSIL are switched off. Load with `--stats` (after `--`) to log triangles, draw calls and fps every two seconds in the diagnostics log.
 
-## FlyPT Mover profile in the download (v1.19.1)
+## FlyPT Mover profile in the download (v1.19.1; version 2 of the profile in v1.19.2)
 The Windows ZIP now includes `SmartMotion-Games.Mover`, a FlyPT Mover profile made from Sam's own that moves the rig smoothly in every game and keeps every actuator inside its travel: see `docs/games/flypt-mover-profile.md`. New test options to record what Mover reads: `--tel_dump=file.csv`, `--quit_after=secs`, `--stunt` (a scripted flight; presses the spaceship's autopilot).
 
 ## Trim, change any key, Controls picture, on-screen help, fixed in the seat, a cockpit that fits (v1.19.0)

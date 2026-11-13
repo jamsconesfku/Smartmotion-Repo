@@ -6,7 +6,7 @@
   <SHARE>
     <ShareUser></ShareUser>
     <ShareName>SmartMotion games (Flight, Racing, Space, Coaster)</ShareName>
-    <ShareDescription>For SmartMotion Flight v1.19+ through the X-Plane 11 (UDP) source. Smooth filters and limits that keep every actuator inside its 300 mm stroke. Made 13 Nov 2026.</ShareDescription>
+    <ShareDescription>For SmartMotion Flight v1.19+ through the X-Plane 11 (UDP) source. Sam's limits and rig gain, with smooth pose filters for every game. Made 13 Nov 2026.</ShareDescription>
   </SHARE>
   <OPTIONS>
     <chkMinimize>False</chkMinimize>
@@ -142,16 +142,16 @@
       <pnlSurge.nudSurgeRange>5</pnlSurge.nudSurgeRange>
       <pnlHeave.nudHeaveOutGain>1</pnlHeave.nudHeaveOutGain>
       <pnlHeave.nudHeaveInGain>1</pnlHeave.nudHeaveInGain>
-      <pnlHeave.nudHeaveRange>22</pnlHeave.nudHeaveRange>
+      <pnlHeave.nudHeaveRange>5</pnlHeave.nudHeaveRange>
       <pnlYaw.nudYawOutGain>1</pnlYaw.nudYawOutGain>
       <pnlYaw.nudYawInGain>1</pnlYaw.nudYawInGain>
-      <pnlYaw.nudYawRange>3</pnlYaw.nudYawRange>
+      <pnlYaw.nudYawRange>10</pnlYaw.nudYawRange>
       <pnlRoll.nudRollOutGain>1</pnlRoll.nudRollOutGain>
       <pnlRoll.nudRollInGain>1</pnlRoll.nudRollInGain>
-      <pnlRoll.nudRollRange>6.5</pnlRoll.nudRollRange>
+      <pnlRoll.nudRollRange>30</pnlRoll.nudRollRange>
       <pnlPitch.nudPitchOutGain>1</pnlPitch.nudPitchOutGain>
       <pnlPitch.nudPitchInGain>1</pnlPitch.nudPitchInGain>
-      <pnlPitch.nudPitchRange>7</pnlPitch.nudPitchRange>
+      <pnlPitch.nudPitchRange>30</pnlPitch.nudPitchRange>
       <pnlRoll.nudSwayInRollOutGain>-0.500</pnlRoll.nudSwayInRollOutGain>
       <pnlPitch.nudSurgeInPitchOutGain>1</pnlPitch.nudSurgeInPitchOutGain>
       <NUDYawCORX>0</NUDYawCORX>
@@ -160,12 +160,12 @@
       <NUDRollCORZ>0</NUDRollCORZ>
       <NUDPitchCORY>0</NUDPitchCORY>
       <NUDPitchCORZ>0</NUDPitchCORZ>
-      <pnlPitch.afcSurgeInPitchFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-25;25);0.22);120);120);120);2.6;1)</pnlPitch.afcSurgeInPitchFilter.txtFilterText>
-      <pnlPitch.afcPitchFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-60;60);0.2);110);110);110);4.4;1)</pnlPitch.afcPitchFilter.txtFilterText>
+      <pnlPitch.afcSurgeInPitchFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-25;25);0.55);120);120);120);6;1)</pnlPitch.afcSurgeInPitchFilter.txtFilterText>
+      <pnlPitch.afcPitchFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-60;60);0.6);110);110);110);14;1)</pnlPitch.afcPitchFilter.txtFilterText>
       <pnlRoll.afcSwayInRollFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-5;5);3.5);100);100);100);25;2)</pnlRoll.afcSwayInRollFilter.txtFilterText>
-      <pnlRoll.afcRollFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-90;90);0.12);110);110);110);6;1)</pnlRoll.afcRollFilter.txtFilterText>
-      <pnlYaw.afcYawFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMAHP(GAIN(CROP(VALUE;-60;60);0.12);600);100);100);2.7;1)</pnlYaw.afcYawFilter.txtFilterText>
-      <pnlHeave.afcHeaveFilter.txtFilterText>LOGISTIC(EMAHP(EMALP(EMALP(GAIN(CROP(VALUE;-25;25);1.8);110);110);500);20;1)</pnlHeave.afcHeaveFilter.txtFilterText>
+      <pnlRoll.afcRollFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-90;90);0.4);110);110);110);18;1)</pnlRoll.afcRollFilter.txtFilterText>
+      <pnlYaw.afcYawFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMAHP(GAIN(CROP(VALUE;-60;60);0.35);600);100);100);8;1)</pnlYaw.afcYawFilter.txtFilterText>
+      <pnlHeave.afcHeaveFilter.txtFilterText>LOGISTIC(EMAHP(EMALP(EMALP(GAIN(CROP(VALUE;-25;25);0.5);110);110);500);4.5;1)</pnlHeave.afcHeaveFilter.txtFilterText>
       <pnlSurge.afcSurgeFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMAHP(GAIN(CROP(VALUE;-5;5);1);1000);1000);1000);50;2)</pnlSurge.afcSurgeFilter.txtFilterText>
       <pnlSway.afcSwayFilter.txtFilterText>LOGISTIC(EMAHP(EMALP(EMALP(GAIN(CROP(VALUE;-5;5);1);1000.000);1000);100);50;2)</pnlSway.afcSwayFilter.txtFilterText>
       <TXTUniqueName>50</TXTUniqueName>
@@ -215,16 +215,16 @@
       <pnlSurge.nudSurgeRange>5</pnlSurge.nudSurgeRange>
       <pnlHeave.nudHeaveOutGain>1</pnlHeave.nudHeaveOutGain>
       <pnlHeave.nudHeaveInGain>1</pnlHeave.nudHeaveInGain>
-      <pnlHeave.nudHeaveRange>22</pnlHeave.nudHeaveRange>
+      <pnlHeave.nudHeaveRange>150</pnlHeave.nudHeaveRange>
       <pnlYaw.nudYawOutGain>1</pnlYaw.nudYawOutGain>
       <pnlYaw.nudYawInGain>1</pnlYaw.nudYawInGain>
-      <pnlYaw.nudYawRange>3</pnlYaw.nudYawRange>
+      <pnlYaw.nudYawRange>5</pnlYaw.nudYawRange>
       <pnlRoll.nudRollOutGain>1</pnlRoll.nudRollOutGain>
       <pnlRoll.nudRollInGain>1</pnlRoll.nudRollInGain>
-      <pnlRoll.nudRollRange>6.5</pnlRoll.nudRollRange>
+      <pnlRoll.nudRollRange>15</pnlRoll.nudRollRange>
       <pnlPitch.nudPitchOutGain>1</pnlPitch.nudPitchOutGain>
       <pnlPitch.nudPitchInGain>1</pnlPitch.nudPitchInGain>
-      <pnlPitch.nudPitchRange>7</pnlPitch.nudPitchRange>
+      <pnlPitch.nudPitchRange>25</pnlPitch.nudPitchRange>
       <pnlRoll.nudSwayInRollOutGain>1</pnlRoll.nudSwayInRollOutGain>
       <pnlPitch.nudSurgeInPitchOutGain>1</pnlPitch.nudSurgeInPitchOutGain>
       <NUDYawCORX>0</NUDYawCORX>
@@ -233,12 +233,12 @@
       <NUDRollCORZ>0</NUDRollCORZ>
       <NUDPitchCORY>0</NUDPitchCORY>
       <NUDPitchCORZ>0</NUDPitchCORZ>
-      <pnlPitch.afcSurgeInPitchFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-30;30);0.3);110);110);110);5;1)</pnlPitch.afcSurgeInPitchFilter.txtFilterText>
-      <pnlPitch.afcPitchFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-40;40);0.2);110);110);110);2;1)</pnlPitch.afcPitchFilter.txtFilterText>
-      <pnlRoll.afcSwayInRollFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-30;30);0.28);110);110);110);4.5;1)</pnlRoll.afcSwayInRollFilter.txtFilterText>
-      <pnlRoll.afcRollFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-40;40);0.12);110);110);110);2;1)</pnlRoll.afcRollFilter.txtFilterText>
-      <pnlYaw.afcYawFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMAHP(GAIN(CROP(VALUE;-60;60);0.1);500);120);120);2.7;1)</pnlYaw.afcYawFilter.txtFilterText>
-      <pnlHeave.afcHeaveFilter.txtFilterText>LOGISTIC(EMAHP(EMALP(EMALP(GAIN(CROP(VALUE;-15;15);2.5);100);100);400);20;1)</pnlHeave.afcHeaveFilter.txtFilterText>
+      <pnlPitch.afcSurgeInPitchFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-30;30);0.9);135);135);135);16;1)</pnlPitch.afcSurgeInPitchFilter.txtFilterText>
+      <pnlPitch.afcPitchFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-40;40);0.5);110);110);110);5;1)</pnlPitch.afcPitchFilter.txtFilterText>
+      <pnlRoll.afcSwayInRollFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-30;30);0.7);135);135);135);11.5;1)</pnlRoll.afcSwayInRollFilter.txtFilterText>
+      <pnlRoll.afcRollFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-40;40);0.3);110);110);110);3;1)</pnlRoll.afcRollFilter.txtFilterText>
+      <pnlYaw.afcYawFilter.txtFilterText>LOGISTIC(EMALP(EMALP(EMAHP(GAIN(CROP(VALUE;-60;60);0.25);500);120);120);4.5;1)</pnlYaw.afcYawFilter.txtFilterText>
+      <pnlHeave.afcHeaveFilter.txtFilterText>LOGISTIC(EMAHP(EMALP(EMALP(GAIN(CROP(VALUE;-15;15);6);100);100);400);50;1)</pnlHeave.afcHeaveFilter.txtFilterText>
       <pnlSurge.afcSurgeFilter.txtFilterText>LOGISTIC(EMAHP(EMALP(GAIN(CROP(VALUE;-5;5);30);400);1000);200;1)</pnlSurge.afcSurgeFilter.txtFilterText>
       <pnlSway.afcSwayFilter.txtFilterText>LOGISTIC(EMAHP(EMALP(EMALP(CROP(VALUE;-5;5);1000);1000);20);150;2)</pnlSway.afcSwayFilter.txtFilterText>
       <TXTUniqueName>54</TXTUniqueName>
@@ -281,24 +281,24 @@
     <Visible>False</Visible>
     <CONTROLS>
       <PNLActuatorsOutput.nudDefault0>0</PNLActuatorsOutput.nudDefault0>
-      <NUDSwayLimit>5</NUDSwayLimit>
+      <NUDSwayLimit>50</NUDSwayLimit>
       <NUDSwayDrive>0</NUDSwayDrive>
       <PNLActuatorsOutput.nudDefault1>0</PNLActuatorsOutput.nudDefault1>
-      <NUDSurgeLimit>5</NUDSurgeLimit>
+      <NUDSurgeLimit>50</NUDSurgeLimit>
       <NUDSurgeDrive>0</NUDSurgeDrive>
       <PNLActuatorsOutput.nudDefault2>0</PNLActuatorsOutput.nudDefault2>
-      <NUDHeaveLimit>22</NUDHeaveLimit>
+      <NUDHeaveLimit>150</NUDHeaveLimit>
       <NUDHeaveDrive>0</NUDHeaveDrive>
       <PNLActuatorsOutput.nudDefault3>0</PNLActuatorsOutput.nudDefault3>
-      <NUDYawLimit>3</NUDYawLimit>
+      <NUDYawLimit>10</NUDYawLimit>
       <NUDYawDrive>0</NUDYawDrive>
       <PNLActuatorsOutput.nudDefault4>0</PNLActuatorsOutput.nudDefault4>
-      <NUDRollLimit>6.5</NUDRollLimit>
+      <NUDRollLimit>30</NUDRollLimit>
       <NUDRollDrive>0</NUDRollDrive>
       <PNLActuatorsOutput.nudDefault5>0</PNLActuatorsOutput.nudDefault5>
-      <NUDPitchLimit>7</NUDPitchLimit>
+      <NUDPitchLimit>30</NUDPitchLimit>
       <NUDPitchDrive>0</NUDPitchDrive>
-      <NUDGain>1</NUDGain>
+      <NUDGain>0.500</NUDGain>
       <NUDActuatorsBitOutput>24</NUDActuatorsBitOutput>
       <NUDScale>1</NUDScale>
       <NUDCORX>0</NUDCORX>

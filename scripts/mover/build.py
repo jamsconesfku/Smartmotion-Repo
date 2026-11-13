@@ -6,36 +6,35 @@ import sys, re
 src,dst=sys.argv[1],sys.argv[2]
 raw=open(src,"rb").read().decode("utf-8-sig")
 
-# the most the seat may move, all six at once, with every actuator still inside its 300 mm stroke (see rig.py)
-LIMIT={"Sway":5,"Surge":5,"Heave":22,"Yaw":3,"Roll":6.5,"Pitch":7}
-
+# v2 (Sam, 13 Nov 2026: "keep the limits as before but make the internal pose profiles work better"):
+# the pose ranges, the rig's limits and the rig gain (0.5) are left exactly as in Sam's profile. Only the pose
+# filters, gains and mixes change. The seat moves half of what a pose says (rig gain 0.5), so a soft limit of 16
+# here is 8 degrees at the seat. The soft limits (LOGISTIC) are set so that in normal use the actuators stay
+# inside their 300 mm stroke, but the hard limits no longer guarantee it (see docs/games/flypt-mover-profile.md).
 AIR={
- "pnlPitch.afcPitchFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-60;60);0.2);110);110);110);4.4;1)",
- "pnlPitch.afcSurgeInPitchFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-25;25);0.22);120);120);120);2.6;1)",
+ "pnlPitch.afcPitchFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-60;60);0.6);110);110);110);14;1)",
+ "pnlPitch.afcSurgeInPitchFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-25;25);0.55);120);120);120);6;1)",
  "pnlPitch.chkMixSurgeInPitch":"True","pnlPitch.nudSurgeInPitchOutGain":"1",
- "pnlRoll.afcRollFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-90;90);0.12);110);110);110);6;1)",
+ "pnlRoll.afcRollFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-90;90);0.4);110);110);110);18;1)",
  "pnlRoll.chkMixSwayInRoll":"False",
- "pnlYaw.afcYawFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMAHP(GAIN(CROP(VALUE;-60;60);0.12);600);100);100);2.7;1)",
- "pnlHeave.afcHeaveFilter.txtFilterText":"LOGISTIC(EMAHP(EMALP(EMALP(GAIN(CROP(VALUE;-25;25);1.8);110);110);500);20;1)",
+ "pnlYaw.afcYawFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMAHP(GAIN(CROP(VALUE;-60;60);0.35);600);100);100);8;1)",
+ "pnlHeave.afcHeaveFilter.txtFilterText":"LOGISTIC(EMAHP(EMALP(EMALP(GAIN(CROP(VALUE;-25;25);0.5);110);110);500);4.5;1)",
  "pnlHeave.nudHeaveOutGain":"1",
  "pnlSurge.nudSurgeOutGain":"0","pnlSway.nudSwayOutGain":"0",
 }
 GROUND={
- "pnlPitch.afcPitchFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-40;40);0.2);110);110);110);2;1)",
- "pnlPitch.afcSurgeInPitchFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-30;30);0.3);110);110);110);5;1)",
+ "pnlPitch.afcPitchFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-40;40);0.5);110);110);110);5;1)",
+ "pnlPitch.afcSurgeInPitchFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-30;30);0.9);135);135);135);16;1)",
  "pnlPitch.chkMixSurgeInPitch":"True","pnlPitch.nudSurgeInPitchOutGain":"1",
- "pnlRoll.afcRollFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-40;40);0.12);110);110);110);2;1)",
- "pnlRoll.afcSwayInRollFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-30;30);0.28);110);110);110);4.5;1)",
+ "pnlRoll.afcRollFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-40;40);0.3);110);110);110);3;1)",
+ "pnlRoll.afcSwayInRollFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMALP(GAIN(CROP(VALUE;-30;30);0.7);135);135);135);11.5;1)",
  "pnlRoll.chkMixSwayInRoll":"True","pnlRoll.nudSwayInRollOutGain":"1",
- "pnlYaw.afcYawFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMAHP(GAIN(CROP(VALUE;-60;60);0.1);500);120);120);2.7;1)",
- "pnlHeave.afcHeaveFilter.txtFilterText":"LOGISTIC(EMAHP(EMALP(EMALP(GAIN(CROP(VALUE;-15;15);2.5);100);100);400);20;1)",
+ "pnlYaw.afcYawFilter.txtFilterText":"LOGISTIC(EMALP(EMALP(EMAHP(GAIN(CROP(VALUE;-60;60);0.25);500);120);120);4.5;1)",
+ "pnlHeave.afcHeaveFilter.txtFilterText":"LOGISTIC(EMAHP(EMALP(EMALP(GAIN(CROP(VALUE;-15;15);6);100);100);400);50;1)",
  "pnlHeave.nudHeaveOutGain":"1",
  "pnlSurge.nudSurgeOutGain":"0","pnlSway.nudSwayOutGain":"0",
 }
-for d,v in LIMIT.items():
-    for P in (AIR,GROUND): P["pnl%s.nud%sRange"%(d,d)]=str(v)
-RIG={"NUDGain":"1","CHKAutoGain":"False"}
-for d,v in LIMIT.items(): RIG["NUD%sLimit"%d]=str(v)
+RIG={}
 
 def block(name,tag):
     m=re.search(r"<%s>\s*<Type>[^<]*</Type>\s*<Name>%s</Name>.*?</%s>"%(tag,re.escape(name),tag),raw,re.S)
@@ -57,6 +56,6 @@ def ground_inputs(b):
 patch("GROUND","POSE",GROUND,ground_inputs)
 patch("MotionXP-PRIME_FLY","RIG",RIG)
 raw=raw.replace("<ShareName></ShareName>","<ShareName>SmartMotion games (Flight, Racing, Space, Coaster)</ShareName>",1)
-raw=raw.replace("<ShareDescription></ShareDescription>","<ShareDescription>For SmartMotion Flight v1.19+ through the X-Plane 11 (UDP) source. Smooth filters and limits that keep every actuator inside its 300 mm stroke. Made %s.</ShareDescription>"%sys.argv[3],1)
+raw=raw.replace("<ShareDescription></ShareDescription>","<ShareDescription>For SmartMotion Flight v1.19+ through the X-Plane 11 (UDP) source. Sam's limits and rig gain, with smooth pose filters for every game. Made %s.</ShareDescription>"%sys.argv[3],1)
 open(dst,"wb").write(b"\xef\xbb\xbf"+raw.encode("utf-8"))
 print("written",dst)
