@@ -182,6 +182,8 @@ USE FLYPT MOVER WITH THE GAME (its 3D picture, or to drive the rig)
         up to about 7 to 9 degrees.
       - AIR pose (flying, the spaceship, the coaster): leans with the turn, pitch and yaw rates, tilts a
         little with speeding up and slowing down, and rises and sinks with g.
+        The coaster (from v1.19.3) sends Mover extra lean for its drops, climbs and banked turns, so it
+        moves the rig about as much as the aircraft does.
       - GROUND pose (the racing car, an aircraft on the runway): tilts back when accelerating, forward
         when braking and sideways in corners, sized for the car's 1 to 3 g; bumps come through heave.
         The GROUND pose now listens only to the game's GROUND values (it was ticked for AIR as well, so it

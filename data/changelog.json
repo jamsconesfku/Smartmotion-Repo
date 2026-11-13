@@ -293,5 +293,12 @@
       "F-08",
       "DOC-08"
     ]
+  },
+  {
+    "date": "2026-11-13",
+    "summary": "Version 1.19.3 of the game: through FlyPT Mover the roller coaster now moves the rig about as much as the aircraft does (it was about a third). The coaster sends Mover extra lean for its drops, climbs and banked turns; the Mover profile itself is unchanged. Checked by replaying recordings through the model of Mover, not yet on the rig.",
+    "ids": [
+      "F-08"
+    ]
   }
 ]

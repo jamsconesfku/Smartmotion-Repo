@@ -48,6 +48,11 @@ var felt := Vector3(0, G, 0)
 var prev_vel := Vector3.ZERO
 var prev_b := Basis()
 var w_body := Vector3.ZERO
+var cue_out := Vector2.ZERO         # the extra roll and pitch rate being sent
+var cue_lp := Vector2.ZERO          # the track's bank and slope, smoothed (see _tel: extra lean for FlyPT Mover)
+const CUE_GAIN := 2.4              # degrees a second of extra turn rate per degree of bank or slope
+const CUE_SIDE := 35.0             # ... and per g of sideways force
+const CUE_FADE := 5.0              # seconds for the extra lean to fade when the track stays banked or sloped
 var cam_init := false
 var cam_q := Quaternion.IDENTITY
 var lap_bars: Array = []
@@ -503,8 +508,30 @@ func _tel(dt: float) -> void:
 			max_g = maxf(max_g, felt.y / G)
 	prev_vel = vel
 	prev_b = fr.basis
+	# v1.19.3, for FlyPT Mover (Sam: the coaster should move the rig as much as the aeroplanes do). Mover's AIR
+	# pose leans the seat with the turn rates. An aeroplane is rolled and pitched briskly by its pilot; a coaster's
+	# track changes its bank and slope slowly, so the same pose hardly moved. So for Mover the coaster adds to its
+	# rates a pull towards the track's own bank and slope (which fades over a few seconds, as a pilot's roll into a
+	# turn does) and towards any sideways force the banking doesn't cancel. The seat then leans into the drops,
+	# climbs and banked turns about as far as it does in the aircraft. The real rates still go to SmartMotion Motion.
+	var cue_roll := 0.0
+	var cue_pitch := 0.0
+	if dt > 0.0 and phase == "ride":
+		var bank := -fr.basis.x.y * 57.3          # like degrees for small angles, and smooth through a loop
+		var slope := -fr.basis.z.y * 57.3
+		cue_lp = cue_lp.lerp(Vector2(bank, slope), 1.0 - exp(-dt / CUE_FADE))
+		# eased towards a top rate of 45 degrees a second and smoothed over a quarter of a second, so it never jerks
+		var want := Vector2(CUE_GAIN * (bank - cue_lp.x) - CUE_SIDE * felt.x / G, CUE_GAIN * (slope - cue_lp.y))
+		want = Vector2(45.0 * tanh(want.x / 45.0), 45.0 * tanh(want.y / 45.0))
+		cue_out = cue_out.lerp(want, 1.0 - exp(-dt / 0.25))
+	else:
+		cue_lp = Vector2.ZERO
+		cue_out = cue_out.lerp(Vector2.ZERO, 1.0 - exp(-dt / 0.25))
+	cue_roll = cue_out.x
+	cue_pitch = cue_out.y
 	make_tel(Time.get_ticks_msec() / 1000.0, false, false, fr.basis, fr.origin, vel, w_body, felt, v * 1.94384,
-		{"speed_kmh": snappedf(v * 3.6, 0.1), "g": snappedf(felt.y / G, 0.01), "phase": phase, "on_ground": phase != "ride"})
+		{"speed_kmh": snappedf(v * 3.6, 0.1), "g": snappedf(felt.y / G, 0.01), "phase": phase, "on_ground": phase != "ride",
+		"mover_cue": {"roll_dps": snappedf(cue_roll, 0.01), "pitch_dps": snappedf(cue_pitch, 0.01)}})
 
 
 func sound() -> Array:

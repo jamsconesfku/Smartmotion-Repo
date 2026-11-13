@@ -341,8 +341,10 @@ func values(frame: Dictionary, now: float) -> Dictionary:
 	var vb := Vector3(_f(vbd, "sway"), _f(vbd, "heave"), -_f(vbd, "surge"))
 	var vw := b * vb
 	var gb := Vector3(_f(gf, "sway"), _f(gf, "heave", 1.0), -_f(gf, "surge"))
-	var P := _f(rate, "roll_dps")
-	var Q := _f(rate, "pitch_dps")
+	# a game may add to the rates Mover sees (the coaster does: see coaster_mode.gd _tel)
+	var cue: Dictionary = f.get("mover_cue", {})
+	var P := _f(rate, "roll_dps") + _f(cue, "roll_dps")
+	var Q := _f(rate, "pitch_dps") + _f(cue, "pitch_dps")
 	var R := _f(rate, "yaw_dps")
 	var rd := _rate_dot
 	if not live:

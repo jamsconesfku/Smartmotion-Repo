@@ -38,6 +38,21 @@ Sam, 13 Nov 2026, after the first version (which cut the limits to pitch 7°, ro
 
 **Not tested in FlyPT Mover or on the rig** (neither is available on the build machine). The model follows flyptmover.com's descriptions of the filters; two details are not documented there and are assumed: the exact weight of EMALP for N samples, and LOGISTIC's curve (range x tanh, which matches the one worked example on the xsimulator forum). The directions of the tilts are kept as in Sam's profile; if one is the wrong way round, put a minus on that out gain.
 
+## The coaster moves as much as the aircraft (game v1.19.3)
+Sam, 13 Nov 2026: "make the telemetry on the rollercoaster work like the aeroplanes so it moves as much as the planes do". Measured through the profile, the coaster moved the rig about a third as much as the aircraft: typical actuator movement 15 mm against 44 mm, typical roll 0.5° against 4.2°. The reason is the AIR pose leans the seat with the **turn rates**. A pilot rolls and pitches an aircraft briskly; a coaster's track changes its bank and slope slowly, and its banking cancels most of the sideways force, so the same pose had little to work on.
+
+Fix, in the game (`coaster_mode.gd` `_tel`, sent through `mover_cue` in the frame; `xplane_link.gd` adds it to the roll and pitch rates Mover reads): on top of the real rates the coaster sends a pull towards the track's own bank and slope (2.4 degrees a second per degree, fading over 5 s when the track stays banked or sloped, as a pilot's roll into a turn does) and towards any sideways force the banking leaves (35 degrees a second per g). It is eased to a top rate of 45 degrees a second and smoothed over a quarter of a second. So the seat now tips forward down the drops, back up the climbs and into the banked turns. Only what Mover reads changes: SmartMotion Motion still gets the real rates.
+
+| Through the profile | Aircraft (scripted aerobatics) | Coaster before | Coaster now |
+|---|---|---|---|
+| Typical / most roll | 4.2° / 7.3° | 0.5° / 4.0° | 2.8° / 7.4° |
+| Typical / most pitch | 3.8° / 7.1° | 1.7° / 7.5° | 3.3° / 6.7° |
+| Typical actuator movement | 44 mm | 15 mm | 33 mm |
+| Furthest actuator from middle (150 available) | 100 mm | 90 mm | 109 mm |
+| Hardest jolt | 0.20 g | 0.17 g | 0.27 g |
+
+The aircraft figure is non-stop steep turns and pull-ups; the coaster's includes the slow lift hill, which is why its typical figure is a little lower with the same peaks. Compare any two recordings with `python3 scripts/mover/compare.py scripts/mover <profile> <folder> flight coaster`. Not tried in Mover or on the rig.
+
 ## Changing it
 1. Record the games: `godot --headless --fixed-fps 60 --path godot -- --auto --stunt --game=flight --tel_dump=flight.csv --quit_after=150` (also `--game=race --autopilot`, `--game=coaster`, `--game=space --space_start=earth`; `--stunt` flies a set routine and presses the spaceship's autopilot).
 2. Edit the filters in `scripts/mover/build.py`, run it (usage at the top of the file), then `python3 scripts/mover/replay.py scripts/mover godot/package/SmartMotion-Games.Mover <folder with the four csv files> --both`.
