@@ -341,7 +341,7 @@
   },
   {
     "date": "2026-11-18",
-    "summary": "Version 1.23.0 of the game: a big graphics upgrade round Duxford. Buildings now look like real buildings (houses with proper pitched or hipped roofs, overhangs, fascias, chimneys; terraces; L-shaped homes; sheds and hangars; flat-roofed shops and offices) with windows and doors that line up wall by wall. Real roads from Ordnance Survey data are laid on the ground with crisp edges and proper white lines. Gardens between the houses are lawns instead of a blurry smudge, and the picture is sharper (new default smoothing, sharper textures in the headset). Not yet seen on the 4090 PC.",
+    "summary": "Version 1.23.0 of the game: a big graphics upgrade round Duxford. Buildings now look like real buildings (houses with proper pitched or hipped roofs, overhangs, fascias, chimneys; terraces; L-shaped homes; sheds and hangars; flat-roofed shops and offices) with windows and doors that line up wall by wall. Real roads from Ordnance Survey data are laid on the ground with crisp edges and proper white lines. Gardens between the houses are lawns instead of a blurry smudge, and the picture is sharper (new default smoothing, sharper textures in the headset). Not yet seen on the 4090 PC. Fix the same day: windows stay visible further away, roads are mid-grey (they read as black lines from the air), less pale paving between the houses.",
     "ids": [
       "LIC-16"
     ]

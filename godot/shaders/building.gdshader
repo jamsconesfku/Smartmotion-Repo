@@ -109,7 +109,7 @@ void fragment() {
 		int style = int(floor(code / 65536.0));
 		// how big a metre is on screen: far away the openings fade into an even facade (no shimmering)
 		float px = length(vec2(dFdx(uv.x), dFdy(uv.x))) + length(vec2(dFdx(uv.y), dFdy(uv.y)));
-		float far_fade = 1.0 - smoothstep(0.08, 0.35, px);
+		float far_fade = 1.0 - smoothstep(0.35, 1.1, px);   // (px adds both directions: about 2x the size of a pixel)
 		bool office = style == 4 || id == 3;
 		float fh = office ? 3.3 : 2.65;
 		vec3 frame_col = style == 3 || office ? vec3(0.17, 0.18, 0.19) : vec3(0.9, 0.9, 0.87);

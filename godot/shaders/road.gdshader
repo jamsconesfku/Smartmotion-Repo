@@ -53,7 +53,7 @@ void fragment() {
 	vec2 tuv = vec2(s, x) / 3.5;
 	vec3 tex = texture(asphalt_col, tuv).rgb;
 	float main = cls <= 3 ? 1.0 : 0.0;
-	vec3 base = mix(vec3(0.115, 0.115, 0.12), vec3(0.075, 0.076, 0.08), main);
+	vec3 base = mix(vec3(0.19, 0.185, 0.18), vec3(0.14, 0.14, 0.145), main);   // weathered tarmac, mid-grey from the air
 	vec3 col = base * (tex / 0.38);
 	float n1 = vnoise(vec2(s, x) / 7.0) * 0.6 + vnoise(vec2(s, x) / 1.7) * 0.4;
 	col *= 0.86 + 0.28 * n1;

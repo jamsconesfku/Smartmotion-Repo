@@ -211,11 +211,11 @@ void fragment() {
 		vec3 tar = mix(vec3(0.085, 0.087, 0.092), vec3(0.055, 0.056, 0.06), ub.a);
 		col = mix(col, tar * (0.9 + 0.2 * vnoise(p / 9.0)), clamp(road8 * 1.4, 0.0, 1.0));
 		road = max(road, clamp(road8 * 1.4, 0.0, 1.0));
-		col = mix(col, vec3(0.30, 0.29, 0.27) * (0.85 + 0.3 * vnoise(p / 3.0)), pave * 0.65);
+		col = mix(col, vec3(0.25, 0.245, 0.23) * (0.85 + 0.3 * vnoise(p / 3.0)), pave * 0.55);
 		// v1.23.0 (Sam: the ground between the houses looked smudged): gardens are lawns with real grass, drives and
 		// patios are paving close round each house, instead of the blurry satellite colour with concrete grain over it
 		float near_bld = dw > 0.0 ? textureLod(detail_mask, d_uv(p), 1.6).a : textureLod(roofmask, ouv, 1.0).r;
-		drive = clamp(near_bld * 2.4 - rm * 1.2, 0.0, 1.0) * town * (1.0 - road) * (1.0 - pave);
+		drive = clamp(near_bld * 1.8 - rm * 1.6 - 0.25, 0.0, 1.0) * town * (1.0 - road) * (1.0 - pave);
 		drive *= smoothstep(0.35, 0.65, vnoise(p / 4.0) * 0.5 + 0.5 * vnoise(p / 11.0 + 3.0) + 0.15);   // not round every side
 		lawn = town * (1.0 - road) * (1.0 - pave) * (1.0 - drive);
 		float g2 = vnoise(p / 7.0) * 0.6 + vnoise(p / 2.6 + 4.0) * 0.4;
@@ -223,7 +223,7 @@ void fragment() {
 		// borders, shrubs and hedges: darker patches here and there
 		lawn_col = mix(lawn_col, vec3(0.05, 0.075, 0.03), smoothstep(0.66, 0.82, vnoise(p / 3.1 + 7.0)) * 0.7);
 		col = mix(col, lawn_col, lawn * 0.85);
-		col = mix(col, vec3(0.33, 0.31, 0.29) * (0.82 + 0.3 * vnoise(p / 1.8)), drive * 0.85);
+		col = mix(col, vec3(0.23, 0.22, 0.205) * (0.82 + 0.3 * vnoise(p / 1.8)), drive * 0.75);
 	}
 
 	// runway: real tarmac colour, cleaner than the 10 m photo
