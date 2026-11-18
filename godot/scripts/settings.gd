@@ -6,7 +6,7 @@ var data := {
 	"aircraft": "bulldog", "start": "runway", "mode": "free", "assist": true, "tod": "day", "wind": "calm",
 	"invert": false, "invert_roll": false, "invert_yaw": false, "invert_steer": false, "pedals_swap": false, "vr_ready": true, "sound": true, "quality": "high", "tel": false, "tel_host": "127.0.0.1", "tel_port": 4123, "fullscreen": true,
 	"clouds3d": true, "view": "normal",
-	"aa": "taa", "weather": "scattered", "brightness": "normal", "grass": true, "show_fps": false, "vsync": true,
+	"aa": "fsr_native", "weather": "scattered", "brightness": "normal", "grass": true, "show_fps": false, "vsync": true,
 	"flypt": true, "flypt_port": 49000, "flypt_out": 49001,
 	"vr_hz": 72.0, "game": "flight", "race": "race", "space_start": "earth", "space_game": "explore", "rig": "all", "rig_map": {},
 	"help_overlay": false, "binds": {},
@@ -21,6 +21,9 @@ func _ready() -> void:
 	if not cf.has_section_key("s", "fs_default"):
 		data["fullscreen"] = true   # v1.15.0: the game now starts full screen (it used to open in a window in the middle)
 	data["fs_default"] = 1
+	if not cf.has_section_key("s", "aa_v123") and str(data["aa"]) == "taa":
+		data["aa"] = "fsr_native"   # v1.23.0: FSR 2 at full size, sharpened: crisper ground and grass than plain TAA
+	data["aa_v123"] = 1
 	if data["aircraft"] == "trainer":
 		data["aircraft"] = "bulldog"   # the Bulldog replaced the light trainer in v1.6.0
 

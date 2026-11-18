@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.22.1"
+const APP_VERSION := "1.23.0"
 ## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
 ## ground stopped at an edge that moved as you climbed)
 const VIEW_FAR := 600000.0
@@ -1269,6 +1269,8 @@ func _vr_view_on(on: bool) -> void:
 		vr_view.use_taa = false          # TAA smears when you turn your head; MSAA keeps VR sharp
 		vr_view.msaa_3d = Viewport.MSAA_2X   # 4x on two eyes at headset resolution cost too much (judder)
 		vr_view.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+		vr_view.anisotropic_filtering_level = Viewport.ANISOTROPY_16X   # v1.23.0: crisp ground at a slant (was the 4x default)
+		vr_view.use_debanding = true
 		vr_view_origin = XROrigin3D.new()
 		vr_view_origin.current = false
 		vr_view.add_child(vr_view_origin)
@@ -1716,6 +1718,7 @@ func _process(delta: float) -> void:
 
 
 var shot_still := -1
+var shot_index := 0     ## which --view_at view the next picture uses
 var shot_game_time := false   # later pictures (--shots) count game seconds, which run slow on a slow computer
 func _shot_tick(delta: float) -> void:
 	if shot_still > 0:
@@ -1734,6 +1737,7 @@ func _save_shot() -> void:
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(str(args["shot"]))
 	print("saved screenshot ", args["shot"])
+	shot_index += 1
 	# test option --shots=b.png@4,c.png@9: more pictures later in the same run (seconds after the one before)
 	if args.has("shots") and str(args["shots"]) != "":
 		var rest: Array = Array(str(args["shots"]).split(","))
@@ -2003,6 +2007,19 @@ func _update_camera(dt: float) -> void:
 		return
 	cam.current = true
 	cam.near = 0.1 if cam_mode == "cockpit" else 0.6
+	if args.has("view_at") and state == "fly":
+		# test option --view_at=x,h,z,yaw,pitch[,fov] (v1.23.0): a fixed camera anywhere, h metres above the ground,
+		# yaw clockwise from north and pitch in degrees; several views (one per later picture) separated by ";"
+		var views: PackedStringArray = str(args["view_at"]).split(";")
+		var vi := clampi(shot_index, 0, views.size() - 1)
+		var a: PackedStringArray = views[vi].split(",")
+		var vx := float(a[0])
+		var vz := float(a[2])
+		var vp := Vector3(vx, world.terrain.height(vx, vz) + float(a[1]), vz)
+		cam.global_transform = Transform3D(Basis.from_euler(Vector3(deg_to_rad(float(a[4])), -deg_to_rad(float(a[3])), 0.0), EULER_ORDER_YXZ), vp)
+		cam.fov = float(a[5]) if a.size() > 5 else 60.0
+		cam.near = 0.2
+		return
 	if state == "menu":
 		orbit_yaw += dt * 0.12
 		var d := 19.0 if spec["key"] == "fighter" else 16.0

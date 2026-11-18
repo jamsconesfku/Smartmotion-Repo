@@ -1069,7 +1069,7 @@ func _build_sheets() -> void:
 	_seg(v, "quality", [["low", "Fast"], ["medium", "Balanced"], ["high", "Best"], ["ultra", "Ultra"]], Settings.get_value("quality"))
 	_note(v, "Ultra: sharper shadows further out, more trees, buildings further away, reflections in water and windows, finer 3D clouds and more grass. Use it if Best runs smoothly; on battery or in VR, Best is safer.")
 	_section(v, "Smooth edges and resolution")
-	_seg(v, "aa", [["taa", "TAA"], ["smaa", "SMAA"], ["fsr_native", "FSR 2 Native"], ["fsr_quality", "FSR 2 Quality"], ["fsr_perf", "FSR 2 Fast"]], Settings.get_value("aa"))
+	_seg(v, "aa", [["fsr_native", "FSR 2 Native (sharpest)"], ["taa", "TAA (softer)"], ["smaa", "SMAA"], ["fsr_quality", "FSR 2 Quality"], ["fsr_perf", "FSR 2 Fast"]], Settings.get_value("aa"))
 	_note(v, "TAA: the standard, smooth picture. SMAA: sharper, a little more shimmer. FSR 2 Native: the smoothest edges at full resolution. FSR 2 Quality / Fast draw the 3D picture smaller and sharpen it back up: more frames per second for nearly the same picture. Not used in VR.")
 	_section(v, "View distance (applies on the next start)")
 	_seg(v, "view", [["near", "Near (fastest)"], ["normal", "Normal"], ["far", "Far"]], Settings.get_value("view"))

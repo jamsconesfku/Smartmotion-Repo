@@ -18,6 +18,10 @@ var lc_data := PackedByteArray()
 var chunks := {}                     # Vector2i -> Node3D
 var coll_grid := {}                  # Vector2i cell -> Array of collider dicts
 var bld_mat: ShaderMaterial
+var road_mat: ShaderMaterial
+var roads := {}                      ## v1.23.0: Vector2i chunk -> Array of road runs [class, dual, points, s, length]
+var radius_road := 3400.0
+var total_roads := 0
 var tree_mat: ShaderMaterial
 var tree_near: Mesh
 var tree_far: Mesh
@@ -42,6 +46,14 @@ func setup(terrain_: Terrain, quality_: String, ortho: Texture2D) -> void:
 	tree_density = {"low": 0.35, "medium": 0.6, "high": 1.0}.get(quality, 0.6)
 	_load_buildings()
 	_load_trees()
+	_load_roads()
+	radius_road = {"low": 1600.0, "medium": 2600.0, "high": 3400.0}.get(quality, 2600.0)
+	road_mat = ShaderMaterial.new()
+	road_mat.shader = load("res://shaders/road.gdshader")
+	road_mat.set_shader_parameter("asphalt_col", load("res://assets/textures/asphalt_col.jpg"))
+	road_mat.set_shader_parameter("asphalt_nrm", load("res://assets/textures/asphalt_nrm.jpg"))
+	road_mat.set_shader_parameter("fade_start", radius_road * 0.75)
+	road_mat.set_shader_parameter("fade_end", radius_road)
 	var lc: Texture2D = load("res://assets/world/landcover.png")
 	if lc != null:
 		var img := lc.get_image()
@@ -104,6 +116,77 @@ func set_vr(on: bool) -> void:
 
 
 # ---------------------------------------------------------------- data
+## v1.23.0: the real roads (assets/world/roads.bin, scripts/build_roads.py), cut into runs per 1 km square with
+## their distance along the road kept, so the lines carry on across the squares. Nothing on the racing circuit.
+func _load_roads() -> void:
+	var f := FileAccess.open("res://assets/world/roads.bin", FileAccess.READ)
+	if f == null:
+		return
+	var buf := f.get_buffer(f.get_length())
+	var nr := buf.decode_u32(0)
+	var o := 4
+	var circuit := PackedVector2Array()
+	for p in RaceTrack.POINTS:
+		circuit.append((p as Vector2) + RaceTrack.OFFSET)
+	for r in nr:
+		var cls := buf.decode_u8(o)
+		var dual := buf.decode_u8(o + 1) & 1 == 1
+		var np := buf.decode_u16(o + 2)
+		o += 4
+		var pts := PackedVector2Array()
+		pts.resize(np)
+		for k in np:
+			pts[k] = Vector2(buf.decode_s32(o) / 4.0, buf.decode_s32(o + 4) / 4.0)
+			o += 8
+		var s := PackedFloat32Array()
+		s.resize(np)
+		for k in range(1, np):
+			s[k] = s[k - 1] + pts[k].distance_to(pts[k - 1])
+		var total := s[np - 1]
+		# runs: consecutive pieces in the same square (each piece goes to the square of its middle)
+		var run_c := Vector2i(1 << 30, 0)
+		var rp := PackedVector2Array()
+		var rs := PackedFloat32Array()
+		for k in range(np - 1):
+			var mid := (pts[k] + pts[k + 1]) / 2.0
+			var skip := _near_circuit(mid, circuit)
+			var ck := _chunk_of(mid)
+			if skip or ck != run_c:
+				if rp.size() >= 2:
+					_add_road_run(run_c, cls, dual, rp, rs, total)
+				rp = PackedVector2Array()
+				rs = PackedFloat32Array()
+				run_c = ck
+				if skip:
+					run_c = Vector2i(1 << 30, 0)
+					continue
+				rp.append(pts[k])
+				rs.append(s[k])
+			rp.append(pts[k + 1])
+			rs.append(s[k + 1])
+		if rp.size() >= 2:
+			_add_road_run(run_c, cls, dual, rp, rs, total)
+	total_roads = nr
+
+
+func _add_road_run(c: Vector2i, cls: int, dual: bool, pts: PackedVector2Array, s: PackedFloat32Array, total: float) -> void:
+	if not roads.has(c):
+		roads[c] = []
+	roads[c].append([cls, dual, pts, s, total])
+
+
+## Within 60 m of the racing circuit's centre line (its own track and kerbs are there).
+static func _near_circuit(p: Vector2, circuit: PackedVector2Array) -> bool:
+	if p.distance_to(circuit[0]) > 1500.0:
+		return false
+	for i in circuit.size():
+		var a := circuit[i]
+		var b := circuit[(i + 1) % circuit.size()]
+		if Geometry2D.get_closest_point_to_segment(p, a, b).distance_to(p) < 60.0:
+			return true
+	return false
+
+
 func _load_buildings() -> void:
 	var f := FileAccess.open("res://assets/world/buildings.bin", FileAccess.READ)
 	if f == null:
@@ -254,9 +337,17 @@ func colliders_near(p: Vector2) -> Array:
 
 ## Thread-safe: everything for one square except the scene nodes.
 func _chunk_data(c: Vector2i, want_trees: bool) -> Dictionary:
-	var d := {"bld": null, "trees": PackedFloat32Array()}
+	var d := {"bld": null, "trees": PackedFloat32Array(), "roads": null}
 	if bld.has(c):
 		d["bld"] = _building_data(bld[c], c)
+	if roads.has(c):
+		var rk := RoadKit.new()
+		for r in roads[c]:
+			rk.add_run(r[0], r[1], r[2], r[3], r[4], terrain)
+		if rk.v.size() > 0:
+			var rm := ArrayMesh.new()
+			rm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, rk.arrays())
+			d["roads"] = rm
 	if want_trees and lc_data.size() > 0:
 		d["trees"] = _tree_data(c)
 	return d
@@ -269,11 +360,20 @@ func _chunk_finish(c: Vector2i, node: Node3D, d: Dictionary) -> void:
 
 ## Adds a square's buildings and crash boxes (its trees go in separately, see _poll_jobs).
 func _chunk_buildings(c: Vector2i, node: Node3D, d: Dictionary) -> void:
+	if d.get("roads") != null:
+		var ri := MeshInstance3D.new()
+		ri.mesh = d["roads"]
+		ri.material_override = road_mat
+		ri.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ri.visibility_range_end = radius_road + 800.0
+		node.add_child(ri)
 	var bd = d["bld"]
 	if bd != null:
 		if bd["arrays"] != null:
-			var m := ArrayMesh.new()
-			m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, bd["arrays"])
+			var m: ArrayMesh = bd["mesh"] if bd.has("mesh") else null
+			if m == null:
+				m = ArrayMesh.new()
+				m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, bd["arrays"])
 			var mi := MeshInstance3D.new()
 			mi.mesh = m
 			mi.material_override = bld_mat
@@ -366,138 +466,39 @@ class Buf:
 
 ## Runs on a worker thread: builds the arrays for one square's buildings and their crash boxes.
 func _building_data(list: Array, c: Vector2i) -> Dictionary:
-	var bf := Buf.new()
+	# v1.23.0: the buildings themselves come from BuildingKit (houses, terraces, wings, sheds, blocks)
+	var kit := BuildingKit.new()
 	var colls: Array = []
 	var rng := RandomNumberGenerator.new()
 	for rec in list:
 		var pts: PackedVector2Array = rec[0]
 		var h: float = rec[1]
 		var kind: int = rec[2]
-		var nv := pts.size()
 		rng.seed = hash(pts[0])
 		var gmin := 1e9
 		for p in pts:
 			gmin = minf(gmin, terrain.height(p.x, p.y))
-		var base := gmin - 0.6
-		# footprint winding (shoelace) so walls face outwards
-		var area := 0.0
-		for i in nv:
-			var a := pts[i]
-			var b := pts[(i + 1) % nv]
-			area += a.x * b.y - b.x * a.y
-		var sgn := 1.0 if area > 0.0 else -1.0
-		# gable roofs on simple four-corner houses and sheds
-		var gable := nv == 4 and kind != 2
-		var long_i := 0
-		var e0 := (pts[1] - pts[0]).length()
-		var e1 := (pts[2] - pts[1]).length()
-		if e1 > e0:
-			long_i = 1
-		var short := minf(e0, e1)
-		var ridge := 0.0
-		if gable:
-			ridge = clampf(short * (0.42 if kind == 0 else 0.14), 1.0, 6.0)
-		var wall_h := maxf(h - ridge, 2.6)
-		var top := gmin + wall_h
-		# colours: walls (brick, render, metal cladding) and roofs (tiles, slate, metal); alpha = material id
-		var wall_col: Color
-		var wall_id: float
-		if kind == 1:
-			wall_col = [Color(0.55, 0.57, 0.55), Color(0.42, 0.47, 0.42), Color(0.6, 0.58, 0.52)][rng.randi() % 3]
-			wall_id = 0.75
-		elif rng.randf() < 0.62:
-			wall_col = Color(1, 1, 1).lerp(Color(0.85, 0.75, 0.65), rng.randf())
-			wall_id = 0.0
-		else:
-			wall_col = [Color(0.93, 0.9, 0.84), Color(0.95, 0.93, 0.88), Color(0.86, 0.82, 0.72)][rng.randi() % 3]
-			wall_id = 0.25
-		var roof_col: Color
-		var roof_id: float
-		if kind == 1 or not gable:
-			roof_col = Color(0.62, 0.63, 0.64).lerp(Color(0.45, 0.48, 0.47), rng.randf())
-			roof_id = 1.0
-		else:
-			roof_col = [Color(0.62, 0.36, 0.28), Color(0.45, 0.3, 0.26), Color(0.36, 0.38, 0.42), Color(0.55, 0.4, 0.32)][rng.randi() % 4]
-			roof_id = 0.5
-		wall_col.a = wall_id
-		roof_col.a = roof_id
-		# walls
-		var ulen := 0.0
-		for i in nv:
-			var a := pts[i]
-			var b := pts[(i + 1) % nv]
-			var d := b - a
-			var len := d.length()
-			if len < 0.05:
-				continue
-			var nrm := Vector3(d.y, 0, -d.x).normalized() * sgn
-			var A := Vector3(a.x, base, a.y)
-			var B := Vector3(b.x, base, b.y)
-			var wall_top := top - gmin
-			bf.quad(A, B, Vector3(b.x, top, b.y), Vector3(a.x, top, a.y), nrm, wall_col,
-				Vector2(ulen, -0.6), Vector2(ulen + len, -0.6), Vector2(ulen + len, wall_top), Vector2(ulen, wall_top))
-			ulen += len
-		# roof
-		if gable:
-			var i0 := long_i
-			var p0 := pts[i0]
-			var p1 := pts[(i0 + 1) % 4]
-			var p2 := pts[(i0 + 2) % 4]
-			var p3 := pts[(i0 + 3) % 4]
-			var m0 := (p0 + p3) / 2.0   # ridge ends on the two short sides
-			var m1 := (p1 + p2) / 2.0
-			var R0 := Vector3(m0.x, top + ridge, m0.y)
-			var R1 := Vector3(m1.x, top + ridge, m1.y)
-			var T := [Vector3(p0.x, top, p0.y), Vector3(p1.x, top, p1.y), Vector3(p2.x, top, p2.y), Vector3(p3.x, top, p3.y)]
-			var mid := Vector3((m0.x + m1.x) / 2.0, top, (m0.y + m1.y) / 2.0)
-			for side in [[T[0], T[1]], [T[2], T[3]]]:
-				var sa: Vector3 = side[0]
-				var sb: Vector3 = side[1]
-				var ra := R0 if sa.distance_to(R0) < sa.distance_to(R1) else R1
-				var rb := R1 if ra == R0 else R0
-				var nrm2 := (sb - sa).cross(rb - sa).normalized()
-				var outw := Vector3((sa.x + sb.x) / 2.0 - mid.x, 0, (sa.z + sb.z) / 2.0 - mid.z)
-				if nrm2.dot(outw) < 0.0 or nrm2.y < 0.0:
-					nrm2 = -nrm2
-				if nrm2.y < 0.0:
-					nrm2.y = -nrm2.y
-				bf.quad(sa, sb, rb, ra, nrm2.normalized(), roof_col, Vector2(sa.x, sa.z), Vector2(sb.x, sb.z), Vector2(rb.x, rb.z), Vector2(ra.x, ra.z))
-			# gable ends (triangles, wall material)
-			for g in [[T[0], T[3], R0], [T[1], T[2], R1]]:
-				var ga: Vector3 = g[0]
-				var gb: Vector3 = g[1]
-				var gr: Vector3 = g[2]
-				var gn := Vector3(gr.x - mid.x, 0, gr.z - mid.z).normalized()
-				bf.tri(ga, gb, gr, gn, wall_col, Vector2(0, wall_h), Vector2(ga.distance_to(gb), wall_h), Vector2(ga.distance_to(gb) / 2.0, wall_h + ridge))
-		else:
-			var tris := Geometry2D.triangulate_polygon(pts)
-			for t in range(0, tris.size(), 3):
-				var a2 := pts[tris[t]]
-				var b2 := pts[tris[t + 1]]
-				var c2 := pts[tris[t + 2]]
-				bf.tri(Vector3(a2.x, top, a2.y), Vector3(b2.x, top, b2.y), Vector3(c2.x, top, c2.y), Vector3.UP, roof_col, a2, b2, c2)
+		kit.add(pts, h, kind, gmin, rng)
 		# crash boxes for the flight model: an oriented box around the footprint
-		var ax := (pts[1] - pts[0]).normalized() if long_i == 0 else (pts[2] - pts[1]).normalized()
-		var lo := Vector2(1e9, 1e9)
-		var hi := Vector2(-1e9, -1e9)
-		for p in pts:
-			var q := Vector2(p.dot(ax), p.dot(Vector2(-ax.y, ax.x)))
-			lo = Vector2(minf(lo.x, q.x), minf(lo.y, q.y))
-			hi = Vector2(maxf(hi.x, q.x), maxf(hi.y, q.y))
+		var bb := BuildingKit.obb(pts)
+		if bb.is_empty():
+			continue
+		var ax: Vector2 = bb[0]
+		var lo: Vector2 = bb[1]
+		var hi: Vector2 = bb[2]
 		var qc := (lo + hi) / 2.0
 		var cw := ax * qc.x + Vector2(-ax.y, ax.x) * qc.y
 		var col := {"cx": cw.x, "cz": cw.y, "c": ax.x, "s": ax.y, "hu": (hi.x - lo.x) / 2.0, "hv": (hi.y - lo.y) / 2.0, "top": gmin + h, "chunk": c}
 		var ck := Vector2i(int(floor(cw.x / COLL_CELL)), int(floor(cw.y / COLL_CELL)))
 		colls.append([ck, col])
-	if bf.v.size() == 0:
+	if kit.v.size() == 0:
 		return {"arrays": null, "colls": colls}
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = bf.v
-	arrays[Mesh.ARRAY_NORMAL] = bf.n
-	arrays[Mesh.ARRAY_COLOR] = bf.c
-	arrays[Mesh.ARRAY_TEX_UV] = bf.uv
-	return {"arrays": arrays, "colls": colls}
+	# v1.23.0: the mesh is made here on the worker thread (the buildings have about four times the triangles they
+	# had, and making the mesh on the main thread held up a frame by 12-17 ms when a square came in)
+	var arr := kit.arrays()
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return {"arrays": arr, "mesh": mesh, "colls": colls}
 
 
 # ---------------------------------------------------------------- trees

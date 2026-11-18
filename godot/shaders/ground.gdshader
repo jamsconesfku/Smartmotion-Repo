@@ -198,6 +198,8 @@ void fragment() {
 	// towns (v1.17.0): streets, pavements, roofs and gardens instead of open grass; sharp roads everywhere
 	float town = 0.0;
 	float pave = 0.0;
+	float lawn = 0.0;
+	float drive = 0.0;
 	if (has_urban) {
 		vec4 ub = texture(urban, ouv) * inside;
 		town = ub.r * smoothstep(0.04, 0.3, ub.b);   // inside a town and among houses (not the airfield or parks)
@@ -210,10 +212,18 @@ void fragment() {
 		col = mix(col, tar * (0.9 + 0.2 * vnoise(p / 9.0)), clamp(road8 * 1.4, 0.0, 1.0));
 		road = max(road, clamp(road8 * 1.4, 0.0, 1.0));
 		col = mix(col, vec3(0.30, 0.29, 0.27) * (0.85 + 0.3 * vnoise(p / 3.0)), pave * 0.65);
-		// gardens, hedges and small trees between the houses: darker and broken up, not a smooth lawn
+		// v1.23.0 (Sam: the ground between the houses looked smudged): gardens are lawns with real grass, drives and
+		// patios are paving close round each house, instead of the blurry satellite colour with concrete grain over it
+		float near_bld = dw > 0.0 ? textureLod(detail_mask, d_uv(p), 1.6).a : textureLod(roofmask, ouv, 1.0).r;
+		drive = clamp(near_bld * 2.4 - rm * 1.2, 0.0, 1.0) * town * (1.0 - road) * (1.0 - pave);
+		drive *= smoothstep(0.35, 0.65, vnoise(p / 4.0) * 0.5 + 0.5 * vnoise(p / 11.0 + 3.0) + 0.15);   // not round every side
+		lawn = town * (1.0 - road) * (1.0 - pave) * (1.0 - drive);
 		float g2 = vnoise(p / 7.0) * 0.6 + vnoise(p / 2.6 + 4.0) * 0.4;
-		vec3 garden = mix(col * vec3(0.72, 0.8, 0.66), vec3(0.16, 0.15, 0.13), smoothstep(0.55, 0.8, g2) * 0.6);
-		col = mix(col, garden, town * 0.55 * (1.0 - road));
+		vec3 lawn_col = mix(vec3(0.105, 0.165, 0.055), col * vec3(0.8, 0.95, 0.7), 0.3) * (0.86 + 0.28 * g2);
+		// borders, shrubs and hedges: darker patches here and there
+		lawn_col = mix(lawn_col, vec3(0.05, 0.075, 0.03), smoothstep(0.66, 0.82, vnoise(p / 3.1 + 7.0)) * 0.7);
+		col = mix(col, lawn_col, lawn * 0.85);
+		col = mix(col, vec3(0.33, 0.31, 0.29) * (0.82 + 0.3 * vnoise(p / 1.8)), drive * 0.85);
 	}
 
 	// runway: real tarmac colour, cleaner than the 10 m photo
@@ -227,9 +237,10 @@ void fragment() {
 	float green = clamp((col.g - max(col.r, col.b)) * 9.0 + 0.3, 0.0, 1.0);
 	// built-up land that looks green in the photo is grass (the airfield, parks, playing fields)
 	float built = clamp(lc.g, 0.0, 1.0) * (1.0 - runway) * (1.0 - 0.6 * rm) * (1.0 - 0.85 * green);
-	built = max(built, max(town * (1.0 - 0.3 * green), pave) * (1.0 - runway));   // towns: no grass texture between the houses
-	float wgrass = (1.0 - built) * (1.0 - runway) * max(green, lc.a);
-	float wsoil = (1.0 - built) * (1.0 - runway) * (1.0 - max(green, lc.a));
+	built = max(built * (1.0 - lawn), max(pave, drive)) * (1.0 - runway);   // towns: lawns are grass, drives and pavements paving
+	float grassy = max(max(green, lc.a), lawn);
+	float wgrass = (1.0 - built) * (1.0 - runway) * grassy;
+	float wsoil = (1.0 - built) * (1.0 - runway) * (1.0 - grassy);
 
 	float fade = 1.0 - smoothstep(250.0, 2200.0, dist);
 	// patches inside the fields (soil, crop and grass vary over tens of metres, not in 10 m squares)
