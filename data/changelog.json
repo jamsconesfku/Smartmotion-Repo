@@ -305,5 +305,10 @@
     "date": "2026-11-18",
     "summary": "Version 1.19.4 of the game: VR should now work through Virtual Desktop as well as Quest Link. On the RTX 4090 gaming PC, VR went through Virtual Desktop and the game closed while loading; it now draws with DirectX 12 when Virtual Desktop is the PC's VR route (the VR .bat does this by itself). Checked on the build machine only, not yet on the 4090 PC.",
     "ids": []
+  },
+  {
+    "date": "2026-11-18",
+    "summary": "Version 1.20.0 of the game: VR fixes after the first try through Virtual Desktop. The Quest controllers should now work (the game asked for two controller inputs that Virtual Desktop refuses, which can switch the controllers off completely; the Quest 3's own controller type is added too). Ctrl+Tab goes in and out of VR as in Microsoft Flight Simulator. In VR the menus come up with you standing beside the vehicle, not in its seat, and the laptop's mouse pointer shows on the menu in the headset. Not yet tried in the headset.",
+    "ids": []
   }
 ]

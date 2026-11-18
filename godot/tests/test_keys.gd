@@ -67,5 +67,20 @@ func _init() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_keys.cfg"))
 	Keys.reset_all()
 	ok(Keys.keys_of("trim_up")[0] == KEY_BRACKETRIGHT and Keys.keys_of("data")[0] == KEY_T and not Keys.changed(), "back to the standard keys")
+	# v1.20.0: Ctrl + key (Ctrl+Tab goes into / out of VR)
+	var ct := KEY_TAB | KEY_MASK_CTRL
+	ok(Keys.key_name(ct) == "Ctrl+Tab" and Keys.label("vr_toggle") == "Ctrl+Tab", "Ctrl+Tab is named Ctrl+Tab")
+	ok("vr_toggle" in Keys.actions_for_key(ct, "flight") and "vr_toggle" in Keys.actions_for_key(ct, "space"), "Ctrl+Tab goes into VR in every game")
+	ok("boost" in Keys.actions_for_key(KEY_TAB, "space") and not "vr_toggle" in Keys.actions_for_key(KEY_TAB, "space"), "Tab on its own is still boost in Space")
+	var ev := InputEventKey.new()
+	ev.physical_keycode = KEY_TAB
+	ev.ctrl_pressed = true
+	var ev2 := InputEventKey.new()
+	ev2.physical_keycode = KEY_CTRL
+	ev2.ctrl_pressed = true
+	ok(Keys.event_code(ev) == ct and Keys.event_code(ev2) == KEY_CTRL, "a key pressed with Ctrl held reads as Ctrl + key (Ctrl itself stays Ctrl)")
+	Keys.set_key("vr_toggle", 0, KEY_F9 | KEY_MASK_CTRL)
+	ok(Keys.label("vr_toggle") == "Ctrl+F9" and Keys.keys_of("thr_down")[0] == KEY_CTRL, "Ctrl + another key can be chosen, and Ctrl alone keeps its own job")
+	Keys.reset_all()
 	print("FAILED: %d" % fails if fails > 0 else "ALL PASSED")
 	quit(1 if fails > 0 else 0)

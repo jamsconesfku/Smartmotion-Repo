@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.19.4"
+const APP_VERSION := "1.20.0"
 ## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
 ## ground stopped at an edge that moved as you climbed)
 const VIEW_FAR := 600000.0
@@ -48,6 +48,9 @@ var ultra := false
 
 # VR
 var vr_active := false
+var on_stand := false     # v1.20.0: at the menus you stand beside the vehicle (in VR), not in its seat
+var vr_stand: Node3D      # where you stand in VR while choosing what to do
+var cap_ctrl := false     # Change keys: Ctrl went down, waiting to see if another key follows (Ctrl + key)
 var xr_origin: XROrigin3D
 var xr_cam: XRCamera3D
 var xr_left: XRController3D
@@ -181,6 +184,17 @@ func _ready() -> void:
 	mcomp.start()
 	ui.vr_btn.visible = XRServer.find_interface("OpenXR") != null
 	to_menu()
+	if args.has("stand_test"):
+		# test option: where VR puts you at the menus (on the ground beside the vehicle, facing it); prints and quits
+		await get_tree().process_frame
+		_place_stand()
+		var sp := vr_stand.global_position
+		var vp: Vector3 = (mode.vehicle if mode != null else plane).global_position
+		var to_v := (Vector3(vp.x, sp.y, vp.z) - sp).normalized()
+		var ok := sp.y - world.terrain.height(sp.x, sp.z) > 1.5 and sp.y - world.terrain.height(sp.x, sp.z) < 1.8 and (-vr_stand.global_basis.z).dot(to_v) > 0.99 and Vector2(vp.x - sp.x, vp.z - sp.z).length() < 15.0
+		print("%s VR stand: %.1f m from the %s, eye %.2f m above the ground, facing it %.3f" % ["PASS" if ok else "FAIL", Vector2(vp.x - sp.x, vp.z - sp.z).length(), game, sp.y - world.terrain.height(sp.x, sp.z), (-vr_stand.global_basis.z).dot(to_v)])
+		get_tree().quit(0 if ok else 1)
+		return
 	if args.has("auto") or (args.has("vr") and args.has("go")):
 		# straight into the game (test option, or the game restarted itself in VR from the menu)
 		await get_tree().create_timer(0.3).timeout
@@ -342,10 +356,14 @@ func _on_fly(vr: bool) -> void:
 
 
 func start_game() -> void:
+	if on_stand:
+		on_stand = false   # off the stand and into the seat
+		vr_frames = 0      # recentres in the seat a few frames later
 	if str(Settings.get_value("game")) == "flight":
 		start_flight()
 	else:
 		await start_mode()
+	_attach_rig()
 
 
 func _on_vr_action(what: String) -> void:
@@ -549,6 +567,9 @@ func _attach_rig() -> void:
 	if not vr_active or xr_origin == null:
 		return
 	var p: Node3D = mode.vehicle if mode != null else plane
+	if on_stand:
+		_place_stand()
+		p = vr_stand
 	if p == null:
 		return
 	if xr_origin.get_parent() != p:
@@ -559,6 +580,8 @@ func _attach_rig() -> void:
 
 
 func _eye() -> Vector3:
+	if on_stand and vr_active:
+		return Vector3.ZERO   # standing at the menus: the stand is at eye height
 	if mode != null:
 		return mode.eye
 	return plane.eye if plane != null else Vector3.ZERO
@@ -627,7 +650,8 @@ func showcase() -> void:
 		await _activate(g)
 		if mode != null:
 			mode.showcase()
-			mode.set_cockpit(vr_active)
+			mode.set_cockpit(vr_active and not on_stand)
+		_attach_rig()
 		return
 	_activate("flight")
 	world.wind = Vector3.ZERO
@@ -639,9 +663,11 @@ func showcase() -> void:
 	_apply_view()
 	world.set_gates(false, 0)
 	_place_plane(0.0)
+	_attach_rig()   # in VR: the stand beside the aircraft, now it is in place
 
 
 func to_menu() -> void:
+	on_stand = true
 	ui.hide_sheets()
 	ui.show_menu()
 	ui.show_pause(false)
@@ -670,7 +696,7 @@ func _mount_plane() -> void:
 
 
 func _apply_view() -> void:
-	var cp := cam_mode == "cockpit" or vr_active
+	var cp := cam_mode == "cockpit" or (vr_active and not on_stand)
 	if mode != null:
 		mode.set_cockpit(cp)
 		return
@@ -767,6 +793,7 @@ static func _dz(v: float) -> float:
 func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventKey and e.pressed and not e.echo:
 		var code: int = e.physical_keycode
+		var combo := Keys.event_code(e)   # with Ctrl held: "Ctrl + key" (v1.20.0, Ctrl+Tab goes into / out of VR)
 		if code == KEY_ESCAPE:
 			if ui.close_top_sheet():
 				pass
@@ -775,7 +802,9 @@ func _unhandled_input(e: InputEvent) -> void:
 			return
 		# v1.19.0: every key can be changed (Settings > Change keys), so look up what this key does in this game
 		var ctx := _key_game()
-		var acts: Array = Keys.actions_for_key(code, ctx)
+		var acts: Array = Keys.actions_for_key(combo, ctx)
+		if acts.is_empty() and combo != code:
+			acts = Keys.actions_for_key(code, ctx)   # nothing on Ctrl + this key: the key on its own (Ctrl is also "less power")
 		for id in acts:
 			_do_action(id)
 		if acts.is_empty() and mode == null and code >= KEY_0 and code <= KEY_9:
@@ -874,6 +903,8 @@ func _do_action(id: String) -> void:
 			Settings.set_value("sound", not Settings.get_value("sound"))
 			ui.set_seg("sound", Settings.get_value("sound"))
 			_toast("Sound on" if Settings.get_value("sound") else "Sound off")
+		"vr_toggle":
+			_toggle_vr()
 		"fullscreen":
 			Settings.set_value("fullscreen", not Settings.get_value("fullscreen"))
 			ui.set_seg("fullscreen", Settings.get_value("fullscreen"))
@@ -1033,9 +1064,10 @@ func _start_vr() -> bool:
 		if not _xr_mode_flag():
 			# VR has to be switched on when the game starts, so restart the game in VR mode
 			ui.set_vr_note("Restarting the game in VR mode…")
-			var restart := ["--xr-mode", "on", "--", "--vr", "--xr", "--go"]
+			# v1.20.0: no "--go": the game comes back at the menu, where you choose what to do
+			var restart := ["--xr-mode", "on", "--", "--vr", "--xr"]
 			if _is_virtual_desktop(Diag.active_runtime()):
-				restart = ["--rendering-driver", "d3d12", "--xr-mode", "on", "--", "--vr", "--xr", "--go", "--d3d12_tried"]
+				restart = ["--rendering-driver", "d3d12", "--xr-mode", "on", "--", "--vr", "--xr", "--d3d12_tried"]
 			var pid := OS.create_process(OS.get_executable_path(), restart)
 			Diag.write("Restarting in VR mode: new process id %d" % pid)
 			await get_tree().create_timer(0.5).timeout
@@ -1109,8 +1141,87 @@ func _start_vr() -> bool:
 	_apply_view()
 	DisplayServer.window_move_to_foreground()
 	Diag.write("VR started; window focused for the keyboard: %s" % str(DisplayServer.window_is_focused()))
+	_watch_xr(xr)
+	get_tree().create_timer(6.0).timeout.connect(_vr_controller_check)
 	ui.toast("VR started. Sit upright, then press B (or %s) to recentre the view." % Keys.first("camera"), 5.0)
 	return true
+
+
+## Ctrl+Tab (v1.20.0, as in Microsoft Flight Simulator): into VR or back to the screen. Started in VR mode, both
+## ways are instant. Started on the screen, going into VR restarts the game in VR mode once (OpenXR can only be
+## switched on when the game starts), back at the menu; after that Ctrl+Tab goes both ways at once.
+func _toggle_vr() -> void:
+	if vr_active:
+		_toast("Back on the screen. %s goes back into VR." % Keys.first("vr_toggle"), 4.0)
+		_stop_vr()
+		_apply_view()
+		if state == "menu":
+			ui.show_menu()
+		return
+	var xr := XRServer.find_interface("OpenXR")
+	if xr == null:
+		_toast("This copy of the game has no VR support.", 4.0)
+		return
+	if not xr.is_initialized():
+		_toast("Starting VR: the game restarts in VR mode…", 4.0)
+	if await _start_vr():
+		if state == "menu" or state == "ended" or paused:
+			_panel_show(true)
+
+
+## OpenXR's session events and the controllers' types, into the log (v1.20.0: the Quest controllers didn't work
+## through Virtual Desktop; this shows which controller type the headset reports and whether the game has focus).
+var _xr_watched := false
+func _watch_xr(xr: XRInterface) -> void:
+	if _xr_watched or xr == null:
+		return
+	_xr_watched = true
+	for sig in ["session_begun", "session_visible", "session_focussed", "session_stopping", "session_loss_pending", "instance_exiting"]:
+		if xr.has_signal(sig):
+			xr.connect(sig, func(): Diag.write("OpenXR: %s" % sig))
+	XRServer.tracker_added.connect(func(nm: StringName, type: int): Diag.write("XR tracker added: %s (type %d)" % [nm, type]))
+	for tn in ["left_hand", "right_hand"]:
+		var tr := XRServer.get_tracker(tn) as XRPositionalTracker
+		if tr != null and tr.has_signal("profile_changed"):
+			tr.profile_changed.connect(func(role: String, profile: String): Diag.write("XR %s controller type: %s %s" % [tn, profile, role]))
+
+
+func _vr_controller_check() -> void:
+	if not vr_active:
+		return
+	var parts: Array = []
+	var any := false
+	for c in [xr_left, xr_right]:
+		if c == null:
+			continue
+		var tr := XRServer.get_tracker(c.tracker) as XRPositionalTracker
+		any = any or c.get_is_active()
+		parts.append("%s active=%s tracking=%s type=%s trigger=%.2f" % [c.tracker, str(c.get_is_active()), str(c.get_has_tracking_data()), tr.profile if tr != null else "(no tracker)", c.get_float("trigger")])
+	Diag.write("VR controllers after 6 s: " + "; ".join(parts))
+	if not any:
+		_toast("The game can't see the controllers. Take the headset off, press Copy diagnostics on the menu and paste it to Claude. The keyboard and mouse still work.", 10.0)
+
+
+## Where you stand in VR while choosing what to do (v1.20.0): on the ground a few metres in front of and to the
+## left of the vehicle on show, at standing eye height, facing it. Your seat comes when you press Fly / Drive / Ride.
+func _place_stand() -> void:
+	if vr_stand == null:
+		vr_stand = Node3D.new()
+		vr_stand.name = "vr_stand"
+		add_child(vr_stand)
+	var v: Node3D = mode.vehicle if mode != null and mode.vehicle != null else plane
+	if v == null:
+		return
+	var tgt := v.global_position
+	var fwd := -v.global_basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized() if fwd.length() > 0.1 else Vector3.FORWARD
+	var left := Vector3.UP.cross(fwd).normalized()
+	var spot := tgt + fwd * 7.0 + left * 7.5
+	var on_earth := game != "space"
+	spot.y = (world.terrain.height(spot.x, spot.z) + 1.65) if on_earth else tgt.y + 1.0
+	var look_at := Vector3(tgt.x, spot.y, tgt.z) - spot
+	vr_stand.global_transform = Transform3D(Basis.looking_at(look_at.normalized(), Vector3.UP), spot)
 
 
 func _stop_vr() -> void:
@@ -1118,9 +1229,9 @@ func _stop_vr() -> void:
 		return
 	vr_active = false
 	get_viewport().use_xr = false
-	var xr := XRServer.find_interface("OpenXR")
-	if xr != null and xr.is_initialized():
-		xr.uninitialize()
+	# v1.20.0: OpenXR stays running (the headset shows nothing), so Ctrl+Tab puts you straight back in VR.
+	# It can't be started again in the same run once it is stopped (the graphics are set up with it).
+	Diag.write("left VR (OpenXR kept running for Ctrl+Tab)")
 	if vr_panel != null:
 		vr_panel.teardown()
 		vr_panel = null
@@ -1193,8 +1304,8 @@ const SEAT_BOX_BULLDOG := {"x0": -0.13, "x1": 0.22, "y0": -0.22, "y1": 0.12, "z0
 ## your head through the canopy, the panel or the seat back, or end up outside after the headset loses
 ## tracking for a moment. Returns true if it had to hold the view back.
 func _keep_in_seat() -> bool:
-	if xr_cam == null or vr_frames >= 0 or xr_cam.position == Vector3.ZERO:
-		return false   # not seated yet (the automatic recentre comes first)
+	if xr_cam == null or vr_frames >= 0 or xr_cam.position == Vector3.ZERO or on_stand:
+		return false   # not seated yet (the automatic recentre comes first), or standing at the menus
 	var box: Dictionary = SEAT_BOX_BULLDOG if mode == null and plane != null and plane.bulldog != null else SEAT_BOX
 	var head := (Transform3D(Basis(), vr_base) * mcomp.correction(vr_pivot)) * xr_cam.position
 	var d := head - _eye()
@@ -1261,8 +1372,16 @@ func _input(e: InputEvent) -> void:
 	# Change keys: a box is waiting for a key (here, not in the menu's own code, so it also works in VR where
 	# the menus are drawn on the headset panel and don't see the keyboard themselves)
 	if ui != null and ui.capturing() and e is InputEventKey:
-		if e.pressed and not e.echo:
-			ui.capture_key(e.physical_keycode)
+		# Ctrl on its own is a key too ("less power"): it is taken when it is let go without another key
+		if e.physical_keycode == KEY_CTRL:
+			if e.pressed and not e.echo:
+				cap_ctrl = true
+			elif not e.pressed and cap_ctrl:
+				cap_ctrl = false
+				ui.capture_key(KEY_CTRL)
+		elif e.pressed and not e.echo:
+			cap_ctrl = false
+			ui.capture_key(Keys.event_code(e))
 		get_viewport().set_input_as_handled()
 		return
 	# while VR is on the menus live on the headset panel: the laptop's mouse and arrow keys still work them

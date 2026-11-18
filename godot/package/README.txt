@@ -48,7 +48,16 @@ VR ON A META QUEST 3
   2. In the Quest Link app: Settings > General > "Set Meta Quest Link as active OpenXR runtime".
   3. Put the headset on and start Quest Link (you'll see the Link home).
   4. Double-click "Play (VR - Meta Quest).bat" (best), or run SmartMotionFlight.exe and press
-     "Play in VR (Meta Quest)" (the game restarts itself in VR mode).
+     "Play in VR (Meta Quest)" or Ctrl+Tab (the game restarts itself in VR mode, back at the menu).
+  IN AND OUT OF VR WITH CTRL+TAB (v1.20.0, as in Microsoft Flight Simulator): Ctrl+Tab on the keyboard
+  switches between the headset and the screen at any time. Started with the VR .bat, it is instant both
+  ways. Started on the screen, the first Ctrl+Tab restarts the game in VR mode (a few seconds); after that it
+  is instant. (Change it in Settings > "Change keys and buttons" > "Go into / out of VR".)
+  CHOOSE FIRST: in VR the menus come up with you standing on the airfield beside the aircraft (or the car,
+  the coaster or the ship), not in its seat. Press Fly / Drive / Ride and you are put in the seat.
+  THE MOUSE IN VR: move the laptop mouse and its pointer shows on the menu in the headset; click as normal.
+  IF THE CONTROLLERS DO NOTHING: the game says so after a few seconds. Press "Copy diagnostics" on the menu
+  and paste it to Claude (it lists the controller type the headset reports).
   5. Sit upright and press B on the right controller (or V on the keyboard) to recentre.
   VIRTUAL DESKTOP works too (v1.19.4): start Virtual Desktop on the headset and the PC as usual, then
   double-click "Play (VR - Meta Quest).bat". When Virtual Desktop is the PC's VR route, the game draws with

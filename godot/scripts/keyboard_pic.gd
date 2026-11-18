@@ -66,6 +66,8 @@ func _draw() -> void:
 	for a in Keys.ACTIONS:
 		if Keys.uses(a[0], game):
 			for k in Keys.keys_of(a[0]):
+				if k != 0 and k & KEY_MASK_CTRL:
+					k = k & KEY_CODE_MASK   # Ctrl + key: shown on the key itself (its label says Ctrl+)
 				if k != 0 and not what.has(k):
 					what[k] = a[0]
 	for r in MAIN.size():

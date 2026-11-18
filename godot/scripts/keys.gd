@@ -5,6 +5,7 @@ extends RefCounted
 ## (Settings "binds"), so new defaults reach everyone who hasn't touched that action.
 ##
 ## Keys are stored as physical key codes (the key's place on the keyboard), so they work on any layout.
+## A key can also be "Ctrl + key" (v1.20.0, for Ctrl+Tab: into / out of VR): the code then carries KEY_MASK_CTRL.
 ## A controller button is {"i": button number, "name": device name}. The default buttons have no name: they
 ## are for a standard gamepad and only work while no simulator joystick is set up (as before v1.19.0).
 
@@ -55,6 +56,7 @@ const ACTIONS := [
 	["data", "all", "Data panel", [KEY_T], -1, "DATA"],
 	["sound", "all", "Sound on / off", [KEY_M], -1, "SOUND"],
 	["fullscreen", "all", "Full screen", [KEY_F11], -1, "FULL SCREEN"],
+	["vr_toggle", "all", "Go into / out of VR (headset)", [KEY_TAB | KEY_MASK_CTRL], -1, "CTRL+TAB: VR"],
 ]
 
 ## Keys that can't be given to an action: they work the menus.
@@ -128,9 +130,25 @@ static func clash(a: String, b: String) -> bool:
 ## True while one of the action's keys is held.
 static func key_down(id: String) -> bool:
 	for k in keys_of(id):
-		if k != 0 and Input.is_physical_key_pressed(k):
+		if k != 0 and pressed(k):
 			return true
 	return false
+
+
+## True while the key (or the Ctrl + key combination) is held.
+static func pressed(code: int) -> bool:
+	var base := code & KEY_CODE_MASK
+	if code & KEY_MASK_CTRL and not Input.is_physical_key_pressed(KEY_CTRL):
+		return false
+	return Input.is_physical_key_pressed(base)
+
+
+## The code for a key event: with KEY_MASK_CTRL when Ctrl is held (and the key isn't Ctrl itself).
+static func event_code(e: InputEventKey) -> int:
+	var code := int(e.physical_keycode)
+	if e.ctrl_pressed and code != KEY_CTRL:
+		code |= KEY_MASK_CTRL
+	return code
 
 
 ## True while the action's controller button is held. A default (gamepad) button only counts while no
@@ -238,6 +256,8 @@ const PAD_NAMES := {
 static func key_name(code: int) -> String:
 	if code == 0:
 		return ""
+	if code & KEY_MASK_CTRL:
+		return "Ctrl+" + key_name(code & KEY_CODE_MASK)
 	if NAMES.has(code):
 		return NAMES[code]
 	var s := OS.get_keycode_string(code)

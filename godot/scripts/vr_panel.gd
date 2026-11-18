@@ -27,6 +27,8 @@ var edge := {}
 var shown := false
 var held := {}                  # side -> trigger held (with a gap between press and release levels)
 var pend := 0.0                 # a trigger pull that hasn't hit a button yet (counts for a moment)
+var cursor: Control             # v1.20.0: the laptop's mouse pointer, drawn on the panel so you see it in the headset
+var cursor_t := 0.0
 const TRIG_ON := 0.55
 const TRIG_OFF := 0.3
 
@@ -42,6 +44,9 @@ func setup(ui_: GameUI, home: Node, origin: XROrigin3D) -> void:
 	add_child(sub)
 	ui.get_parent().remove_child(ui)
 	sub.add_child(ui)
+	cursor = MousePointer.new()
+	cursor.visible = false
+	sub.add_child(cursor)   # after the menus, so it is drawn on top of them
 	quad = MeshInstance3D.new()
 	var qm := QuadMesh.new()
 	qm.size = SIZE_M
@@ -118,6 +123,12 @@ var _skip := 0
 func _process(_dt: float) -> void:
 	if sub == null:
 		return
+	if cursor != null and cursor.visible:
+		cursor_t -= _dt
+		if cursor_t <= 0.0:
+			cursor.visible = false   # hidden again a few seconds after the mouse stops
+		elif cursor.get_index() != sub.get_child_count() - 1:
+			sub.move_child(cursor, -1)   # stay on top of anything the menus added
 	if shown:
 		if sub.render_target_update_mode != SubViewport.UPDATE_ALWAYS:
 			sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -315,4 +326,24 @@ func desktop_mouse(e: InputEvent, screen: Vector2) -> bool:
 	ev.position = p
 	ev.global_position = p
 	sub.push_input(ev)
+	if cursor != null:
+		cursor.position = p
+		cursor.visible = true
+		cursor_t = 4.0
 	return true
+
+
+## The mouse pointer as it looks on the screen: a white arrow with a dark edge, big enough to see in the headset.
+class MousePointer extends Control:
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		z_index = 100
+	func _draw() -> void:
+		var k := 2.2
+		var pts := PackedVector2Array([Vector2(0, 0), Vector2(0, 17), Vector2(4.5, 13), Vector2(7.5, 20), Vector2(10, 19), Vector2(7, 12), Vector2(12.5, 12)])
+		for i in pts.size():
+			pts[i] *= k
+		draw_colored_polygon(pts, Color.WHITE)
+		var loop := pts.duplicate()
+		loop.append(pts[0])
+		draw_polyline(loop, Color(0.05, 0.05, 0.1), 2.5, true)
