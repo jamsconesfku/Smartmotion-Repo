@@ -320,5 +320,10 @@
     "date": "2026-11-18",
     "summary": "Version 1.21.1 of the game: the 'controllers not found' message in VR was a false alarm. Through Virtual Desktop the game only gets the controllers about 30 seconds after it starts, and the check ran before that. It now checks a few seconds after the headset hands the controllers over.",
     "ids": []
+  },
+  {
+    "date": "2026-11-18",
+    "summary": "Version 1.22.0 of the game: Ctrl+Tab now switches between the screen and the headset straight away (the game starts with VR ready in the background when the PC has Virtual Desktop or Quest Link). Racing has its own steering invert and a pedal swap, every control in Set up controls has an Invert switch, and the wheel or joystick can have Pause, Restart and Change view buttons. The aircraft move the rig more through FlyPT Mover (about 30% in aerobatics, more in gentle flying; furthest actuator 114 of 150 mm on the model). Not yet tried on the rig or Sam's PC.",
+    "ids": []
   }
 ]

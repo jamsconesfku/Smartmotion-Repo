@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.21.1"
+const APP_VERSION := "1.22.0"
 ## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
 ## ground stopped at an edge that moved as you climbed)
 const VIEW_FAR := 600000.0
@@ -86,10 +86,18 @@ var learning := ""
 const RIG_ACTIONS := {
 	"stick": [["roll", "Stick left / right", "Push the stick fully to the RIGHT"], ["pitch", "Stick forward / back", "Pull the stick fully BACK towards you"],
 		["throttle", "Throttle lever", "Push the throttle fully FORWARD"], ["rudder", "Rudder pedals or stick twist (optional)", "Push the RIGHT pedal (or twist the stick RIGHT)"],
-		["fire", "Fire button (Space game)", "Press the fire button"]],
+		["fire", "Fire button (Space game)", "Press the fire button"],
+		["pause_btn", "Pause button (optional)", "Press the button you want for PAUSE"],
+		["restart_btn", "Restart button (optional)", "Press the button you want for RESTART"],
+		["camera_btn", "Change view button (optional; in VR it recentres)", "Press the button you want for CHANGE VIEW"]],
 	"wheel": [["steer", "Steering wheel", "Turn the wheel to the RIGHT (about a quarter turn)"], ["accel", "Accelerator pedal", "Press the accelerator all the way down"],
-		["brake", "Brake pedal", "Press the brake all the way down"]],
+		["brake", "Brake pedal", "Press the brake all the way down"],
+		["pause_btn", "Pause button (optional)", "Press the button you want for PAUSE"],
+		["restart_btn", "Restart button (optional)", "Press the button you want for RESTART"],
+		["camera_btn", "Change view button (optional; in VR it recentres)", "Press the button you want for CHANGE VIEW"]],
 }
+## v1.22.0: the optional buttons in both lists above (Pause, Restart, Change view): learned control -> action
+const RIG_BUTTON_ACTION := {"pause_btn": "pause", "restart_btn": "restart", "camera_btn": "camera"}
 const BIPOLAR := ["roll", "pitch", "rudder", "steer"]
 
 # frame timing (diagnostics log): how smooth the game is running
@@ -102,7 +110,7 @@ func _ready() -> void:
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	Diag.start(not args.has("xr"))
 	Diag.write("SmartMotion Flight native v%s started" % APP_VERSION)
-	if _vr_on_directx():
+	if _vr_on_directx() or _vr_ready_restart():
 		return
 	var saved_keys = Settings.get_value("binds")
 	Keys.over = saved_keys if saved_keys is Dictionary else {}
@@ -157,6 +165,7 @@ func _ready() -> void:
 	ui.restart_pressed.connect(start_game)
 	ui.vr_action.connect(_on_vr_action)
 	ui.learn_pressed.connect(_learn)
+	ui.invert_toggled.connect(_set_invert)
 	ui.binds_changed.connect(func():
 		Settings.set_value("binds", Keys.over)
 		_refresh_help())
@@ -184,6 +193,8 @@ func _ready() -> void:
 	mcomp.start()
 	ui.vr_btn.visible = XRServer.find_interface("OpenXR") != null
 	to_menu()
+	if not args.has("vr"):
+		_vr_idle_set(true)   # VR ready in the background (v1.22.0): the headset waits until Ctrl+Tab
 	if args.has("stand_test"):
 		# test option: where VR puts you at the menus (on the ground beside the vehicle, facing it); prints and quits
 		await get_tree().process_frame
@@ -931,6 +942,11 @@ func _poll_buttons() -> void:
 	for id in BUTTON_ACTIONS:
 		if _edge("b_" + id, Keys.uses(id, ctx) and Keys.button_down(id, hm)):
 			_do_action(id)
+	# buttons learned in Set up controls (v1.22.0)
+	for lid in RIG_BUTTON_ACTION:
+		var v := _mapped(lid)
+		if _edge("m_" + lid, not is_nan(v) and v > 0.5):
+			_do_action(RIG_BUTTON_ACTION[lid])
 
 
 ## Trim: shown as a short message while it changes (and in the headset), and on the HUD's TRIM tag.
@@ -1063,15 +1079,7 @@ func _start_vr() -> bool:
 	if not xr.is_initialized():
 		if not _xr_mode_flag():
 			# VR has to be switched on when the game starts, so restart the game in VR mode
-			ui.set_vr_note("Restarting the game in VR mode…")
-			# v1.20.0: no "--go": the game comes back at the menu, where you choose what to do
-			var restart := ["--xr-mode", "on", "--", "--vr", "--xr"]
-			if _is_virtual_desktop(Diag.active_runtime()):
-				restart = ["--rendering-driver", "d3d12", "--xr-mode", "on", "--", "--vr", "--xr", "--d3d12_tried"]
-			var pid := OS.create_process(OS.get_executable_path(), restart)
-			Diag.write("Restarting in VR mode: new process id %d" % pid)
-			await get_tree().create_timer(0.5).timeout
-			get_tree().quit()
+			await _restart_in_vr()
 			return false
 		var tried := xr.initialize()
 		Diag.write("OpenXR manual initialize() returned: %s" % str(tried))
@@ -1082,6 +1090,7 @@ func _start_vr() -> bool:
 			ui.set_vr_note("The game restarted in VR mode but couldn't reach the headset. Press 'Copy diagnostics' below and paste the result to Claude. Also check: (1) Meta Quest Link app open on this laptop, (2) the headset shows the white Link room, (3) Link app > Settings > General > 'Set Meta Quest Link as active OpenXR runtime' is ON.")
 			return false
 		Diag.write("OpenXR started on the second try")
+	_vr_idle_set(false)
 	get_viewport().use_xr = true
 	get_viewport().use_taa = false            # TAA smears when you turn your head; MSAA keeps VR sharp
 	# 2x MSAA: 4x on two eyes at headset resolution cost too much time per frame (judder when looking around)
@@ -1131,6 +1140,7 @@ func _start_vr() -> bool:
 	vr_panel = VRPanel.new()
 	xr_origin.add_child(vr_panel)
 	vr_panel.setup(ui, self, xr_origin)
+	xr_origin.current = true
 	ui.set_vr(true, _vr_hz_label())
 	xr_cam.environment = cam.environment
 	xr_cam.far = cam.far
@@ -1155,6 +1165,12 @@ func _start_vr() -> bool:
 ## ways are instant. Started on the screen, going into VR restarts the game in VR mode once (OpenXR can only be
 ## switched on when the game starts), back at the menu; after that Ctrl+Tab goes both ways at once.
 func _toggle_vr() -> void:
+	var xr0 := XRServer.find_interface("OpenXR")
+	if not vr_active and (xr0 == null or not xr0.is_initialized()) and OS.get_name() == "Windows" and Diag.active_runtime() != "":
+		# VR wasn't ready at start (the headset wasn't connected then, or "VR ready at start" is off): restart in VR
+		_toast("Starting VR: the game restarts in VR mode…", 4.0)
+		await _restart_in_vr()
+		return
 	if vr_active:
 		_toast("Back on the screen. %s goes back into VR." % Keys.first("vr_toggle"), 4.0)
 		_stop_vr()
@@ -1171,6 +1187,102 @@ func _toggle_vr() -> void:
 	if await _start_vr():
 		if state == "menu" or state == "ended" or paused:
 			_panel_show(true)
+
+
+## Restarts the game in VR mode, back at the menu (v1.20.0: no "--go", so you choose what to do first).
+func _restart_in_vr() -> void:
+	ui.set_vr_note("Restarting the game in VR mode…")
+	var restart := ["--xr-mode", "on", "--", "--vr", "--xr"]
+	if _is_virtual_desktop(Diag.active_runtime()):
+		restart = ["--rendering-driver", "d3d12", "--xr-mode", "on", "--", "--vr", "--xr", "--d3d12_tried"]
+	var pid := OS.create_process(OS.get_executable_path(), restart)
+	Diag.write("Restarting in VR mode: new process id %d" % pid)
+	await get_tree().create_timer(0.5).timeout
+	get_tree().quit()
+
+
+## v1.22.0, "VR ready at start" (Settings, on unless turned off): Ctrl+Tab can only go into VR at once if OpenXR was
+## switched on when the game started (the graphics are set up with it). So when the PC has a VR runtime (Virtual
+## Desktop or Quest Link) and the game was started normally, it restarts itself straight away, before the world
+## loads (about a second), with OpenXR on and on DirectX 12 for Virtual Desktop, and carries on on the screen.
+## If the headset isn't connected, Godot starts without VR and Ctrl+Tab restarts into VR later, as before.
+func _vr_ready_restart() -> bool:
+	if OS.get_name() != "Windows" or args.has("xr") or args.has("no_vr_ready") or DisplayServer.get_name() == "headless":
+		return false
+	if not bool(Settings.get_value("vr_ready")) or RenderingServer.get_current_rendering_method() == "gl_compatibility":
+		return false
+	for test in ["auto", "shot", "shots", "ui_shot", "key_test", "test_panel", "stand_test", "tel_dump", "switch_test"]:
+		if args.has(test):
+			return false
+	var runtime := Diag.active_runtime()
+	if runtime == "":
+		return false
+	var restart: Array = []
+	var engine_args := OS.get_cmdline_args()
+	for a in engine_args:
+		restart.append(a)
+	restart.append_array(["--xr-mode", "on"])
+	var vd := _is_virtual_desktop(runtime)
+	if vd and not "--rendering-driver" in engine_args:
+		restart.append_array(["--rendering-driver", "d3d12"])
+	restart.append("--")
+	for u in OS.get_cmdline_user_args():
+		restart.append(u)
+	restart.append("--xr")
+	if vd:
+		restart.append("--d3d12_tried")
+	Diag.write("VR ready at start: restarting with OpenXR on (%s) %s" % [runtime, str(restart)])
+	set_process(false)
+	set_process_input(false)
+	set_process_unhandled_input(false)
+	var pid := OS.create_process(OS.get_executable_path(), restart)
+	Diag.write("restarted: new process id %d" % pid)
+	get_tree().quit()
+	return true
+
+
+## While VR is ready but you're on the screen, the headset shows a quiet dark room with a note (v1.22.0). Godot
+## needs a viewport drawing to the headset while OpenXR runs (otherwise it logs a warning every frame), and the
+## headset should say what to do. One small scene of its own, drawn in stereo: costs next to nothing.
+var vr_idle: SubViewport
+var vr_idle_origin: XROrigin3D
+func _vr_idle_set(on: bool) -> void:
+	var xr := XRServer.find_interface("OpenXR")
+	on = on and xr != null and xr.is_initialized() and not vr_active
+	if on and vr_idle == null:
+		vr_idle = SubViewport.new()
+		vr_idle.name = "vr_idle"
+		vr_idle.own_world_3d = true
+		vr_idle.size = Vector2i(64, 64)
+		var e := Environment.new()
+		e.background_mode = Environment.BG_COLOR
+		e.background_color = Color("#02022f")
+		e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		e.ambient_light_color = Color(0.6, 0.6, 0.7)
+		var we := WorldEnvironment.new()
+		we.environment = e
+		vr_idle.add_child(we)
+		vr_idle_origin = XROrigin3D.new()
+		vr_idle.add_child(vr_idle_origin)
+		var c := XRCamera3D.new()
+		vr_idle_origin.add_child(c)
+		var lb := Label3D.new()
+		lb.text = "SmartMotion\n\nThe game is on the screen.\nPress Ctrl+Tab (or Play in VR) to come into VR."
+		lb.font = load("res://assets/fonts/Barlow-SemiBold.ttf")
+		lb.font_size = 64
+		lb.pixel_size = 0.0012
+		lb.position = Vector3(0, 0, -1.6)
+		lb.modulate = Color("#f2f2f5")
+		lb.outline_size = 0
+		lb.shaded = false
+		vr_idle_origin.add_child(lb)
+		add_child(vr_idle)
+		Diag.write("VR ready: the headset waits (Ctrl+Tab goes into VR)")
+	if vr_idle != null:
+		vr_idle.use_xr = on
+		vr_idle.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+		if on and vr_idle_origin != null:
+			vr_idle_origin.current = true
 
 
 ## OpenXR's session events and the controllers' types, into the log (v1.20.0: the Quest controllers didn't work
@@ -1273,6 +1385,7 @@ func _stop_vr() -> void:
 	world.env.ssil_enabled = quality == "high"
 	world.set_vr_mode(false)
 	cam.current = true
+	_vr_idle_set(true)   # the headset waits; Ctrl+Tab comes back
 
 
 func _read_vr() -> Dictionary:
@@ -1932,7 +2045,7 @@ func _read_mode_input(dt: float) -> Dictionary:
 		var thr := Keys.val("accel", hm)
 		var brk := Keys.val("race_brake", hm)
 		if pad >= 0:
-			steer += _dz(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X)) * _inv("invert_roll")
+			steer += _dz(Input.get_joy_axis(pad, JOY_AXIS_LEFT_X)) * _inv("invert_steer")
 			thr = maxf(thr, Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_RIGHT))
 			brk = maxf(brk, Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_LEFT))
 		if vrr != null:
@@ -1945,7 +2058,11 @@ func _read_mode_input(dt: float) -> Dictionary:
 		var ma := _mapped("accel")
 		var mb := _mapped("brake")
 		if not is_nan(ms):
-			steer += ms * _inv("invert_roll")
+			steer += ms * _inv("invert_steer")
+		if bool(Settings.get_value("pedals_swap")):
+			var tmp := ma
+			ma = mb
+			mb = tmp
 		if not is_nan(ma):
 			thr = maxf(thr, ma)
 		if not is_nan(mb):
@@ -2378,13 +2495,33 @@ func _mapped(action: String) -> float:
 	if absf(span) < 0.05:
 		return NAN
 	var x: float = (raw - float(e["rest"])) / span
+	var flip := bool(e.get("invert", false))   # v1.22.0: the Invert switch beside each control in Set up controls
 	if action in BIPOLAR:
-		return 0.0 if absf(x) < 0.04 else clampf(x, -1.0, 1.0)
-	return clampf(x, 0.0, 1.0)
+		return 0.0 if absf(x) < 0.04 else clampf(-x if flip else x, -1.0, 1.0)
+	return clampf(1.0 - x if flip else x, 0.0, 1.0)
 
 
 func _refresh_controls_sheet() -> void:
 	ui.set_control_actions(RIG_ACTIONS.get(str(Settings.get_value("rig")), []))
+	var map := _rig_map()
+	for a in RIG_ACTIONS.get(str(Settings.get_value("rig")), []):
+		var e: Dictionary = map.get(a[0], {})
+		ui.set_control_invert(a[0], bool(e.get("invert", false)))
+
+
+## The Invert switch beside a control in Set up controls (v1.22.0).
+func _set_invert(action: String, on: bool) -> void:
+	var map := _rig_map().duplicate(true)
+	if not map.has(action):
+		ui.ctl_info.text = "Set the control first, then choose Invert if it works the wrong way round."
+		ui.set_control_invert(action, false)
+		return
+	var e: Dictionary = map[action]
+	e["invert"] = on
+	map[action] = e
+	Settings.set_value("rig_map", map)
+	Diag.write("Control %s inverted: %s" % [action, str(on)])
+	ui.ctl_info.text = "%s: %s." % [action, "inverted (works the other way round)" if on else "normal"]
 
 
 func _controls_tick() -> void:
@@ -2439,7 +2576,7 @@ func _learn(action: String) -> void:
 	while t < 8.0:
 		await get_tree().process_frame
 		t += get_process_delta_time()
-		if action == "fire":
+		if action == "fire" or action.ends_with("_btn"):
 			for k in btn0.keys():
 				if Input.is_joy_button_pressed(k.x, k.y) and not btn0[k]:
 					found = {"name": Input.get_joy_name(k.x), "dev": k.x, "button": k.y}

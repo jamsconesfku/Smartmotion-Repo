@@ -60,8 +60,47 @@ static func make(fm: FlightModel, inp: Dictionary, t: float, paused: bool) -> Di
 	}
 
 
+## v1.22.0, for FlyPT Mover (Sam: "the planes need to produce more movement"). Mover's AIR pose leans the seat
+## with the turn rates, so in a steady turn or climb the seat soon drifts back to level and gentle flying hardly
+## moves the rig. As the coaster does (coaster_mode.gd), the aircraft now adds to the rates Mover reads a pull
+## towards its own bank and pitch (fading over CUE_FADE seconds, so the seat leans into a turn and settles back
+## slowly), a tilt back with the g of a pull-up, and a lean with any sideways force. Off on the ground (Mover's
+## GROUND pose does the runway). SmartMotion Motion still gets the real rates.
+const CUE_GAIN := 1.8      # degrees a second of extra turn rate per degree of bank or pitch
+const CUE_G := 7.0         # ... of pitch rate per g above 1 (pulling g tips the seat back)
+const CUE_SIDE := 30.0     # ... of roll rate per g of sideways force
+const CUE_FADE := 6.0      # seconds for the extra lean to fade in a steady turn or climb
+var cue_lp := Vector2.ZERO
+var cue_out := Vector2.ZERO
+var _cue_t := -1.0
+
+
+func _aircraft_cue(fm: FlightModel, t: float, paused: bool) -> Dictionary:
+	var dt := clampf(t - _cue_t, 0.0, 0.1) if _cue_t >= 0.0 else 0.0
+	_cue_t = t
+	var i: Dictionary = fm.i
+	var air := not bool(i["on_ground"]) and not fm.crashed and not paused
+	if dt <= 0.0:
+		return {"roll_dps": snappedf(cue_out.x, 0.01), "pitch_dps": snappedf(cue_out.y, 0.01)}
+	if air:
+		# like degrees for small angles and smooth all the way round a roll or a loop
+		var bank := 57.3 * sin(deg_to_rad(float(i["roll"])))
+		var nose := 57.3 * sin(deg_to_rad(float(i["pitch"])))
+		cue_lp = cue_lp.lerp(Vector2(bank, nose), 1.0 - exp(-dt / CUE_FADE))
+		var g_up := fm.spec_force.y / FlightModel.G
+		var g_side := fm.spec_force.x / FlightModel.G
+		var want := Vector2(CUE_GAIN * (bank - cue_lp.x) + CUE_SIDE * g_side, CUE_GAIN * (nose - cue_lp.y) + CUE_G * clampf(g_up - 1.0, -1.5, 4.0))
+		want = Vector2(40.0 * tanh(want.x / 40.0), 40.0 * tanh(want.y / 40.0))   # eased towards 40 degrees a second
+		cue_out = cue_out.lerp(want, 1.0 - exp(-dt / 0.25))                       # smoothed over a quarter second
+	else:
+		cue_lp = Vector2.ZERO
+		cue_out = cue_out.lerp(Vector2.ZERO, 1.0 - exp(-dt / 0.25))
+	return {"roll_dps": snappedf(cue_out.x, 0.01), "pitch_dps": snappedf(cue_out.y, 0.01)}
+
+
 func push(fm: FlightModel, inp: Dictionary, t: float, paused: bool) -> void:
 	frame = make(fm, inp, t, paused)
+	frame["mover_cue"] = _aircraft_cue(fm, t, paused)
 	if enabled and t >= _next:
 		_next = t + 1.0 / 60.0 - 0.002
 		udp.put_packet(JSON.stringify(frame).to_utf8_buffer())

@@ -16,7 +16,7 @@ HOW TO START
      The menu then shows the games for that set-up ("Change setup" to pick again).
   4. With a joystick or wheel fitted, press "Set up controls" once: press Set beside each control and move it
      as asked (the game remembers it). If a direction comes out the wrong way round, Settings has
-     Inverted options for pitch (nose up/down), left / right (roll, and steering in Racing) and rudder.
+     Inverted options for pitch, roll, rudder and Racing steering, and each control has an Invert switch.
   5. Choose the options and press Fly / Race / Launch / Ride.
      (Racing, Space and the Coaster take a few seconds to build the first time you pick them.)
 
@@ -49,10 +49,12 @@ VR ON A META QUEST 3
   3. Put the headset on and start Quest Link (you'll see the Link home).
   4. Double-click "Play (VR - Meta Quest).bat" (best), or run SmartMotionFlight.exe and press
      "Play in VR (Meta Quest)" or Ctrl+Tab (the game restarts itself in VR mode, back at the menu).
-  IN AND OUT OF VR WITH CTRL+TAB (v1.20.0, as in Microsoft Flight Simulator): Ctrl+Tab on the keyboard
-  switches between the headset and the screen at any time. Started with the VR .bat, it is instant both
-  ways. Started on the screen, the first Ctrl+Tab restarts the game in VR mode (a few seconds); after that it
-  is instant. (Change it in Settings > "Change keys and buttons" > "Go into / out of VR".)
+  IN AND OUT OF VR WITH CTRL+TAB (as in Microsoft Flight Simulator): Ctrl+Tab on the keyboard switches
+  between the headset and the screen at any time, straight away both ways (v1.22.0). When the PC has
+  Virtual Desktop or Quest Link, the game starts with VR ready in the background (it restarts itself once
+  as it opens, about a second), stays on the screen, and the headset shows "Press Ctrl+Tab" until you do.
+  If the headset wasn't connected when the game started, the first Ctrl+Tab restarts the game in VR mode.
+  Settings > "VR: ready at start" turns this off. (Change the keys in Settings > "Change keys and buttons".)
   CHOOSE FIRST: in VR the menus come up with you standing on the airfield beside the aircraft (or the car,
   the coaster or the ship), not in its seat. Press Fly / Drive / Ride and you are put in the seat.
   THE MOUSE IN VR: move the laptop mouse and its pointer shows on the menu in the headset; click as normal.
@@ -93,6 +95,19 @@ VR ON A META QUEST 3
   Smooth VR: the pause menu's "Headset" button shows the frame rate. It should say "smooth". If it says "too slow",
   pick 72 Hz there (or in the Quest Link app: Settings > Graphics preferences > Refresh rate 72 Hz), and
   set Graphics quality to Medium in Settings. Plug the laptop in to mains power: on battery the graphics card slows down.
+
+RACING CONTROLS (v1.22.0)
+  Settings > "Racing: steering": Normal or Inverted (the wheel or gamepad stick turns the other way).
+  Settings > "Racing: pedals": Normal or Swap accelerator and brake.
+  Set up controls (wheel or joystick): every control has its own Invert switch, and you can give buttons on
+  the wheel or joystick to PAUSE, RESTART and CHANGE VIEW (in VR that button recentres): press Set beside
+  the row and press the button. Press Pause again to carry on. P and Esc on the keyboard always pause too.
+
+MORE MOVEMENT FROM THE AIRCRAFT (v1.22.0, FlyPT Mover)
+  The aircraft now lean the seat into turns, climbs and dives and hold the lean (it fades back over about
+  six seconds in a steady turn), tip it back when you pull g, and lean it with any sideslip. Your Mover
+  profile and its limits are unchanged. Checked on the computer model of the rig: about 30% more movement
+  in aerobatics (much more in gentle flying), the furthest actuator 114 mm of the 150 mm. Not yet on the rig.
 
 THE SPITFIRE (v1.21.0)
   The second aircraft is a Supermarine Spitfire LF Mk IX in the colours of MH434, the Spitfire that flies

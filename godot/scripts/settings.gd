@@ -4,7 +4,7 @@ extends Node
 const PATH := "user://settings.cfg"
 var data := {
 	"aircraft": "bulldog", "start": "runway", "mode": "free", "assist": true, "tod": "day", "wind": "calm",
-	"invert": false, "invert_roll": false, "invert_yaw": false, "sound": true, "quality": "high", "tel": false, "tel_host": "127.0.0.1", "tel_port": 4123, "fullscreen": true,
+	"invert": false, "invert_roll": false, "invert_yaw": false, "invert_steer": false, "pedals_swap": false, "vr_ready": true, "sound": true, "quality": "high", "tel": false, "tel_host": "127.0.0.1", "tel_port": 4123, "fullscreen": true,
 	"clouds3d": true, "view": "normal",
 	"aa": "taa", "weather": "scattered", "brightness": "normal", "grass": true, "show_fps": false, "vsync": true,
 	"flypt": true, "flypt_port": 49000, "flypt_out": 49001,

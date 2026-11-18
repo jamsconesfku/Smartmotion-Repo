@@ -53,6 +53,19 @@ Fix, in the game (`coaster_mode.gd` `_tel`, sent through `mover_cue` in the fram
 
 The aircraft figure is non-stop steep turns and pull-ups; the coaster's includes the slow lift hill, which is why its typical figure is a little lower with the same peaks. Compare any two recordings with `python3 scripts/mover/compare.py scripts/mover <profile> <folder> flight coaster`. Not tried in Mover or on the rig.
 
+## The aircraft move the rig more (game v1.22.0)
+Sam, 18 Nov 2026: "the planes need to produce more movement when flying". As with the coaster, the profile is unchanged (his limits and rig gain stay); the game adds a cue to the rates Mover reads (`telemetry.gd` `_aircraft_cue`, sent as `mover_cue` in the frame): a pull towards the aircraft's own bank and pitch (1.8 degrees a second per degree, fading over 6 s in a steady turn or climb, so the seat leans into the turn and settles back slowly), a tilt back of 7 degrees a second per g above 1 when pulling, and 30 degrees a second per g of sideways force; eased to 40 degrees a second, smoothed over a quarter of a second, off on the ground. SmartMotion Motion still gets the real rates.
+
+| Through the profile, 150 s of scripted aerobatics | Bulldog before | Bulldog now | Spitfire before | Spitfire now |
+|---|---|---|---|---|
+| Typical / most roll | 4.2° / 7.3° | 5.7° / 8.2° | 4.1° / 7.1° | 5.7° / 8.2° |
+| Typical / most pitch | 3.8° / 7.1° | 4.9° / 7.8° | 3.5° / 7.2° | 5.1° / 8.3° |
+| Typical actuator movement | 44 mm | 57 mm | 42 mm | 58 mm |
+| Furthest actuator from middle (150 available) | 100 mm | 114 mm | 95 mm | 109 mm |
+| Hardest jolt | 0.20 g | 0.20 g | 0.20 g | 0.20 g |
+
+The routine is non-stop steep turns and pull-ups, which already reach the profile's soft limits, so it shows the smallest gain; in gentle flying (steady turns, climbs) the seat used to drift back to level within a second or two and now holds a lean for several. Not tried in Mover or on the rig.
+
 ## Changing it
 1. Record the games: `godot --headless --fixed-fps 60 --path godot -- --auto --stunt --game=flight --tel_dump=flight.csv --quit_after=150` (also `--game=race --autopilot`, `--game=coaster`, `--game=space --space_start=earth`; `--stunt` flies a set routine and presses the spaceship's autopilot).
 2. Edit the filters in `scripts/mover/build.py`, run it (usage at the top of the file), then `python3 scripts/mover/replay.py scripts/mover godot/package/SmartMotion-Games.Mover <folder with the four csv files> --both`.

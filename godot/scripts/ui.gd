@@ -10,6 +10,7 @@ signal setting_changed(key: String, value)
 signal diag_pressed
 signal vr_action(what: String)
 signal learn_pressed(action: String)
+signal invert_toggled(action: String, on: bool)
 signal binds_changed
 
 const NAVY := Color("#02022f")
@@ -754,8 +755,21 @@ func set_control_actions(actions: Array) -> void:
 		var act: String = a[0]
 		b.pressed.connect(func(): learn_pressed.emit(act))
 		r.add_child(b)
+		# v1.22.0: turn a control round if it works the wrong way (not for buttons)
+		var inv: CheckBox = null
+		if not (act == "fire" or act.ends_with("_btn")):
+			inv = CheckBox.new()
+			inv.text = "Invert"
+			inv.toggled.connect(func(on: bool): invert_toggled.emit(act, on))
+			r.add_child(inv)
 		ctl_rows.add_child(r)
-		ctl_widgets[act] = [st, bar]
+		ctl_widgets[act] = [st, bar, inv]
+
+
+func set_control_invert(action: String, on: bool) -> void:
+	if not ctl_widgets.has(action) or ctl_widgets[action].size() < 3 or ctl_widgets[action][2] == null:
+		return
+	(ctl_widgets[action][2] as CheckBox).set_pressed_no_signal(on)
 
 
 func set_control_row(action: String, status: String, value: float) -> void:
@@ -1086,6 +1100,14 @@ func _build_sheets() -> void:
 	_seg(v, "invert_roll", [[false, "Normal"], [true, "Inverted"]], Settings.get_value("invert_roll"))
 	_section(v, "Rudder pedals / twist (yaw)")
 	_seg(v, "invert_yaw", [[false, "Normal"], [true, "Inverted"]], Settings.get_value("invert_yaw"))
+	_section(v, "Racing: steering (wheel, gamepad stick)")
+	_seg(v, "invert_steer", [[false, "Normal"], [true, "Inverted"]], Settings.get_value("invert_steer"))
+	_section(v, "Racing: pedals")
+	_seg(v, "pedals_swap", [[false, "Normal"], [true, "Swap accelerator and brake"]], Settings.get_value("pedals_swap"))
+	_note(v, "Each control in \"Set up controls\" also has its own Invert switch, and the wheel or joystick can have Pause, Restart and Change view buttons there.")
+	_section(v, "VR: ready at start (Ctrl+Tab goes into VR at once)")
+	_seg(v, "vr_ready", [[true, "On"], [false, "Off"]], Settings.get_value("vr_ready"))
+	_note(v, "On: when the PC has Virtual Desktop or Quest Link, the game starts with VR ready (on the screen), so Ctrl+Tab switches between the screen and the headset straight away. Changes the next time you start the game.")
 	_section(v, "Full screen")
 	_seg(v, "fullscreen", [[false, "Window"], [true, "Full screen"]], Settings.get_value("fullscreen"))
 	_section(v, "Motion rig: send flight data (UDP, 60 times a second)")
