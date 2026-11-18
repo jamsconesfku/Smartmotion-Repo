@@ -38,6 +38,13 @@ A 32.8 km square centred on the middle of Duxford's hard runway (real heading 05
 ## Performance (RTX 4060 target)
 High: about 1 M triangles of nearby trees, about 2 M of far trees, 16,000 buildings within 7 km, 72 cloud steps a pixel. If it drops below 60 fps, use Medium (fewer trees, shorter range, 44 cloud steps). In VR the 3D clouds, SSAO and SSIL are switched off. Load with `--stats` (after `--`) to log triangles, draw calls and fps every two seconds in the diagnostics log.
 
+## VR through Virtual Desktop: DirectX 12 (v1.19.4)
+Sam, 18 Nov 2026: VR didn't run on the RTX 4090 gaming PC; the game showed Godot's loading screen and closed. The log showed that PC's OpenXR runtime is Virtual Desktop (VirtualDesktopXR 1.1.0, Quest 3, 120 Hz): OpenXR started fine and the game crashed while laying out the ground (`world.gd` `_ground`, the first big texture uploads and the `_paint` read-back). Every earlier VR test was through Quest Link. Sam asked for it to work with Virtual Desktop.
+- **What changed**: VirtualDesktopXR is built on DirectX; Vulkan games go through its interop layer. When VR goes through Virtual Desktop the game now draws with **DirectX 12** (`--rendering-driver d3d12`), which Godot 4.6's official Windows build includes along with OpenXR's D3D12 support (`XR_KHR_D3D12_enable`); no extra DLLs are needed (no `dxil.dll`; the Agility SDK is optional on Windows 11).
+- `Play (VR - Meta Quest).bat` reads the active runtime (`HKLM\SOFTWARE\Khronos\OpenXR\1`) and adds `--rendering-driver d3d12` when it is Virtual Desktop. Quest Link and other runtimes keep Vulkan.
+- Started in VR any other way (`--xr-mode on` on Vulkan with `XRRuntimeName` VirtualDesktopXR), `main.gd` `_vr_on_directx` restarts the game once on DirectX 12 before the world loads. The menu's "Play in VR" restart asks for DirectX 12 straight away (`Diag.active_runtime()`). `--d3d12_tried` stops a second restart (if DirectX 12 can't start, Godot falls back to Vulkan), and `--keep_vulkan` turns the switch off. The log now names the graphics driver ("Graphics driver: d3d12").
+- **Not tried yet** on the 4090 PC: it was checked only on the build machine (Linux, no DirectX). The cause of the Vulkan crash is the likely one, not a proven one (Godot's own `godot.log` from the crash would show it). If DirectX 12 still crashes, the next things to try are Virtual Desktop's OpenXR runtime set to SteamVR, or Quest Link.
+
 ## Coaster moves the rig as much as the aircraft, through Mover (v1.19.3)
 The coaster now adds to the roll and pitch rates FlyPT Mover reads, so the rig leans into its drops, climbs and banked turns about as much as it does in the aircraft (it was about a third). Details and figures: `docs/games/flypt-mover-profile.md`.
 

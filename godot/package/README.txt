@@ -50,6 +50,12 @@ VR ON A META QUEST 3
   4. Double-click "Play (VR - Meta Quest).bat" (best), or run SmartMotionFlight.exe and press
      "Play in VR (Meta Quest)" (the game restarts itself in VR mode).
   5. Sit upright and press B on the right controller (or V on the keyboard) to recentre.
+  VIRTUAL DESKTOP works too (v1.19.4): start Virtual Desktop on the headset and the PC as usual, then
+  double-click "Play (VR - Meta Quest).bat". When Virtual Desktop is the PC's VR route, the game draws with
+  DirectX 12 instead of Vulkan (Virtual Desktop is built on DirectX; on Vulkan the game crashed while loading).
+  The first start on DirectX 12 can take a little longer while the graphics are prepared. Virtual Desktop
+  often runs the headset at 120 Hz: if the pause menu's "Headset" says "too slow", pick 90 Hz or 72 Hz there
+  (or in Virtual Desktop's settings on the headset).
   You can fly with the keyboard while wearing the headset: click the game window on the laptop once
   BEFORE putting the headset on, and don't click anywhere else afterwards.
   Your hands show as small balls where the controllers are (they shrink a little when you squeeze).

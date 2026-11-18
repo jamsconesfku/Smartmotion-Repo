@@ -45,6 +45,7 @@ static func snapshot() -> void:
 	write("Game args: %s" % [str(OS.get_cmdline_user_args())])
 	write("Executable: %s" % OS.get_executable_path())
 	write("XR_RUNTIME_JSON env: '%s'" % OS.get_environment("XR_RUNTIME_JSON"))
+	write("Graphics driver: %s" % RenderingServer.get_current_rendering_driver_name())
 	if OS.get_name() == "Windows":
 		for key in ["HKLM\\SOFTWARE\\Khronos\\OpenXR\\1", "HKLM\\SOFTWARE\\WOW6432Node\\Khronos\\OpenXR\\1", "HKCU\\SOFTWARE\\Khronos\\OpenXR\\1"]:
 			var out: Array = []
@@ -62,6 +63,20 @@ static func snapshot() -> void:
 		if xr.is_initialized():
 			write("OpenXR system info: %s" % str(xr.get_system_info()))
 			write("OpenXR refresh rate: %s" % str(xr.get_display_refresh_rate()))
+
+
+## The VR route Windows hands games to (the OpenXR "active runtime"): a file path such as
+## "...\\Virtual Desktop Streamer\\OpenXR\\virtualdesktop-openxr.json", or "" if none is set (or not Windows).
+static func active_runtime() -> String:
+	if OS.get_environment("XR_RUNTIME_JSON") != "":
+		return OS.get_environment("XR_RUNTIME_JSON")   # overrides the registry, as in the OpenXR loader
+	if OS.get_name() != "Windows":
+		return ""
+	var out: Array = []
+	if OS.execute("reg", ["query", "HKLM\\SOFTWARE\\Khronos\\OpenXR\\1", "/v", "ActiveRuntime"], out, true) != 0 or out.is_empty():
+		return ""
+	var m := RegEx.create_from_string("ActiveRuntime\\s+REG_\\w+\\s+(.+)").search(str(out[0]))
+	return m.get_string(1).strip_edges() if m != null else ""
 
 
 static func engine_log_tail(max_lines := 120) -> String:

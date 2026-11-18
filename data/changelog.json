@@ -300,5 +300,10 @@
     "ids": [
       "F-08"
     ]
+  },
+  {
+    "date": "2026-11-18",
+    "summary": "Version 1.19.4 of the game: VR should now work through Virtual Desktop as well as Quest Link. On the RTX 4090 gaming PC, VR went through Virtual Desktop and the game closed while loading; it now draws with DirectX 12 when Virtual Desktop is the PC's VR route (the VR .bat does this by itself). Checked on the build machine only, not yet on the 4090 PC.",
+    "ids": []
   }
 ]

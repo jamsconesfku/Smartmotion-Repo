@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.19.3"
+const APP_VERSION := "1.19.4"
 ## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
 ## ground stopped at an edge that moved as you climbed)
 const VIEW_FAR := 600000.0
@@ -99,6 +99,8 @@ func _ready() -> void:
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	Diag.start(not args.has("xr"))
 	Diag.write("SmartMotion Flight native v%s started" % APP_VERSION)
+	if _vr_on_directx():
+		return
 	var saved_keys = Settings.get_value("binds")
 	Keys.over = saved_keys if saved_keys is Dictionary else {}
 	# v1.18.0: the game always opens on Flight (the Flight tab), unless the simulator's set-up has no Flight (a
@@ -373,6 +375,42 @@ func _copy_diag() -> void:
 	Diag.snapshot()
 	DisplayServer.clipboard_set(Diag.full_text())
 	ui.set_vr_note("Diagnostics copied. Paste them into the chat (Ctrl+V). They are also saved in: " + Diag.log_path())
+
+
+## v1.19.4: Virtual Desktop's own VR route (VirtualDesktopXR) is built on DirectX. With the game drawing through
+## Vulkan it crashed while laying out the ground on Sam's RTX 4090 PC (18 Nov 2026), so when VR goes through
+## Virtual Desktop the game draws with DirectX 12 instead. The VR .bat starts it that way; if the game was started
+## in VR some other way, it restarts itself once on DirectX 12 here, before the world loads. "--d3d12_tried" stops
+## a second restart (if DirectX 12 can't start, Godot falls back to Vulkan); "--keep_vulkan" turns this off.
+func _vr_on_directx() -> bool:
+	if OS.get_name() != "Windows" or not args.has("xr") or args.has("d3d12_tried") or args.has("keep_vulkan"):
+		return false
+	if RenderingServer.get_current_rendering_driver_name() != "vulkan":
+		return false
+	var xr := XRServer.find_interface("OpenXR")
+	if xr == null or not xr.is_initialized():
+		return false
+	var runtime := str(xr.get_system_info().get("XRRuntimeName", ""))
+	if not _is_virtual_desktop(runtime):
+		return false
+	var restart := ["--rendering-driver", "d3d12", "--xr-mode", "on", "--"]
+	for u in OS.get_cmdline_user_args():
+		restart.append(u)
+	restart.append("--d3d12_tried")
+	Diag.write("VR runs through %s (built on DirectX): restarting the game on DirectX 12 %s" % [runtime, str(restart)])
+	# nothing is built yet: don't run a frame on it before the quit
+	set_process(false)
+	set_process_input(false)
+	set_process_unhandled_input(false)
+	xr.uninitialize()   # hand the headset back before the new copy asks for it
+	var pid := OS.create_process(OS.get_executable_path(), restart)
+	Diag.write("restarted on DirectX 12: new process id %d" % pid)
+	get_tree().quit()
+	return true
+
+
+func _is_virtual_desktop(runtime: String) -> bool:
+	return runtime.to_lower().replace(" ", "").contains("virtualdesktop")
 
 
 func _xr_mode_flag() -> bool:
@@ -995,7 +1033,10 @@ func _start_vr() -> bool:
 		if not _xr_mode_flag():
 			# VR has to be switched on when the game starts, so restart the game in VR mode
 			ui.set_vr_note("Restarting the game in VR mode…")
-			var pid := OS.create_process(OS.get_executable_path(), ["--xr-mode", "on", "--", "--vr", "--xr", "--go"])
+			var restart := ["--xr-mode", "on", "--", "--vr", "--xr", "--go"]
+			if _is_virtual_desktop(Diag.active_runtime()):
+				restart = ["--rendering-driver", "d3d12", "--xr-mode", "on", "--", "--vr", "--xr", "--go", "--d3d12_tried"]
+			var pid := OS.create_process(OS.get_executable_path(), restart)
 			Diag.write("Restarting in VR mode: new process id %d" % pid)
 			await get_tree().create_timer(0.5).timeout
 			get_tree().quit()
