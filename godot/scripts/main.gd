@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.21.0"
+const APP_VERSION := "1.21.1"
 ## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
 ## ground stopped at an edge that moved as you climbed)
 const VIEW_FAR := 600000.0
@@ -1142,7 +1142,11 @@ func _start_vr() -> bool:
 	DisplayServer.window_move_to_foreground()
 	Diag.write("VR started; window focused for the keyboard: %s" % str(DisplayServer.window_is_focused()))
 	_watch_xr(xr)
-	get_tree().create_timer(6.0).timeout.connect(_vr_controller_check)
+	_xr_check_gen += 1
+	var gen := _xr_check_gen
+	# v1.21.1: the controllers only work once the headset gives the game focus (Virtual Desktop does that
+	# 20 to 30 s after the game starts), so they are checked a few seconds after that, not on a fixed timer
+	get_tree().create_timer(45.0).timeout.connect(func(): if gen == _xr_check_gen and not _xr_focused: _vr_no_focus())
 	ui.toast("VR started. Sit upright, then press B (or %s) to recentre the view." % Keys.first("camera"), 5.0)
 	return true
 
@@ -1172,18 +1176,35 @@ func _toggle_vr() -> void:
 ## OpenXR's session events and the controllers' types, into the log (v1.20.0: the Quest controllers didn't work
 ## through Virtual Desktop; this shows which controller type the headset reports and whether the game has focus).
 var _xr_watched := false
+var _xr_focused := false
+var _xr_check_gen := 0
 func _watch_xr(xr: XRInterface) -> void:
 	if _xr_watched or xr == null:
 		return
 	_xr_watched = true
-	for sig in ["session_begun", "session_visible", "session_focussed", "session_stopping", "session_loss_pending", "instance_exiting"]:
+	for sig in ["session_begun", "session_visible", "session_stopping", "session_loss_pending", "instance_exiting"]:
 		if xr.has_signal(sig):
-			xr.connect(sig, func(): Diag.write("OpenXR: %s" % sig))
+			xr.connect(sig, func():
+				Diag.write("OpenXR: %s" % sig)
+				if sig == "session_visible" or sig == "session_stopping":
+					_xr_focused = false)
+	if xr.has_signal("session_focussed"):
+		xr.connect("session_focussed", func():
+			Diag.write("OpenXR: session_focussed (the game has the controllers now)")
+			_xr_focused = true
+			get_tree().create_timer(4.0).timeout.connect(_vr_controller_check))
 	XRServer.tracker_added.connect(func(nm: StringName, type: int): Diag.write("XR tracker added: %s (type %d)" % [nm, type]))
 	for tn in ["left_hand", "right_hand"]:
 		var tr := XRServer.get_tracker(tn) as XRPositionalTracker
 		if tr != null and tr.has_signal("profile_changed"):
-			tr.profile_changed.connect(func(role: String, profile: String): Diag.write("XR %s controller type: %s %s" % [tn, profile, role]))
+			tr.profile_changed.connect(func(profile: String): Diag.write("XR %s controller type: %s" % [tn, profile]))
+
+
+func _vr_no_focus() -> void:
+	if not vr_active:
+		return
+	Diag.write("OpenXR: no focus 45 s after VR started: the headset hasn't handed the controllers to the game")
+	_toast("The headset hasn't given the game the controllers yet. In Virtual Desktop, look at the game (not the desktop view). The keyboard and mouse still work.", 8.0)
 
 
 func _vr_controller_check() -> void:
@@ -1197,7 +1218,7 @@ func _vr_controller_check() -> void:
 		var tr := XRServer.get_tracker(c.tracker) as XRPositionalTracker
 		any = any or c.get_is_active()
 		parts.append("%s active=%s tracking=%s type=%s trigger=%.2f" % [c.tracker, str(c.get_is_active()), str(c.get_has_tracking_data()), tr.profile if tr != null else "(no tracker)", c.get_float("trigger")])
-	Diag.write("VR controllers after 6 s: " + "; ".join(parts))
+	Diag.write("VR controllers 4 s after the game got focus: " + "; ".join(parts))
 	if not any:
 		_toast("The game can't see the controllers. Take the headset off, press Copy diagnostics on the menu and paste it to Claude. The keyboard and mouse still work.", 10.0)
 

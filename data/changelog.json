@@ -315,5 +315,10 @@
     "date": "2026-11-18",
     "summary": "Version 1.21.0 of the game: the WW2 fighter is now a proper Spitfire Mk IX in the colours of MH434 (the Duxford Spitfire in Sam's photo): real size and shape, camouflage, roundels and codes ZD-B, and its own cockpit with the RAF blind-flying panel, gunsight and spade grip. It flies like a Spitfire (about 290 knots, lifts off at about 90). On the ground Easy mode now catches the swing that tail-draggers have. Checked by the flight checks and pictures on the build machine, not yet in the headset or on the rig.",
     "ids": []
+  },
+  {
+    "date": "2026-11-18",
+    "summary": "Version 1.21.1 of the game: the 'controllers not found' message in VR was a false alarm. Through Virtual Desktop the game only gets the controllers about 30 seconds after it starts, and the check ran before that. It now checks a few seconds after the headset hands the controllers over.",
+    "ids": []
   }
 ]
