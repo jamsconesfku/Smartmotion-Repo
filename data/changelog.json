@@ -325,5 +325,10 @@
     "date": "2026-11-18",
     "summary": "Version 1.22.0 of the game: Ctrl+Tab now switches between the screen and the headset straight away (the game starts with VR ready in the background when the PC has Virtual Desktop or Quest Link). Racing has its own steering invert and a pedal swap, every control in Set up controls has an Invert switch, and the wheel or joystick can have Pause, Restart and Change view buttons. The aircraft move the rig more through FlyPT Mover (about 30% in aerobatics, more in gentle flying; furthest actuator 114 of 150 mm on the model). Not yet tried on the rig or Sam's PC.",
     "ids": []
+  },
+  {
+    "date": "2026-11-18",
+    "summary": "Version 1.22.1 of the game: leaving VR should no longer leave the screen black (the headset now has its own view and the screen shows what the rider sees); the waiting message in the headset moves with your head and a trigger pull goes back into VR; the controllers are logged in detail so the next diagnostics show what the game sees. The roller coaster now tilts the seat back all the way up the lift hill (to the Mover profile's limit, about 7 degrees) and rolls more in the turns (furthest actuator 110 of 150 mm on the model). Not yet tried on Sam's PC or the rig.",
+    "ids": []
   }
 ]

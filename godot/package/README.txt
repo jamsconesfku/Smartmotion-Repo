@@ -52,7 +52,8 @@ VR ON A META QUEST 3
   IN AND OUT OF VR WITH CTRL+TAB (as in Microsoft Flight Simulator): Ctrl+Tab on the keyboard switches
   between the headset and the screen at any time, straight away both ways (v1.22.0). When the PC has
   Virtual Desktop or Quest Link, the game starts with VR ready in the background (it restarts itself once
-  as it opens, about a second), stays on the screen, and the headset shows "Press Ctrl+Tab" until you do.
+  as it opens, about a second), stays on the screen, and the headset shows a waiting room: pull a trigger
+  there (or press Ctrl+Tab) to come into VR. While you are in VR the screen shows what the rider sees.
   If the headset wasn't connected when the game started, the first Ctrl+Tab restarts the game in VR mode.
   Settings > "VR: ready at start" turns this off. (Change the keys in Settings > "Change keys and buttons".)
   CHOOSE FIRST: in VR the menus come up with you standing on the airfield beside the aircraft (or the car,

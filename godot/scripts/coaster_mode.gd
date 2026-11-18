@@ -50,9 +50,14 @@ var prev_b := Basis()
 var w_body := Vector3.ZERO
 var cue_out := Vector2.ZERO         # the extra roll and pitch rate being sent
 var cue_lp := Vector2.ZERO          # the track's bank and slope, smoothed (see _tel: extra lean for FlyPT Mover)
-const CUE_GAIN := 2.4              # degrees a second of extra turn rate per degree of bank or slope
-const CUE_SIDE := 35.0             # ... and per g of sideways force
-const CUE_FADE := 5.0              # seconds for the extra lean to fade when the track stays banked or sloped
+# v1.22.1 (Sam: "tilt back as far as possible going uphill and roll left and right a lot"): stronger, and the tilt
+# back now holds for the whole lift hill instead of fading in 5 s
+const CUE_GAIN := 3.2              # degrees a second of extra pitch rate per degree of slope
+const CUE_GAIN_ROLL := 4.5         # ... of roll rate per degree of bank
+const CUE_SIDE := 55.0             # ... and per g of sideways force
+const CUE_FADE := 40.0             # seconds for the tilt to fade when the track stays sloped (longer than the lift hill)
+const CUE_FADE_ROLL := 8.0         # ... and for the lean to fade in a long banked turn
+const CUE_TOP := 60.0              # the extra rate is eased towards this (degrees a second)
 var cam_init := false
 var cam_q := Quaternion.IDENTITY
 var lap_bars: Array = []
@@ -519,10 +524,11 @@ func _tel(dt: float) -> void:
 	if dt > 0.0 and phase == "ride":
 		var bank := -fr.basis.x.y * 57.3          # like degrees for small angles, and smooth through a loop
 		var slope := -fr.basis.z.y * 57.3
-		cue_lp = cue_lp.lerp(Vector2(bank, slope), 1.0 - exp(-dt / CUE_FADE))
-		# eased towards a top rate of 45 degrees a second and smoothed over a quarter of a second, so it never jerks
-		var want := Vector2(CUE_GAIN * (bank - cue_lp.x) - CUE_SIDE * felt.x / G, CUE_GAIN * (slope - cue_lp.y))
-		want = Vector2(45.0 * tanh(want.x / 45.0), 45.0 * tanh(want.y / 45.0))
+		cue_lp.x = lerpf(cue_lp.x, bank, 1.0 - exp(-dt / CUE_FADE_ROLL))
+		cue_lp.y = lerpf(cue_lp.y, slope, 1.0 - exp(-dt / CUE_FADE))
+		# eased towards a top rate and smoothed over a quarter of a second, so it never jerks
+		var want := Vector2(CUE_GAIN_ROLL * (bank - cue_lp.x) - CUE_SIDE * felt.x / G, CUE_GAIN * (slope - cue_lp.y))
+		want = Vector2(CUE_TOP * tanh(want.x / CUE_TOP), CUE_TOP * tanh(want.y / CUE_TOP))
 		cue_out = cue_out.lerp(want, 1.0 - exp(-dt / 0.25))
 	else:
 		cue_lp = Vector2.ZERO

@@ -53,6 +53,20 @@ Fix, in the game (`coaster_mode.gd` `_tel`, sent through `mover_cue` in the fram
 
 The aircraft figure is non-stop steep turns and pull-ups; the coaster's includes the slow lift hill, which is why its typical figure is a little lower with the same peaks. Compare any two recordings with `python3 scripts/mover/compare.py scripts/mover <profile> <folder> flight coaster`. Not tried in Mover or on the rig.
 
+## The coaster tilts back up the whole lift hill and rolls more (game v1.22.1)
+Sam, 18 Nov 2026: "on the roller coaster make it tilt and move the motion more so it tilts back as far as possible when going up hill and rolling left and right a lot". In `coaster_mode.gd`: the slope cue now fades over 40 s (was 5 s, so the seat used to drift level half way up the lift hill), pitch gain 3.2 (was 2.4), roll gain 4.5 per degree of bank fading over 8 s, 55 per g of sideways force (was 35), top rate 60 degrees a second (was 45).
+
+| Coaster through the profile | Before | Now |
+|---|---|---|
+| Seat pitch on the lift hill (every 5 s, 20 to 50 s) | 1.6, 3.1, 5.0, 3.8, 3.1, 0.7, then down the drop | 2.8, 5.5, 6.7, 6.8, 6.8, 6.7, 6.4, then down the drop |
+| Typical / most roll | 2.8° / 7.4° | 3.9° / 8.3° |
+| Typical / most pitch | 3.3° / 6.7° | 4.2° / 6.8° |
+| Typical actuator movement | 33 mm | 43 mm |
+| Furthest actuator from middle (150 available) | 109 mm | 110 mm |
+| Hardest jolt | 0.27 g | 0.25 g |
+
+"As far as possible" here is the profile's soft pitch limit of the AIR pose (about 7° at the seat), which the climb now sits on. Tilting further would mean raising that limit in the profile (a filter change, shared with the aircraft and the spaceship): pitch on its own could go to about 14° within the actuators' travel, but not together with full roll and heave. Not done without Sam's say-so. Not tried in Mover or on the rig.
+
 ## The aircraft move the rig more (game v1.22.0)
 Sam, 18 Nov 2026: "the planes need to produce more movement when flying". As with the coaster, the profile is unchanged (his limits and rig gain stay); the game adds a cue to the rates Mover reads (`telemetry.gd` `_aircraft_cue`, sent as `mover_cue` in the frame): a pull towards the aircraft's own bank and pitch (1.8 degrees a second per degree, fading over 6 s in a steady turn or climb, so the seat leans into the turn and settles back slowly), a tilt back of 7 degrees a second per g above 1 when pulling, and 30 degrees a second per g of sideways force; eased to 40 degrees a second, smoothed over a quarter of a second, off on the ground. SmartMotion Motion still gets the real rates.
 

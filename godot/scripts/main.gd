@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.22.0"
+const APP_VERSION := "1.22.1"
 ## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
 ## ground stopped at an edge that moved as you climbed)
 const VIEW_FAR := 600000.0
@@ -1091,11 +1091,16 @@ func _start_vr() -> bool:
 			return false
 		Diag.write("OpenXR started on the second try")
 	_vr_idle_set(false)
-	get_viewport().use_xr = true
-	get_viewport().use_taa = false            # TAA smears when you turn your head; MSAA keeps VR sharp
-	# 2x MSAA: 4x on two eyes at headset resolution cost too much time per frame (judder when looking around)
-	get_viewport().msaa_3d = Viewport.MSAA_2X
-	get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+	# v1.22.1: the headset has its own view (vr_view, a SubViewport of the same world); the main window is never
+	# switched to the headset. Switching it back left the screen black on Sam's PC after leaving VR. The screen
+	# now shows what the rider sees, drawn at half size so it costs little.
+	_vr_view_on(true)
+	var mv := get_viewport()
+	mv.use_taa = false
+	mv.msaa_3d = Viewport.MSAA_DISABLED
+	mv.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+	mv.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	mv.scaling_3d_scale = 0.5
 	# v1.6.3 also turned on foveated rendering, depth submission and a 72 Hz request here: VR then stuck on
 	# Quest Link's loading hourglass on Sam's PC, so those are out. The refresh rate is only changed from the VR menu.
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)   # the headset sets the pace, not the laptop screen
@@ -1124,9 +1129,9 @@ func _start_vr() -> bool:
 	xr_origin.add_child(hand_r)
 	hand_on = {"l": 0.0, "r": 0.0}
 	vr_scale = 1.0
-	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
-	get_viewport().scaling_3d_scale = 1.0
-	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
+	vr_view.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	vr_view.scaling_3d_scale = 1.0
+	RenderingServer.viewport_set_measure_render_time(vr_view.get_viewport_rid(), true)
 	vr_label = Label3D.new()
 	vr_label.font = load("res://assets/fonts/Barlow-SemiBold.ttf")
 	vr_label.font_size = 40
@@ -1144,6 +1149,10 @@ func _start_vr() -> bool:
 	ui.set_vr(true, _vr_hz_label())
 	xr_cam.environment = cam.environment
 	xr_cam.far = cam.far
+	vr_view_cam.environment = cam.environment
+	vr_view_cam.attributes = cam.attributes
+	vr_view_cam.far = cam.far
+	vr_view_cam.near = 0.05
 	_attach_rig()
 	if mode != null:
 		mode.set_vr(true)
@@ -1152,6 +1161,9 @@ func _start_vr() -> bool:
 	DisplayServer.window_move_to_foreground()
 	Diag.write("VR started; window focused for the keyboard: %s" % str(DisplayServer.window_is_focused()))
 	_watch_xr(xr)
+	_ctl_log_left = 4        # v1.22.1: the controllers into the log every 15 s for the first minute in VR
+	if _xr_focused:
+		get_tree().create_timer(4.0).timeout.connect(_vr_controller_check)
 	_xr_check_gen += 1
 	var gen := _xr_check_gen
 	# v1.21.1: the controllers only work once the headset gives the game focus (Virtual Desktop does that
@@ -1244,8 +1256,34 @@ func _vr_ready_restart() -> bool:
 ## While VR is ready but you're on the screen, the headset shows a quiet dark room with a note (v1.22.0). Godot
 ## needs a viewport drawing to the headset while OpenXR runs (otherwise it logs a warning every frame), and the
 ## headset should say what to do. One small scene of its own, drawn in stereo: costs next to nothing.
+## The headset's view while in VR (v1.22.1): a SubViewport that shares the game's world and draws only to the headset.
+var vr_view: SubViewport
+var vr_view_origin: XROrigin3D
+var vr_view_cam: XRCamera3D
+func _vr_view_on(on: bool) -> void:
+	if vr_view == null:
+		vr_view = SubViewport.new()
+		vr_view.name = "vr_view"
+		vr_view.own_world_3d = false     # the same world as the screen
+		vr_view.size = Vector2i(64, 64)  # the headset sets the real size
+		vr_view.use_taa = false          # TAA smears when you turn your head; MSAA keeps VR sharp
+		vr_view.msaa_3d = Viewport.MSAA_2X   # 4x on two eyes at headset resolution cost too much (judder)
+		vr_view.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+		vr_view_origin = XROrigin3D.new()
+		vr_view_origin.current = false
+		vr_view.add_child(vr_view_origin)
+		vr_view_cam = XRCamera3D.new()
+		vr_view_origin.add_child(vr_view_cam)
+		add_child(vr_view)
+		vr_view_cam.current = true
+	vr_view.use_xr = on
+	vr_view.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+
+
 var vr_idle: SubViewport
 var vr_idle_origin: XROrigin3D
+var vr_idle_hands: Array = []
+var vr_idle_armed := false
 func _vr_idle_set(on: bool) -> void:
 	var xr := XRServer.find_interface("OpenXR")
 	on = on and xr != null and xr.is_initialized() and not vr_active
@@ -1267,22 +1305,45 @@ func _vr_idle_set(on: bool) -> void:
 		var c := XRCamera3D.new()
 		vr_idle_origin.add_child(c)
 		var lb := Label3D.new()
-		lb.text = "SmartMotion\n\nThe game is on the screen.\nPress Ctrl+Tab (or Play in VR) to come into VR."
+		lb.text = "SmartMotion\n\nThe game is on the screen.\nPull a trigger, or press Ctrl+Tab, to come into VR."
 		lb.font = load("res://assets/fonts/Barlow-SemiBold.ttf")
 		lb.font_size = 64
 		lb.pixel_size = 0.0012
-		lb.position = Vector3(0, 0, -1.6)
+		lb.position = Vector3(0, -0.05, -1.6)
 		lb.modulate = Color("#f2f2f5")
 		lb.outline_size = 0
 		lb.shaded = false
-		vr_idle_origin.add_child(lb)
+		c.add_child(lb)                   # v1.22.1: moves with your head (it was fixed at floor level)
+		for tn in ["left_hand", "right_hand"]:
+			var hc := XRController3D.new()
+			hc.tracker = tn
+			vr_idle_origin.add_child(hc)
+			vr_idle_hands.append(hc)
 		add_child(vr_idle)
 		Diag.write("VR ready: the headset waits (Ctrl+Tab goes into VR)")
+	vr_idle_armed = false   # a trigger must be let go first (it may still be held from clicking "Leave VR")
 	if vr_idle != null:
 		vr_idle.use_xr = on
 		vr_idle.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 		if on and vr_idle_origin != null:
 			vr_idle_origin.current = true
+
+
+## In the headset's waiting room: pull a trigger (or press A / X) to come into VR (v1.22.1).
+func _vr_idle_tick() -> void:
+	if vr_idle == null or not vr_idle.use_xr or vr_active:
+		return
+	var any := false
+	for hc in vr_idle_hands:
+		var c := hc as XRController3D
+		if c.get_float("trigger") > 0.6 or c.is_button_pressed("ax_button"):
+			any = true
+	if not any:
+		vr_idle_armed = true
+	elif vr_idle_armed:
+		vr_idle_armed = false
+		Diag.write("VR: trigger pulled in the waiting room: into VR")
+		_toggle_vr()
 
 
 ## OpenXR's session events and the controllers' types, into the log (v1.20.0: the Quest controllers didn't work
@@ -1319,7 +1380,8 @@ func _vr_no_focus() -> void:
 	_toast("The headset hasn't given the game the controllers yet. In Virtual Desktop, look at the game (not the desktop view). The keyboard and mouse still work.", 8.0)
 
 
-func _vr_controller_check() -> void:
+var _ctl_log_left := 0
+func _vr_controller_check(quiet := false) -> void:
 	if not vr_active:
 		return
 	var parts: Array = []
@@ -1329,8 +1391,14 @@ func _vr_controller_check() -> void:
 			continue
 		var tr := XRServer.get_tracker(c.tracker) as XRPositionalTracker
 		any = any or c.get_is_active()
-		parts.append("%s active=%s tracking=%s type=%s trigger=%.2f" % [c.tracker, str(c.get_is_active()), str(c.get_has_tracking_data()), tr.profile if tr != null else "(no tracker)", c.get_float("trigger")])
-	Diag.write("VR controllers 4 s after the game got focus: " + "; ".join(parts))
+		parts.append("%s active=%s tracking=%s type=%s trigger=%.2f grip=%.2f stick=%s A/X=%s B/Y=%s" % [c.tracker, str(c.get_is_active()), str(c.get_has_tracking_data()), tr.profile if tr != null else "(no tracker)",
+			c.get_float("trigger"), c.get_float("grip"), str(c.get_vector2("primary")), str(c.is_button_pressed("ax_button")), str(c.is_button_pressed("by_button"))])
+	Diag.write("VR controllers (focus %s): %s" % [str(_xr_focused), "; ".join(parts)])
+	if _ctl_log_left > 0:
+		_ctl_log_left -= 1
+		get_tree().create_timer(15.0).timeout.connect(func(): _vr_controller_check(true))
+	if quiet:
+		return
 	if not any:
 		_toast("The game can't see the controllers. Take the headset off, press Copy diagnostics on the menu and paste it to Claude. The keyboard and mouse still work.", 10.0)
 
@@ -1361,7 +1429,7 @@ func _stop_vr() -> void:
 	if not vr_active:
 		return
 	vr_active = false
-	get_viewport().use_xr = false
+	_vr_view_on(false)
 	# v1.20.0: OpenXR stays running (the headset shows nothing), so Ctrl+Tab puts you straight back in VR.
 	# It can't be started again in the same run once it is stopped (the graphics are set up with it).
 	Diag.write("left VR (OpenXR kept running for Ctrl+Tab)")
@@ -1548,6 +1616,7 @@ func _toast(t: String, secs := 2.2) -> void:
 
 func _process(delta: float) -> void:
 	tel.service()
+	_vr_idle_tick()
 	if args.has("switch_test") and Engine.get_process_frames() % 10 == 0:
 		Diag.write("frame %d, %.0f ms, state %s, game %s, mode %s | process %.0f ms, physics %.0f ms, draw calls %d, objects %d, nodes %d, prims %d" % [Engine.get_process_frames(), delta * 1000.0, state, game, str(mode),
 			Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
@@ -1602,6 +1671,8 @@ func _process(delta: float) -> void:
 		_keep_in_seat()
 		xr_origin.transform = Transform3D(Basis(), vr_base) * mcomp.correction(vr_pivot)
 		XRServer.world_origin = xr_origin.global_transform
+		if vr_view_origin != null:
+			vr_view_origin.global_transform = xr_origin.global_transform
 		_update_hands(dt)
 		_vr_auto_resolution(delta)
 	elif args.has("hands") and plane.bulldog != null:
@@ -1760,7 +1831,9 @@ func _update_hands(dt: float) -> void:
 ## headset allows, the 3D picture is drawn at a slightly lower resolution (down to 70%); when there is
 ## plenty of time again it goes back up. Checked twice a second.
 func _vr_auto_resolution(delta: float) -> void:
-	var rid := get_viewport().get_viewport_rid()
+	if vr_view == null:
+		return
+	var rid := vr_view.get_viewport_rid()
 	var gpu := RenderingServer.viewport_get_measured_render_time_gpu(rid)
 	if gpu <= 0.0:
 		return
@@ -1784,7 +1857,7 @@ func _vr_auto_resolution(delta: float) -> void:
 	else:
 		gpu_acc["calm"] = 0
 	if vr_scale != was:
-		get_viewport().scaling_3d_scale = vr_scale
+		vr_view.scaling_3d_scale = vr_scale
 		Diag.write("VR resolution %d%% (graphics card %.1f ms of %.1f ms)" % [roundi(vr_scale * 100.0), avg, budget])
 	gpu_acc["sum"] = 0.0
 	gpu_acc["n"] = 0
@@ -2000,6 +2073,7 @@ func _process_mode(dt: float, delta: float) -> void:
 		_keep_in_seat()
 		xr_origin.transform = Transform3D(Basis(), vr_base) * mcomp.correction(vr_pivot)
 		XRServer.world_origin = xr_origin.global_transform   # same frame as the vehicle moved (no lag)
+		vr_view_origin.global_transform = xr_origin.global_transform
 		_update_hands(dt)
 		_vr_auto_resolution(delta)
 		mode.follow_camera(xr_cam.global_position)
