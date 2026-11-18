@@ -80,6 +80,9 @@ Sam, 18 Nov 2026: "the planes need to produce more movement when flying". As wit
 
 The routine is non-stop steep turns and pull-ups, which already reach the profile's soft limits, so it shows the smallest gain; in gentle flying (steady turns, climbs) the seat used to drift back to level within a second or two and now holds a lean for several. Not tried in Mover or on the rig.
 
+## Sam's "Small plane with fans and belt" profile (DOC-09, 18 Nov 2026)
+`docs/source/flypt-mover/Small_Plane_with_FANS_an_BELT_new1.Mover` (FlyPT Mover 3.5.4), sent without a note. Compared with DOC-08 the only real changes are: the GROUND pose takes the X-Plane source's GROUND values only and its sway-in-roll mix is off (two of the fixes in the games profile), the X-Plane 11 source has auto connect and forward UDP off, and the M4S output is set to COM9. Filters, pose ranges, limits and rig gain (0.5) are the same as DOC-08, so it still has the old profile's behaviour (heave slamming between its limits, the GROUND pose sized for taxiing). The actuator readings saved with the file are 190, 195, -79, -88, -113 and -98 mm: two past the 150 mm half stroke, so the rig was at its end stops when it was saved. The games profile is unchanged by this so far.
+
 ## Changing it
 1. Record the games: `godot --headless --fixed-fps 60 --path godot -- --auto --stunt --game=flight --tel_dump=flight.csv --quit_after=150` (also `--game=race --autopilot`, `--game=coaster`, `--game=space --space_start=earth`; `--stunt` flies a set routine and presses the spaceship's autopilot).
 2. Edit the filters in `scripts/mover/build.py`, run it (usage at the top of the file), then `python3 scripts/mover/replay.py scripts/mover godot/package/SmartMotion-Games.Mover <folder with the four csv files> --both`.

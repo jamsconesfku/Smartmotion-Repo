@@ -92,5 +92,19 @@
     ],
     "notes": "Sam, 13 Nov 2026. His MotionXP-PRIME_FLY profile: rig measurements, M4S serial output, AIR and GROUND poses. The smooth profile shipped with the game (godot/package/SmartMotion-Games.Mover) is made from it.",
     "updated": "2026-11-13"
+  },
+  {
+    "id": "DOC-09",
+    "title": "Sam's FlyPT Mover profile for small aircraft with the fans and belt (Small_Plane_with_FANS_an_BELT_new1.Mover)",
+    "format": "FlyPT Mover 3.5.4 profile (XML)",
+    "area": "Games",
+    "status": "in_repo",
+    "path": "docs/source/flypt-mover/Small_Plane_with_FANS_an_BELT_new1.Mover",
+    "links": [
+      "docs/games/flypt-mover-profile.md",
+      "DOC-08"
+    ],
+    "notes": "Sam, 18 Nov 2026 (sent without a note). The same as DOC-08 except: the GROUND pose listens to the X-Plane source's GROUND values only and has sway-in-roll off (as in the games profile), the X-Plane source's auto connect and forward UDP are off, and the M4S output is on COM9. Filters, limits and rig gain are unchanged from DOC-08. The live readings saved with it show two actuators at about +190 mm, past the 150 mm half stroke.",
+    "updated": "2026-11-18"
   }
 ]

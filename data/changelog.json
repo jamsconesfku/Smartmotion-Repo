@@ -330,5 +330,13 @@
     "date": "2026-11-18",
     "summary": "Version 1.22.1 of the game: leaving VR should no longer leave the screen black (the headset now has its own view and the screen shows what the rider sees); the waiting message in the headset moves with your head and a trigger pull goes back into VR; the controllers are logged in detail so the next diagnostics show what the game sees. The roller coaster now tilts the seat back all the way up the lift hill (to the Mover profile's limit, about 7 degrees) and rolls more in the turns (furthest actuator 110 of 150 mm on the model). Not yet tried on Sam's PC or the rig.",
     "ids": []
+  },
+  {
+    "date": "2026-11-18",
+    "summary": "Sam sent his FlyPT Mover profile for small aircraft with the fans and belt (DOC-09). Filed and compared with his earlier profile: the same filters and limits, with the GROUND pose fixed as in the games profile and the M4S output on COM9. Its saved readings show two actuators past the end of their travel.",
+    "ids": [
+      "DOC-09",
+      "DOC-08"
+    ]
   }
 ]
