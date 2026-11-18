@@ -94,6 +94,18 @@ VR ON A META QUEST 3
   pick 72 Hz there (or in the Quest Link app: Settings > Graphics preferences > Refresh rate 72 Hz), and
   set Graphics quality to Medium in Settings. Plug the laptop in to mains power: on battery the graphics card slows down.
 
+THE SPITFIRE (v1.21.0)
+  The second aircraft is a Supermarine Spitfire LF Mk IX in the colours of MH434, the Spitfire that flies
+  from Duxford: Dark Green and Ocean Grey camouflage, Medium Sea Grey underneath, codes ZD-B. Real size and
+  shape (elliptical wing, Merlin engine with six exhaust stubs a side, four-blade propeller), and its own
+  cockpit: the RAF blind-flying panel (airspeed in mph, artificial horizon, rate of climb, altimeter,
+  direction indicator, turn and slip), rpm and boost gauges, the reflector gunsight with its orange ring,
+  the spade grip, the throttle on the left wall, the trim wheel, rudder pedals, the bulged hood and mirror.
+  How it flies: fast (about 290 knots low down), light ailerons that get heavier with speed, lifts off at
+  about 90 knots after 300 m, lands at about 80. It sits nose high on the ground, so you can't see over the
+  nose: weave (rudder left and right) when taxiing. Like the real one, it wants to swing on the ground:
+  in Easy mode the game catches the swing for you and A / D steer; in Pro it's your feet.
+
 CONTROLS (keyboard)
   SEE THEM IN THE GAME: "Controls" on the menu shows a picture of the keyboard with every key that does
   something lit up and labelled, for Flight, Racing and the Spaceship, plus the gamepad and VR controllers.
@@ -179,7 +191,7 @@ USE FLYPT MOVER WITH THE GAME (its 3D picture, or to drive the rig)
        on without reconnecting. Only if Mover itself was closed or reconnected do you need Connect again.
     3. Fly. The 3D rig picture in Mover moves with the game. Press T in the game: the panel shows
        "FlyPT Mover connected" once Mover is asking for data.
-  COCKPIT LIGHT: the Bulldog's warning-light row has a MOVER light (the fighter shows it on the engine dial):
+  COCKPIT LIGHT: the Bulldog's warning-light row has a MOVER light (the Spitfire has one on the left of its panel):
     dark "OFF" = the link is off in Settings; amber "WAITING" = the game is ready but Mover hasn't asked
     for data; green "LINKED" = Mover is reading the game.
   If it stays amber: Mover may be listening for X-Plane's "DATA" rows instead of asking. Open the X-Plane

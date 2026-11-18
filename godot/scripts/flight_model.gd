@@ -38,19 +38,23 @@ const SPECS := {
 		"hit": [Vector3(0, -0.15, -2.4), Vector3(0, 0.3, 4.75), Vector3(-5.0, 0.08, 0.1), Vector3(5.0, 0.08, 0.1), Vector3(0, -0.62, 0.3), Vector3(0, 0.98, 0.25)],
 		"eye": Vector3(-0.3, 0.68, 0.22), "cruise": 55.0, "cruiseThrottle": 0.65, "vr": 27.0, "rpmIdle": 700.0, "rpmMax": 2700.0,
 	},
+	# Supermarine Spitfire LF Mk IX (MH434, v1.21.0): span 11.23 m, wing 22.48 m2 (elliptical, aspect ratio 5.6),
+	# about 3,250 kg flying, Merlin 66 (about 1,580 hp at low level) and a four-blade Rotol propeller. Stall about
+	# 80 kt clean (power off) and 70 kt with flaps, top speed about 290 kt at low level; tail-dragger, narrow track.
+	# Ailerons: about 95 degrees a second of roll at cruise (the real ailerons get heavy as the speed builds).
 	"fighter": {
-		"key": "fighter", "name": "WW2 Fighter", "blurb": "Fast single-seat fighter. Powerful and lively: needs a firm hand.",
-		"mass": 3000.0, "S": 22.5, "b": 11.2, "c": 2.1, "I": Vector3(8000.0, 11000.0, 4500.0),
-		"clA": 4.4, "cl0": 0.18, "aStall": 15.0 * D2R, "aStallN": -13.0 * D2R, "clFlap": 0.35,
-		"cd0": 0.0215, "cdFlap": 0.04, "k": 0.07,
-		"cm0": 0.03, "cmA": -0.8, "cmQ": -14.0, "cmDe": 1.1, "deMax": 0.44,
-		"rollP": -0.5, "rollB": 0.08, "rollDa": 0.2, "daMax": 0.38,
+		"key": "fighter", "name": "Spitfire Mk IX", "blurb": "Supermarine Spitfire LF Mk IX, as MH434 flies at Duxford. Fast, light on the controls, and it swings on take-off: needs a firm hand.",
+		"mass": 3250.0, "S": 22.48, "b": 11.23, "c": 2.16, "I": Vector3(7600.0, 10600.0, 4900.0),
+		"clA": 4.6, "cl0": 0.15, "aStall": 15.5 * D2R, "aStallN": -13.0 * D2R, "clFlap": 0.42,
+		"cd0": 0.021, "cdFlap": 0.08, "k": 0.067,
+		"cm0": 0.03, "cmA": -0.75, "cmQ": -13.0, "cmDe": 1.15, "deMax": 0.44,
+		"rollP": -0.48, "rollB": 0.08, "rollDa": 0.11, "daMax": 0.38,
 		"yawB": -0.08, "yawR": -0.12, "yawDr": 0.07, "drMax": 0.36, "yawDa": 0.02, "cyB": -0.3,
-		"power": 1100e3, "eta": 0.82, "tStatic": 11000.0, "propSlip": 330.0,
-		"gear": [{"p": Vector3(-1.9, -1.45, -0.2), "brake": true}, {"p": Vector3(1.9, -1.45, -0.2), "brake": true}, {"p": Vector3(0, -1.0, 5.1), "steer": true}],
-		"gearK": 136000.0, "gearC": 9500.0, "brakeMu": 0.4, "tailDragger": true,
-		"hit": [Vector3(0, -0.1, -3.2), Vector3(0, 0.4, 5.9), Vector3(-5.6, -0.2, 0), Vector3(5.6, -0.2, 0), Vector3(0, -0.8, 0.2), Vector3(0, -0.95, -3.1)],
-		"eye": Vector3(0, 0.6, -0.9), "cruise": 90.0, "cruiseThrottle": 0.5, "vr": 40.0, "rpmIdle": 800.0, "rpmMax": 3000.0,
+		"power": 1180e3, "eta": 0.82, "tStatic": 14000.0, "propSlip": 340.0,
+		"gear": [{"p": Vector3(-0.84, -1.75, -0.85), "brake": true}, {"p": Vector3(0.84, -1.75, -0.85), "brake": true}, {"p": Vector3(0, -0.386, 5.30), "steer": true}],
+		"gearK": 147000.0, "gearC": 10000.0, "brakeMu": 0.4, "tailDragger": true,
+		"hit": [Vector3(0, 0.0, -3.6), Vector3(0, 0.3, 5.85), Vector3(-5.6, 0.04, 0.0), Vector3(5.6, 0.04, 0.0), Vector3(0, -0.72, 0.3), Vector3(0, -1.35, -3.02)],
+		"eye": Vector3(0, 0.76, 0.25), "cruise": 110.0, "cruiseThrottle": 0.55, "vr": 41.0, "rpmIdle": 800.0, "rpmMax": 3000.0,
 	},
 }
 
@@ -212,6 +216,12 @@ func _controls(h: float, inp: Dictionary, v: float, alpha_: float, beta_: float,
 		e = inp["pitch"] + inp.get("trim", 0.0)
 		a = inp["roll"]
 		r = inp["yaw"]
+		if on_ground and assist and spec["tailDragger"]:
+			# v1.21.0, Easy mode: on the ground a tail-dragger wants to swing round (its weight is behind the
+			# wheels); like a pilot's feet, the rudder catches the swing as it starts. Pro leaves it to you.
+			# The narrow track tips over easily, so the ailerons keep the wings level and A / D steer instead.
+			r += clampf(2.2 * w.y, -0.8, 0.8) + 0.5 * inp["roll"]
+			a = clampf(0.7 * (2.0 * (inp["roll"] * 3.0 * D2R - phi) - (-w.z)), -1.0, 1.0)
 		gamma_int = 0.0
 	else:
 		var g_t: float = inp["pitch"] * 17.0 * D2R if inp["pitch"] >= 0.0 else inp["pitch"] * 12.0 * D2R
@@ -335,7 +345,9 @@ func _sub(h: float, inp: Dictionary) -> void:
 		var brake := 0.0
 		if gr.has("brake"):
 			brake = inp.get("brake", 0.0) * sp["brakeMu"] * (1.0 if (not sp["tailDragger"] or tail_down) else 0.12)
-		var f_l := -mu * nn * tanh(v_l / 0.25)
+		# v1.21.0: sideways grip builds up with the tyre's slip angle (full at about 7 degrees at speed), as real
+		# tyres do; it used to be full at 0.25 m/s sideways at any speed, which spun tail-draggers round at speed
+		var f_l := -mu * nn * tanh(v_l / (0.25 + 0.12 * absf(v_f)))
 		var f_f := -(roll_res + brake) * nn * tanh(v_f / 0.4)
 		var fg := Vector3(fwd.x * f_f + lat.x * f_l, nn, fwd.z * f_f + lat.z * f_l)
 		fw += fg

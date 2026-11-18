@@ -310,5 +310,10 @@
     "date": "2026-11-18",
     "summary": "Version 1.20.0 of the game: VR fixes after the first try through Virtual Desktop. The Quest controllers should now work (the game asked for two controller inputs that Virtual Desktop refuses, which can switch the controllers off completely; the Quest 3's own controller type is added too). Ctrl+Tab goes in and out of VR as in Microsoft Flight Simulator. In VR the menus come up with you standing beside the vehicle, not in its seat, and the laptop's mouse pointer shows on the menu in the headset. Not yet tried in the headset.",
     "ids": []
+  },
+  {
+    "date": "2026-11-18",
+    "summary": "Version 1.21.0 of the game: the WW2 fighter is now a proper Spitfire Mk IX in the colours of MH434 (the Duxford Spitfire in Sam's photo): real size and shape, camouflage, roundels and codes ZD-B, and its own cockpit with the RAF blind-flying panel, gunsight and spade grip. It flies like a Spitfire (about 290 knots, lifts off at about 90). On the ground Easy mode now catches the swing that tail-draggers have. Checked by the flight checks and pictures on the build machine, not yet in the headset or on the rig.",
+    "ids": []
   }
 ]

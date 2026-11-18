@@ -60,19 +60,20 @@ const SPECS = {
     hit: [[0, -0.15, -2.4], [0, 0.3, 4.75], [-5.0, 0.08, 0.1], [5.0, 0.08, 0.1], [0, -0.62, 0.3], [0, 0.98, 0.25]],
     eye: [-0.3, 0.68, 0.22], cruise: 55, cruiseThrottle: 0.65, vr: 27, rpmIdle: 700, rpmMax: 2700,
   },
+  // Spitfire LF Mk IX (v1.21.0, same numbers as godot/scripts/flight_model.gd)
   fighter: {
-    key: 'fighter', name: 'WW2 Fighter', blurb: 'Fast single-seat fighter. Powerful and lively: needs a firm hand.',
-    mass: 3000, S: 22.5, b: 11.2, c: 2.1, I: [8000, 11000, 4500],
-    clA: 4.4, cl0: 0.18, aStall: 15 * D2R, aStallN: -13 * D2R, clFlap: 0.35,
-    cd0: 0.0215, cdFlap: 0.04, k: 0.07,
-    cm0: 0.03, cmA: -0.8, cmQ: -14, cmDe: 1.1, deMax: 0.44,
-    rollP: -0.5, rollB: 0.08, rollDa: 0.2, daMax: 0.38,
+    key: 'fighter', name: 'Spitfire Mk IX', blurb: 'Supermarine Spitfire LF Mk IX, as MH434 flies at Duxford. Fast, light on the controls, and it swings on take-off: needs a firm hand.',
+    mass: 3250, S: 22.48, b: 11.23, c: 2.16, I: [7600, 10600, 4900],
+    clA: 4.6, cl0: 0.15, aStall: 15.5 * D2R, aStallN: -13 * D2R, clFlap: 0.42,
+    cd0: 0.021, cdFlap: 0.08, k: 0.067,
+    cm0: 0.03, cmA: -0.75, cmQ: -13, cmDe: 1.15, deMax: 0.44,
+    rollP: -0.48, rollB: 0.08, rollDa: 0.11, daMax: 0.38,
     yawB: -0.08, yawR: -0.12, yawDr: 0.07, drMax: 0.36, yawDa: 0.02, cyB: -0.3,
-    power: 1100e3, eta: 0.82, tStatic: 11000, propSlip: 330,
-    gear: [{ p: [-1.9, -1.45, -0.2], brake: true }, { p: [1.9, -1.45, -0.2], brake: true }, { p: [0, -1.0, 5.1], steer: true }],
-    gearK: 136000, gearC: 9500, brakeMu: 0.4, tailDragger: true,
-    hit: [[0, -0.1, -3.2], [0, 0.4, 5.9], [-5.6, -0.2, 0], [5.6, -0.2, 0], [0, -0.8, 0.2], [0, -0.95, -3.1]],
-    eye: [0, 0.6, -0.9], cruise: 90, cruiseThrottle: 0.5, vr: 40, rpmIdle: 800, rpmMax: 3000,
+    power: 1180e3, eta: 0.82, tStatic: 14000, propSlip: 340,
+    gear: [{ p: [-0.84, -1.75, -0.85], brake: true }, { p: [0.84, -1.75, -0.85], brake: true }, { p: [0, -0.386, 5.30], steer: true }],
+    gearK: 147000, gearC: 10000, brakeMu: 0.4, tailDragger: true,
+    hit: [[0, 0.0, -3.6], [0, 0.3, 5.85], [-5.6, 0.04, 0], [5.6, 0.04, 0], [0, -0.72, 0.3], [0, -1.35, -3.02]],
+    eye: [0, 0.76, 0.25], cruise: 110, cruiseThrottle: 0.55, vr: 41, rpmIdle: 800, rpmMax: 3000,
   },
 };
 
@@ -150,6 +151,12 @@ class FlightModel {
     let e, a, r;
     if (onGround || !this.assist || V < 18) {
       e = inp.pitch + (inp.trim || 0); a = inp.roll; r = inp.yaw;
+      // v1.21.0, Easy mode: the rudder catches a tail-dragger's swing on the ground (Pro leaves it to you)
+      // and as its narrow track tips over easily, the ailerons keep the wings level and roll input steers instead
+      if (onGround && this.assist && sp.tailDragger) {
+        r += Math.max(-0.8, Math.min(0.8, 2.2 * this.w[1])) + 0.5 * inp.roll;
+        a = Math.max(-1, Math.min(1, 0.7 * (2.0 * (inp.roll * 3.0 * D2R - phi) - (-this.w[2]))));
+      }
       this.gammaInt = 0;
     } else {
       // pitch: stick commands flight path angle; roll: stick commands bank angle; rudder is coordinated
@@ -253,7 +260,8 @@ class FlightModel {
       const mu = paved ? 0.85 : 0.6;
       // a tail-dragger only brakes while its tail wheel is down, otherwise braking would tip it onto its nose
       const brake = g.brake ? (inp.brake || 0) * (sp.brakeMu || 0.5) * ((sp.tailDragger && !this.tailDown) ? 0.12 : 1) : 0;
-      const Fl = -mu * N * Math.tanh(vL / 0.25);
+      // v1.21.0: sideways grip builds up with the slip angle (full at about 7 degrees at speed), as real tyres do
+      const Fl = -mu * N * Math.tanh(vL / (0.25 + 0.12 * Math.abs(vF)));
       const Ff = -(roll + brake) * N * Math.tanh(vF / 0.4);
       const F = [fw[0] * Ff + lw[0] * Fl, N, fw[2] * Ff + lw[2] * Fl];
       Fw = add(Fw, F); torW = add(torW, cross(rW, F));

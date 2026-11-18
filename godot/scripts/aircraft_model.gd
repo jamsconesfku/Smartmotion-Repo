@@ -19,7 +19,8 @@ var pilot_nodes: Array = []
 var instruments: Instruments
 var yoke := Node3D.new()
 var in_cockpit := false
-var bulldog: Bulldog
+var bulldog: Bulldog          # the detailed aircraft with a full cockpit: the Bulldog, or the Spitfire (a Bulldog subclass)
+var prop_dir := 1.0           # -1: the propeller turns clockwise seen from the cockpit (the Spitfire's Merlin)
 var ctl := {}   ## pilot inputs for moving cockpit parts (set by main.gd every frame)
 var eye := Vector3.ZERO
 var logo: Texture2D
@@ -106,6 +107,10 @@ func build(aircraft_key: String, logo_tex: Texture2D, with_cockpit := true) -> v
 	add_child(cockpit_node)
 	if key == "bulldog":
 		bulldog = Bulldog.new()
+		bulldog.build(self, with_cockpit)
+		return
+	if key == "fighter":
+		bulldog = Spitfire.new()     # v1.21.0: the WW2 fighter is a Spitfire Mk IX (MH434)
 		bulldog.build(self, with_cockpit)
 		return
 	var white := C("#f2f4fa")
@@ -313,7 +318,7 @@ func update_visuals(surf: Dictionary, engine: float, dt: float, ias: float) -> v
 	ail_l.rotation.x = k * float(surf["a"])
 	elevator.rotation.x = -k * float(surf["e"])
 	rudder.rotation.y = k * float(surf["r"])
-	prop.rotation.z += (8.0 + engine * 95.0) * dt
+	prop.rotation.z += prop_dir * (8.0 + engine * 95.0) * dt
 	var blur := clampf((engine - 0.2) / 0.5, 0.0, 1.0)
 	if disc.material_override is ShaderMaterial:
 		(disc.material_override as ShaderMaterial).set_shader_parameter("strength", blur)   # the Bulldog's round disc

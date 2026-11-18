@@ -987,8 +987,9 @@ func _airfield() -> void:
 		a.set_cockpit_view(false)
 		var piv := Node3D.new()
 		piv.add_child(a)
-		a.rotation.x = 0.085 if r[0] == "fighter" else 0.0
-		_place(piv, r[1], r[2], 1.03 if r[0] == "bulldog" else 1.38, deg_to_rad(r[3]))
+		# v1.21.0: the fighters are Spitfires, sitting on all three wheels 12.5 degrees nose up
+		a.rotation.x = 0.2177 if r[0] == "fighter" else 0.0
+		_place(piv, r[1], r[2], 1.03 if r[0] == "bulldog" else 1.51, deg_to_rad(r[3]))
 
 
 func _runway_decal() -> void:

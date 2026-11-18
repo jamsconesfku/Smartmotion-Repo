@@ -3,7 +3,7 @@ extends Node
 ## The games share it: Flight (Duxford, this file), Racing (race_mode.gd), Space (space_mode.gd, and since
 ## v1.16.0 ship_earth_mode.gd for the spaceship over Duxford) and the roller coaster (coaster_mode.gd).
 
-const APP_VERSION := "1.20.0"
+const APP_VERSION := "1.21.0"
 ## v1.17.1: how far the camera draws: 600 km, past the real horizon even at 20 km up (it was 40 km, so the
 ## ground stopped at an edge that moved as you climbed)
 const VIEW_FAR := 600000.0
@@ -1298,6 +1298,8 @@ func _auto_recentre() -> void:
 ## x right, y up, z back). The Bulldog's limits keep your head inside the canopy and out of the instructor.
 const SEAT_BOX := {"x0": -0.20, "x1": 0.20, "y0": -0.22, "y1": 0.14, "z0": -0.28, "z1": 0.16}
 const SEAT_BOX_BULLDOG := {"x0": -0.13, "x1": 0.22, "y0": -0.22, "y1": 0.12, "z0": -0.30, "z1": 0.14}
+## v1.21.0: the Spitfire's cockpit is narrow and the hood close over your head
+const SEAT_BOX_SPITFIRE := {"x0": -0.17, "x1": 0.17, "y0": -0.22, "y1": 0.09, "z0": -0.26, "z1": 0.18}
 
 ## v1.19.0: you can never leave the seat. You can still lean and look round naturally, but once your head
 ## reaches the edge of the seat's space the view stops there (the cockpit comes with you), so you can't put
@@ -1307,6 +1309,8 @@ func _keep_in_seat() -> bool:
 	if xr_cam == null or vr_frames >= 0 or xr_cam.position == Vector3.ZERO or on_stand:
 		return false   # not seated yet (the automatic recentre comes first), or standing at the menus
 	var box: Dictionary = SEAT_BOX_BULLDOG if mode == null and plane != null and plane.bulldog != null else SEAT_BOX
+	if mode == null and plane != null and plane.bulldog is Spitfire:
+		box = SEAT_BOX_SPITFIRE
 	var head := (Transform3D(Basis(), vr_base) * mcomp.correction(vr_pivot)) * xr_cam.position
 	var d := head - _eye()
 	var c := Vector3(clampf(d.x, box["x0"], box["x1"]), clampf(d.y, box["y0"], box["y1"]), clampf(d.z, box["z0"], box["z1"]))

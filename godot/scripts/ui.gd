@@ -83,7 +83,7 @@ var adi_slot: Control
 var launch_title: Label
 var launch_sum: Label
 const GAMES := {
-	"flight": ["Flight", "Fly the skies around Duxford in Skysmart's Bulldog or a WW2 fighter.", "Fly"],
+	"flight": ["Flight", "Fly the skies around Duxford in Skysmart's Bulldog or a Spitfire.", "Fly"],
 	"race": ["Racing", "Drive an open-wheel racing car round a 4 km circuit: race seven rivals or set a fast lap.", "Race"],
 	"space": ["Space", "Fly a spaceship: take off from Duxford and climb into space, jump at hyperspeed between the planets, then fly back down and land. Or fight drones round the Saturn station.", "Launch"],
 	"coaster": ["Coaster", "Ride a roller coaster beside Duxford airfield: a 52 m lift hill, a drop to 104 km/h, airtime hills and a helix. Just sit back.", "Ride"],
@@ -442,7 +442,7 @@ func _build_menu() -> void:
 	v.add_child(fb)
 	mode_boxes["flight"] = fb
 	_section(fb, "Aircraft")
-	_seg(fb, "aircraft", [["bulldog", "Bulldog G-SMAT (trainer)"], ["fighter", "WW2 Fighter (fast)"]], Settings.get_value("aircraft"))
+	_seg(fb, "aircraft", [["bulldog", "Bulldog G-SMAT (trainer)"], ["fighter", "Spitfire Mk IX (fast)"]], Settings.get_value("aircraft"))
 	var fr := HBoxContainer.new()
 	fr.add_theme_constant_override("separation", 12)
 	fb.add_child(fr)
